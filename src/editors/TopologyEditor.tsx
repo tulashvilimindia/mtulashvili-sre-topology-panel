@@ -1,0 +1,195 @@
+import React from 'react';
+import { TopologyPanelOptions, ThresholdStep } from '../types';
+
+interface EditorProps {
+  options: TopologyPanelOptions;
+  onOptionsChange: (options: TopologyPanelOptions) => void;
+}
+
+/**
+ * TopologyEditor - Custom editor panel for configuring nodes, edges, and groups.
+ * Registered via PanelPlugin.setEditor(), so it receives { options, onOptionsChange }.
+ */
+export const TopologyEditor: React.FC<EditorProps> = ({
+  options,
+  onOptionsChange,
+}) => {
+  const nodeCount = options?.nodes?.length || 0;
+  const edgeCount = options?.edges?.length || 0;
+  const groupCount = options?.groups?.length || 0;
+
+  return (
+    <div style={{ padding: '12px' }}>
+      <h5 style={{ marginBottom: '8px' }}>Topology configuration</h5>
+      
+      <div style={{ 
+        background: '#1e2228', 
+        borderRadius: '6px', 
+        padding: '12px',
+        marginBottom: '12px',
+        fontSize: '13px',
+        lineHeight: '1.6'
+      }}>
+        <div><strong>Nodes:</strong> {nodeCount}</div>
+        <div><strong>Edges:</strong> {edgeCount}</div>
+        <div><strong>Groups:</strong> {groupCount}</div>
+      </div>
+
+      <div style={{
+        background: '#1e2228',
+        borderRadius: '6px',
+        padding: '12px',
+        fontSize: '12px',
+        color: '#88c0d0',
+        lineHeight: '1.6'
+      }}>
+        <p style={{ marginBottom: '8px' }}>
+          <strong>V1 Setup:</strong> Configure topology via the dashboard JSON editor.
+        </p>
+        <p style={{ marginBottom: '8px' }}>
+          1. Click the dashboard settings gear icon<br/>
+          2. Select &quot;JSON Model&quot;<br/>
+          3. Find this panel&apos;s <code>options</code> object<br/>
+          4. Add <code>nodes</code>, <code>edges</code>, and <code>groups</code> arrays
+        </p>
+        <p style={{ color: '#616e88' }}>
+          See project documentation for the full JSON schema and example configurations.
+        </p>
+      </div>
+
+      <div style={{ marginTop: '12px' }}>
+        <button
+          style={{
+            background: '#2d3748',
+            border: '1px solid #4c566a',
+            color: '#d8dee9',
+            padding: '6px 16px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            width: '100%',
+          }}
+          onClick={() => {
+            // Load example topology
+            const exampleTopology = getExampleTopology();
+            onOptionsChange({ ...options, ...exampleTopology } as TopologyPanelOptions);
+          }}
+        >
+          Load example topology (Angular Portal E2E)
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Helper to type threshold colors as literal union
+function t(value: number, color: 'green' | 'yellow' | 'red'): ThresholdStep {
+  return { value, color };
+}
+
+function getExampleTopology(): Partial<TopologyPanelOptions> {
+  return {
+    nodes: [
+      {
+        id: 'n-cf', name: 'Cloudflare edge', role: 'CDN / WAF', type: 'cloudflare',
+        position: { x: 245, y: 20 }, compact: false, width: 180,
+        metrics: [
+          { id: 'cf-rps', label: 'rps', datasourceUid: '', query: '', format: '${value}', section: 'Traffic', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 15000, color: 'yellow' }, { value: 25000, color: 'red' }], showSparkline: true },
+          { id: 'cf-cache', label: 'cache', datasourceUid: '', query: '', format: '${value}%', section: 'Traffic', isSummary: true, thresholds: [{ value: 0, color: 'red' }, { value: 50, color: 'yellow' }, { value: 80, color: 'green' }], showSparkline: false },
+          { id: 'cf-waf', label: 'waf', datasourceUid: '', query: '', format: '${value}', section: 'Security', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 100, color: 'yellow' }, { value: 500, color: 'red' }], showSparkline: false },
+          { id: 'cf-p95', label: 'p95', datasourceUid: '', query: '', format: '${value}ms', section: 'Performance', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 100, color: 'yellow' }, { value: 500, color: 'red' }], showSparkline: true },
+        ],
+      },
+      {
+        id: 'n-pa1', name: 'PA_FW01', role: 'active', type: 'firewall',
+        position: { x: 70, y: 175 }, compact: false, width: 200, groupId: 'grp-pa',
+        metrics: [
+          { id: 'pa1-sess', label: 'sessions', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
+          { id: 'pa1-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
+          { id: 'pa1-tput', label: 'tput', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
+          { id: 'pa1-threats', label: 'threats', datasourceUid: '', query: '', format: '${value}', section: 'Security', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 1, color: 'yellow' }, { value: 10, color: 'red' }], showSparkline: false },
+        ],
+      },
+      {
+        id: 'n-pa2', name: 'PA_FW02', role: 'passive', type: 'firewall',
+        position: { x: 400, y: 175 }, compact: false, width: 200, groupId: 'grp-pa',
+        metrics: [
+          { id: 'pa2-sess', label: 'sessions', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
+          { id: 'pa2-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
+          { id: 'pa2-sync', label: 'sync', datasourceUid: '', query: '', format: '${value}', section: 'HA', isSummary: false, thresholds: [], showSparkline: false },
+        ],
+      },
+      {
+        id: 'n-f51', name: 'F5_LTM01', role: 'active', type: 'loadbalancer',
+        position: { x: 70, y: 335 }, compact: false, width: 200, groupId: 'grp-f5',
+        metrics: [
+          { id: 'f51-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: true },
+          { id: 'f51-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
+          { id: 'f51-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'VS', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
+          { id: 'f51-ssl', label: 'ssl tps', datasourceUid: '', query: '', format: '${value}', section: 'VS', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 800, color: 'yellow' }, { value: 1200, color: 'red' }], showSparkline: false },
+        ],
+      },
+      {
+        id: 'n-f52', name: 'F5_LTM02', role: 'standby', type: 'loadbalancer',
+        position: { x: 400, y: 335 }, compact: false, width: 200, groupId: 'grp-f5',
+        metrics: [
+          { id: 'f52-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
+          { id: 'f52-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
+          { id: 'f52-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'VS', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
+          { id: 'f52-sync', label: 'sync', datasourceUid: '', query: '', format: '${value}', section: 'HA', isSummary: false, thresholds: [], showSparkline: false },
+        ],
+      },
+      {
+        id: 'n-vs', name: 'VS Angular 443', role: 'virtual server', type: 'virtualserver',
+        position: { x: 175, y: 470 }, compact: false, width: 150,
+        metrics: [
+          { id: 'vs-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
+          { id: 'vs-status', label: 'status', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: true, thresholds: [], showSparkline: false },
+          { id: 'vs-in', label: 'in', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
+          { id: 'vs-out', label: 'out', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
+        ],
+      },
+      {
+        id: 'n-pl', name: 'Pool Angular', role: '6/6 up', type: 'pool',
+        position: { x: 370, y: 470 }, compact: false, width: 150,
+        metrics: [
+          { id: 'pl-act', label: 'active', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
+          { id: 'pl-que', label: 'queued', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 1, color: 'yellow' }, { value: 10, color: 'red' }], showSparkline: false },
+          { id: 'pl-algo', label: 'algo', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: false, thresholds: [], showSparkline: false },
+          { id: 'pl-health', label: 'health', datasourceUid: '', query: '', format: '${value}', section: 'Monitor', isSummary: false, thresholds: [], showSparkline: false },
+        ],
+      },
+      ...Array.from({ length: 6 }, (_, i) => ({
+        id: `n-p${i + 1}`, name: `PP0${i + 1}`, role: '', type: 'server' as const,
+        position: { x: 15 + i * 110, y: 570 }, compact: true, width: 100, groupId: 'grp-iis',
+        metrics: [
+          { id: `p${i + 1}-cpu`, label: 'cpu', datasourceUid: '', query: '', format: '${value}', section: 'IIS', isSummary: true, thresholds: [t(0, 'green'), t(60, 'yellow'), t(80, 'red')], showSparkline: false },
+          { id: `p${i + 1}-ram`, label: 'ram', datasourceUid: '', query: '', format: '${value}', section: 'IIS', isSummary: true, thresholds: [t(0, 'green'), t(40, 'yellow'), t(70, 'red')], showSparkline: false },
+          { id: `p${i + 1}-rps`, label: 'rps', datasourceUid: '', query: '', format: '${value}', section: 'IIS', isSummary: false, thresholds: [t(0, 'green')], showSparkline: true },
+          { id: `p${i + 1}-5xx`, label: '5xx', datasourceUid: '', query: '', format: '${value}', section: 'IIS', isSummary: false, thresholds: [t(0, 'green'), t(1, 'yellow'), t(5, 'red')], showSparkline: false },
+        ],
+      })),
+    ],
+    edges: [
+      { id: 'e-cf-pa1', sourceId: 'n-cf', targetId: 'n-pa1', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'auto', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '18.2k rps' },
+      { id: 'e-cf-pa2', sourceId: 'n-cf', targetId: 'n-pa2', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '6.1k rps' },
+      { id: 'e-pa1-f51', sourceId: 'n-pa1', targetId: 'n-f51', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'fast', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '34.6k sess' },
+      { id: 'e-pa2-f52', sourceId: 'n-pa2', targetId: 'n-f52', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: 'standby' },
+      { id: 'e-f51-vs', sourceId: 'n-f51', targetId: 'n-vs', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
+      { id: 'e-f52-vs', sourceId: 'n-f52', targetId: 'n-vs', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
+      { id: 'e-vs-pl', sourceId: 'n-vs', targetId: 'n-pl', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '128' },
+      ...Array.from({ length: 6 }, (_, i) => ({
+        id: `e-pl-p${i + 1}`, sourceId: 'n-pl', targetId: `n-p${i + 1}`, type: 'traffic' as const,
+        thicknessMode: 'fixed' as const, thicknessMin: 1.5, thicknessMax: 4,
+        thresholds: [{ value: 0, color: 'green' as const }],
+        flowAnimation: true, flowSpeed: 'auto' as const,
+        bidirectional: false, anchorSource: 'auto' as const, anchorTarget: 'auto' as const,
+      })),
+    ],
+    groups: [
+      { id: 'grp-pa', label: 'HA — Palo Alto', type: 'ha_pair', nodeIds: ['n-pa1', 'n-pa2'], style: 'dashed' },
+      { id: 'grp-f5', label: 'HA — F5 BIG-IP', type: 'ha_pair', nodeIds: ['n-f51', 'n-f52'], style: 'dashed' },
+      { id: 'grp-iis', label: 'IIS backend — Angular Portal', type: 'cluster', nodeIds: ['n-p1', 'n-p2', 'n-p3', 'n-p4', 'n-p5', 'n-p6'], style: 'dashed' },
+    ],
+  };
+}

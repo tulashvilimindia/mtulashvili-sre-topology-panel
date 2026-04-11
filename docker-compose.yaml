@@ -1,0 +1,20 @@
+services:
+  grafana:
+    user: root
+    container_name: sid2-grafana-topology-dev
+    build:
+      context: ./.config
+      args:
+        grafana_image: ${GRAFANA_IMAGE:-grafana-enterprise}
+        grafana_version: ${GRAFANA_VERSION:-10.4.0}
+    ports:
+      - 13100:3000/tcp
+    volumes:
+      - ./dist:/var/lib/grafana/plugins/sid2-grafana-topology-panel
+      - ./provisioning:/etc/grafana/provisioning
+    environment:
+      NODE_ENV: development
+      GF_LOG_FILTERS: plugin.sid2-grafana-topology-panel:debug
+      GF_LOG_LEVEL: debug
+      GF_DATAPROXY_LOGGING: 1
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: sid2-grafana-topology-panel

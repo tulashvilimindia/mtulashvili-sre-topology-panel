@@ -1,0 +1,258 @@
+/* ============ PANEL ============ */
+.topology-panel {
+  background: #13161a;
+  border-radius: 4px;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #d8dee9;
+}
+
+/* ============ TOOLBAR ============ */
+.topology-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #1e2228;
+  height: 36px;
+}
+
+.topology-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #88c0d0;
+}
+
+.topology-toolbar-spacer {
+  flex: 1;
+}
+
+.topology-btn {
+  font-size: 10px;
+  color: #616e88;
+  background: #1e2228;
+  border: 1px solid #2d3748;
+  border-radius: 5px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.topology-btn:hover {
+  background: #2d3748;
+  color: #d8dee9;
+}
+
+/* ============ CANVAS ============ */
+.topology-canvas {
+  background: #13161a;
+}
+
+/* ============ FLOW ANIMATION ============ */
+@keyframes topoFlow {
+  to { stroke-dashoffset: -16; }
+}
+
+@keyframes topoPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ============ GROUP CONTAINERS ============ */
+.topology-group-label {
+  position: absolute;
+  top: -9px;
+  left: 12px;
+  font-size: 8px;
+  color: #4c566a;
+  background: #13161a;
+  padding: 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* ============ NODES ============ */
+.topology-node {
+  border-radius: 8px;
+  border: 1.5px solid #2d3748;
+  background: #1a1e24;
+  cursor: grab;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  overflow: hidden;
+  user-select: none;
+}
+
+.topology-node:hover {
+  border-color: #4c566a;
+  box-shadow: 0 0 0 1px rgba(76, 86, 106, 0.3);
+}
+
+.topology-node.dragging {
+  cursor: grabbing;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  border-color: #5e81ac;
+}
+
+.topology-node.st-ok { border-left: 3px solid #a3be8c; }
+.topology-node.st-warning { border-left: 3px solid #ebcb8b; }
+.topology-node.st-critical { border-left: 3px solid #bf616a; }
+.topology-node.st-unknown { border-left: 3px solid #4c566a; }
+.topology-node.st-nodata { border-left: 3px solid #4c566a; }
+
+/* ============ NODE HEADER ============ */
+.topo-node-header {
+  padding: 6px 8px 3px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.topo-node-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.topology-node.compact .topo-node-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 7px;
+}
+
+.topo-node-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.topo-node-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #e5e9f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topo-node-role {
+  font-size: 8px;
+  color: #616e88;
+}
+
+.topo-node-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.topo-node-dot.ok { background: #a3be8c; }
+.topo-node-dot.warning { background: #ebcb8b; }
+.topo-node-dot.critical { background: #bf616a; animation: topoPulse 1.5s ease-in-out infinite; }
+.topo-node-dot.critical.no-pulse { animation: none; }
+.topo-node-dot.unknown { background: #4c566a; }
+.topo-node-dot.nodata { background: #4c566a; }
+
+/* ============ METRICS ============ */
+.topo-node-metrics {
+  padding: 2px 8px 4px;
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.topo-metric {
+  background: #12151a;
+  border-radius: 3px;
+  padding: 2px 4px;
+  min-width: 36px;
+  flex: 1;
+}
+
+.topo-metric-label {
+  font-size: 7px;
+  color: #4c566a;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.topo-metric-value {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.topo-metric-value.ok { color: #a3be8c; }
+.topo-metric-value.warning { color: #ebcb8b; }
+.topo-metric-value.critical { color: #bf616a; }
+.topo-metric-value.unknown { color: #616e88; }
+
+/* ============ SPARKLINE ============ */
+.topo-sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.topo-spark-bar {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 1px 1px 0 0;
+  opacity: 0.7;
+}
+
+/* ============ EXPAND HINT ============ */
+.topo-node-hint {
+  font-size: 7px;
+  color: #3b4252;
+  text-align: center;
+  padding: 1px 0 3px;
+}
+
+.topology-node:hover .topo-node-hint {
+  color: #5e81ac;
+}
+
+/* ============ EXPANDED METRICS ============ */
+.topo-node-expanded {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.topology-node.open .topo-node-expanded {
+  max-height: 500px;
+}
+
+.topology-node.open .topo-node-hint {
+  display: none;
+}
+
+.topo-node-expanded-inner {
+  padding: 4px 8px 6px;
+  border-top: 1px solid #2d3748;
+}
+
+.topo-exp-section {
+  font-size: 7px;
+  color: #4c566a;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 3px 0 1px;
+  border-bottom: 1px solid #1e2228;
+  margin-bottom: 2px;
+}
+
+.topo-exp-row {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 2px;
+  flex-wrap: wrap;
+}
