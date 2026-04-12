@@ -121,7 +121,7 @@ async function queryCloudWatch(
           namespace: config.namespace,
           metricName: config.metricName,
           dimensions,
-          statistic: [config.stat || 'Average'],
+          statistic: config.stat || 'Average',
           period: String(config.period || 300),
           region: 'default',
         }],
