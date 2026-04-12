@@ -26,8 +26,9 @@ function useSelfQueries(
   panelSeries: DataFrame[],
   replaceVars?: (value: string) => string,
   historicalTime?: number
-): Map<string, number | null> {
+): { data: Map<string, number | null>; isLoading: boolean } {
   const [results, setResults] = useState<Map<string, number | null>>(new Map());
+  const [isLoading, setIsLoading] = useState(false);
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Collect node + edge metrics that need self-querying
@@ -77,6 +78,7 @@ function useSelfQueries(
     }
 
     fetchTimerRef.current = setTimeout(async () => {
+      setIsLoading(true);
       const newResults = new Map<string, number | null>();
 
       // Query all uncovered metrics using the multi-DS abstraction
@@ -87,6 +89,7 @@ function useSelfQueries(
 
       await Promise.all(promises);
       setResults(newResults);
+      setIsLoading(false);
     }, 500);
 
     return () => {
@@ -96,7 +99,7 @@ function useSelfQueries(
     };
   }, [uncoveredMetrics, replaceVars, historicalTime]);
 
-  return results;
+  return { data: results, isLoading };
 }
 
 export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data, width, height, replaceVariables }) => {
@@ -119,7 +122,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   }, [timeOffset]);
 
   // Auto-fetch metrics not covered by panel queries (supports Prometheus, CloudWatch, Infinity)
-  const selfQueryResults = useSelfQueries(nodes, edges, data.series, replaceVariables, historicalTime);
+  const { data: selfQueryResults, isLoading: isFetchingMetrics } = useSelfQueries(nodes, edges, data.series, replaceVariables, historicalTime);
 
   // Ref to read current positions without triggering useEffect re-runs
   const nodePositionsRef = useRef(nodePositions);
@@ -218,7 +221,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
 
           metricValues[metricConfig.id] = {
             raw,
-            formatted: metricConfig.format.replace('${value}', formatNumber(raw)),
+            formatted: formatMetricValue(raw, metricConfig.format),
             status,
             sparklineData: sparklineValues,
           };
@@ -245,22 +248,25 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   }, [nodes, data, expandedNodes, selfQueryResults]);
 
   // Compute health summary: worst status per node type for toolbar indicator
-  const healthSummary = useMemo<Array<{ type: NodeType; icon: string; color: string; status: NodeStatus }>>(() => {
-    const byType = new Map<NodeType, NodeStatus>();
+  const healthSummary = useMemo<Array<{ type: NodeType; icon: string; color: string; status: NodeStatus; count: number }>>(() => {
+    const byType = new Map<NodeType, { status: NodeStatus; count: number }>();
     nodes.forEach((node) => {
       const state = nodeStates.get(node.id);
-      const currentWorst = byType.get(node.type) || 'ok';
-      if (state && isWorseStatus(state.status, currentWorst)) {
-        byType.set(node.type, state.status);
-      } else if (!byType.has(node.type)) {
-        byType.set(node.type, state?.status || 'nodata');
+      const current = byType.get(node.type) || { status: 'ok' as NodeStatus, count: 0 };
+      current.count++;
+      if (state && isWorseStatus(state.status, current.status)) {
+        current.status = state.status;
+      } else if (current.count === 1 && !state) {
+        current.status = 'nodata';
       }
+      byType.set(node.type, current);
     });
-    return Array.from(byType).map(([type, status]) => ({
+    return Array.from(byType).map(([type, data]) => ({
       type,
       icon: NODE_TYPE_CONFIG[type]?.icon || '?',
-      color: STATUS_COLORS[status] || '#4c566a',
-      status,
+      color: STATUS_COLORS[data.status] || '#4c566a',
+      status: data.status,
+      count: data.count,
     }));
   }, [nodes, nodeStates]);
 
@@ -308,7 +314,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       let formattedLabel: string | undefined;
       if (edge.labelTemplate) {
         if (value !== null) {
-          formattedLabel = edge.labelTemplate.replace('${value}', formatNumber(value));
+          formattedLabel = formatMetricValue(value, edge.labelTemplate);
         } else {
           formattedLabel = edge.labelTemplate.replace('${value}', 'N/A');
         }
@@ -403,9 +409,10 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   }, [nodes]);
 
   return (
-    <div className="topology-panel" style={{ width, height }}>
+    <div className="topology-panel" style={{ width, height }} onClick={() => setPopupNodeId(null)}>
       <div className="topology-toolbar">
         <span className="topology-title">E2E topology</span>
+        {isFetchingMetrics && <span style={{ fontSize: 9, color: '#616e88', marginLeft: 6 }}>Loading...</span>}
         {healthSummary.length > 0 && (
           <div className="topology-health-bar">
             {healthSummary.map((h) => (
@@ -413,7 +420,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
                 key={h.type}
                 className="topology-health-dot"
                 style={{ background: h.color }}
-                title={`${h.icon} ${h.type}: ${h.status}`}
+                title={`${h.icon} ${h.type} (${h.count}): ${h.status}`}
               />
             ))}
           </div>
@@ -446,6 +453,12 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
           <option value={-1440}>24h ago</option>
         </select>
       </div>
+      {timeOffset !== 0 && (
+        <div className="topology-time-banner">
+          <span>Viewing: {Math.abs(timeOffset) >= 60 ? Math.abs(timeOffset) / 60 + 'h' : Math.abs(timeOffset) + 'm'} ago</span>
+          <button className="topology-btn" onClick={() => setTimeOffset(0)}>Back to Live</button>
+        </div>
+      )}
       <TopologyCanvas
         nodes={nodes}
         edges={edges}
@@ -457,22 +470,13 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         animationOptions={animation}
         displayOptions={display}
         width={width}
-        height={height - 36}
+        height={height - 36 - (timeOffset !== 0 ? 28 : 0)}
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
+        popupNode={popupNodeId ? nodes.find((n) => n.id === popupNodeId) || null : null}
+        popupPosition={popupNodeId ? nodePositions.get(popupNodeId) || null : null}
+        onPopupClose={() => setPopupNodeId(null)}
       />
-      {popupNodeId && (() => {
-        const popupNode = nodes.find((n) => n.id === popupNodeId);
-        const popupPos = nodePositions.get(popupNodeId);
-        if (!popupNode || !popupPos) { return null; }
-        return (
-          <NodePopup
-            node={popupNode}
-            position={{ x: popupPos.x + (popupNode.width || 180) + 10, y: popupPos.y + 36 }}
-            onClose={() => setPopupNodeId(null)}
-          />
-        );
-      })()}
     </div>
   );
 };
@@ -491,4 +495,38 @@ function formatNumber(value: number): string {
     return value.toString();
   }
   return value.toFixed(1);
+}
+
+/** Format seconds as human-readable duration */
+function formatDuration(seconds: number): string {
+  const abs = Math.abs(seconds);
+  if (abs >= 86400) {
+    return (seconds / 86400).toFixed(1) + 'd';
+  }
+  if (abs >= 3600) {
+    return (seconds / 3600).toFixed(1) + 'h';
+  }
+  if (abs >= 60) {
+    return (seconds / 60).toFixed(1) + 'm';
+  }
+  return seconds.toFixed(1) + 's';
+}
+
+/** Format a metric value using its format template, with time-unit detection */
+function formatMetricValue(raw: number, format: string): string {
+  // Detect time-unit format templates: "${value}s", "${value}ms", "${value}m", "${value}h"
+  const timeMatch = format.match(/\$\{value\}(ms|s|m|h)$/);
+  if (timeMatch) {
+    const unit = timeMatch[1];
+    let seconds = raw;
+    if (unit === 'ms') {
+      seconds = raw / 1000;
+    } else if (unit === 'm') {
+      seconds = raw * 60;
+    } else if (unit === 'h') {
+      seconds = raw * 3600;
+    }
+    return formatDuration(seconds);
+  }
+  return format.replace('${value}', formatNumber(raw));
 }

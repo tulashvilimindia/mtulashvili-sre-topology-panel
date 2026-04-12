@@ -218,7 +218,7 @@ export function propagateStatus(
       return;
     }
     const targetStatus = nodeStatuses.get(edge.targetId);
-    if (targetStatus === 'critical') {
+    if (targetStatus && isWorseStatus(targetStatus, 'ok') && targetStatus !== 'nodata' && targetStatus !== 'unknown') {
       propagatedEdges.add(edge.id);
     }
   });

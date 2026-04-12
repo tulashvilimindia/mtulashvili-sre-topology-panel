@@ -6,6 +6,7 @@ import {
 } from '../types';
 import { getAnchorPoint, getBezierPath, getBezierMidpoint, EDGE_TYPE_STYLES } from '../utils/edges';
 import { ViewportState, DEFAULT_VIEWPORT, zoomAtPoint, fitToView } from '../utils/viewport';
+import { NodePopup } from './NodePopup';
 
 interface CanvasProps {
   nodes: TopologyNode[];
@@ -21,12 +22,16 @@ interface CanvasProps {
   height: number;
   onNodeDrag: (nodeId: string, x: number, y: number) => void;
   onNodeToggle: (nodeId: string) => void;
+  popupNode?: TopologyNode | null;
+  popupPosition?: { x: number; y: number } | null;
+  onPopupClose?: () => void;
 }
 
 export const TopologyCanvas: React.FC<CanvasProps> = ({
   nodes, edges, groups, nodePositions, nodeStates, edgeStates,
   canvasOptions, animationOptions, displayOptions,
-  width, height, onNodeDrag, onNodeToggle
+  width, height, onNodeDrag, onNodeToggle,
+  popupNode, popupPosition, onPopupClose
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -82,6 +87,16 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     nodes.forEach((n) => { widths.set(n.id, n.width || (n.compact ? 110 : 180)); });
     setViewport(fitToView(nodePositions, widths, width, height));
   }, [nodePositions, nodes, width, height]);
+
+  // Auto fit-to-view on first render (when nodes load for the first time)
+  const prevNodeCountRef = useRef(0);
+  useEffect(() => {
+    if (prevNodeCountRef.current === 0 && nodes.length > 0) {
+      setTimeout(handleFitToView, 100);
+    }
+    prevNodeCountRef.current = nodes.length;
+  }, [nodes.length, handleFitToView]);
+
   const onNodeDragRef = useRef(onNodeDrag);
   onNodeDragRef.current = onNodeDrag;
 
@@ -91,10 +106,14 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     if (!pos) {return;}
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) {return;}
+    // Inverse-transform pointer coords by viewport for correct drag at any zoom level
+    const scale = viewport.scale || 1;
+    const worldX = (e.clientX - rect.left - viewport.translateX) / scale;
+    const worldY = (e.clientY - rect.top - viewport.translateY) / scale;
     setDragging({
       nodeId,
-      offX: e.clientX - rect.left - pos.x,
-      offY: e.clientY - rect.top - pos.y,
+      offX: worldX - pos.x,
+      offY: worldY - pos.y,
     });
     hasMovedRef.current = false;
     e.preventDefault();
@@ -108,10 +127,14 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
       hasMovedRef.current = true;
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) {return;}
-      let x = e.clientX - rect.left - dragging.offX;
-      let y = e.clientY - rect.top - dragging.offY;
-      x = Math.max(0, Math.min(width - 100, x));
-      y = Math.max(0, Math.min(height - 40, y));
+      // Inverse-transform pointer coords by viewport
+      const scale = viewport.scale || 1;
+      const worldX = (e.clientX - rect.left - viewport.translateX) / scale;
+      const worldY = (e.clientY - rect.top - viewport.translateY) / scale;
+      let x = worldX - dragging.offX;
+      let y = worldY - dragging.offY;
+      x = Math.max(0, Math.min(width / scale - 100, x));
+      y = Math.max(0, Math.min(height / scale - 40, y));
       onNodeDragRef.current(dragging.nodeId, x, y);
     };
 
@@ -352,6 +375,9 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
             key={node.id}
             ref={(el) => { if (el) {nodeElRefs.current.set(node.id, el);} }}
             className={`topology-node ${node.compact ? 'compact' : ''} st-${status} ${isExpanded ? 'open' : ''} ${isDragging ? 'dragging' : ''}`}
+            role="button"
+            aria-label={`${node.name} (${node.type}): ${status}`}
+            title={node.name}
             style={{
               position: 'absolute',
               left: pos.x,
@@ -443,6 +469,14 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           </div>
         );
       })}
+      {/* Node popup — inside viewport wrapper for correct zoom positioning */}
+      {popupNode && popupPosition && onPopupClose && (
+        <NodePopup
+          node={popupNode}
+          position={{ x: popupPosition.x + (popupNode.width || 180) + 10, y: popupPosition.y }}
+          onClose={onPopupClose}
+        />
+      )}
       </div>{/* end viewport transform wrapper */}
       {/* Zoom controls overlay */}
       <div style={{ position: 'absolute', bottom: 6, right: 6, display: 'flex', gap: 3, zIndex: 20 }}>

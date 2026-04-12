@@ -46,6 +46,20 @@
   transform: scale(1.5);
 }
 
+/* ============ TIME TRAVEL BANNER ============ */
+.topology-time-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: #3d2e00;
+  border-bottom: 1px solid #ebcb8b44;
+  height: 28px;
+  font-size: 11px;
+  color: #ebcb8b;
+}
+
 .topology-toolbar-spacer {
   flex: 1;
 }
@@ -86,7 +100,7 @@
   position: absolute;
   top: -9px;
   left: 12px;
-  font-size: 8px;
+  font-size: 9px;
   color: #4c566a;
   background: #13161a;
   padding: 0 6px;
@@ -145,7 +159,7 @@
 .topology-node.compact .topo-node-icon {
   width: 18px;
   height: 18px;
-  font-size: 7px;
+  font-size: 9px;
 }
 
 .topo-node-info {
@@ -163,7 +177,7 @@
 }
 
 .topo-node-role {
-  font-size: 8px;
+  font-size: 9px;
   color: #616e88;
 }
 
@@ -199,7 +213,7 @@
 }
 
 .topo-metric-label {
-  font-size: 7px;
+  font-size: 9px;
   color: #4c566a;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -233,7 +247,7 @@
 
 /* ============ EXPAND HINT ============ */
 .topo-node-hint {
-  font-size: 7px;
+  font-size: 9px;
   color: #3b4252;
   text-align: center;
   padding: 1px 0 3px;
@@ -264,7 +278,7 @@
 }
 
 .topo-exp-section {
-  font-size: 7px;
+  font-size: 9px;
   color: #4c566a;
   text-transform: uppercase;
   letter-spacing: 0.4px;
