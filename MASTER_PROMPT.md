@@ -9,20 +9,20 @@ The plugin scaffold is complete with:
 - Canvas component with SVG bezier edges, animated flow, drag-and-drop, click-to-expand
 - Auto-layout algorithm (topological sort + tier-based positioning)
 - Edge utilities (anchor points, bezier paths, status calculation, thickness, flow speed)
-- Panel editor with example topology loader (Angular Portal E2E)
+- Panel editor with example topology loader (Sample E2E)
 - CSS with Nord-inspired dark theme
-- Example topology matching the Sauron's Eye dashboard: CF → PA (HA) → F5 (HA) → VS → Pool → 6x IIS
+- Example topology matching the Example: CDN → Firewall (HA) → LB (HA) → VS → Pool → 6x Web Servers
 
 ## What needs to happen next
 
 ### Immediate (get it running)
 1. Set up webpack config — the project needs `.config/webpack/webpack.config.ts` from `@grafana/create-plugin`. Run `npx @grafana/create-plugin@latest` in a temp directory, copy the `.config/` folder into this project, and verify `npm run dev` compiles without errors.
 2. Fix any TypeScript errors from the scaffold — the types are complete but some component imports may need adjustment.
-3. Build and install on https://grafana.mcoreops.com — copy dist/ to the Grafana plugins directory, add `allow_loading_unsigned_plugins = sid2-grafana-topology` to grafana.ini, restart Grafana.
+3. Build and install on (your Grafana URL) — copy dist/ to the Grafana plugins directory, add `allow_loading_unsigned_plugins = sid2-grafana-topology` to grafana.ini, restart Grafana.
 4. Create a test dashboard with the example topology and verify: nodes render, drag works, edges animate, expand/collapse works.
 
 ### Phase 2 — Grafana data integration
-5. Wire up actual Prometheus/Cloudflare/New Relic queries to node metrics — update datasourceUid and query fields in the example topology to match real datasources on grafana.mcoreops.com.
+5. Wire up actual Prometheus/Cloudflare/New Relic queries to node metrics — update datasourceUid and query fields in the example topology to match real datasources on your Grafana instance.
 6. Implement proper DataFrame → MetricValue mapping in TopologyPanel.tsx — currently uses refId matching, may need to use frame.name or field.labels for more precise matching.
 7. Add template variable support — use `replaceVariables()` from PanelProps on all query expressions before execution.
 

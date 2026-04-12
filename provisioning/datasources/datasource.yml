@@ -6,7 +6,7 @@ datasources:
     uid: testdata
     access: proxy
 
-  # Infinity — production Grafana REST API proxy
+  # Infinity datasource — connects to production Grafana REST API
   - name: Production Grafana API
     type: yesoreyeram-infinity-datasource
     uid: prod-grafana-infinity
@@ -15,17 +15,17 @@ datasources:
     jsonData:
       auth_method: bearerToken
       allowedHosts:
-        - https://grafana.mcoreops.com
+        - ${GRAFANA_URL}
     secureJsonData:
       bearerToken: ${GRAFANA_API_TOKEN}
 
-  # Prometheus — proxied through production Grafana
+  # Prometheus datasource — proxied through production Grafana
   - name: Production Prometheus
     type: prometheus
     uid: prod-prometheus
     isDefault: true
     access: proxy
-    url: https://grafana.mcoreops.com/api/datasources/proxy/uid/prometheus
+    url: ${GRAFANA_URL}/api/datasources/proxy/uid/prometheus
     jsonData:
       httpMethod: POST
       timeInterval: 15s
@@ -33,7 +33,7 @@ datasources:
     secureJsonData:
       httpHeaderValue1: Bearer ${GRAFANA_API_TOKEN}
 
-  # New Relic — direct Infinity datasource with NR API key
+  # New Relic — direct Infinity datasource
   - name: New Relic
     type: yesoreyeram-infinity-datasource
     uid: nr-infinity
@@ -54,21 +54,7 @@ datasources:
     access: proxy
     jsonData:
       authType: keys
-      defaultRegion: ap-east-1
+      defaultRegion: ${AWS_REGION:-us-east-1}
     secureJsonData:
       accessKey: ${AWS_ACCESS_KEY}
       secretKey: ${AWS_SECRET_KEY}
-
-  # CLD Kibana (Sportsbook logs) — direct Infinity
-  - name: CLD Kibana SB
-    type: yesoreyeram-infinity-datasource
-    uid: cld-kibana-infinity
-    access: proxy
-    jsonData:
-      auth_method: basicAuth
-      allowedHosts:
-        - https://cld-kibana.mansion88.net
-    secureJsonData:
-      basicAuthPassword: ${CLD_KIBANA_PASSWORD}
-    basicAuth: true
-    basicAuthUser: SRE-ADMIN

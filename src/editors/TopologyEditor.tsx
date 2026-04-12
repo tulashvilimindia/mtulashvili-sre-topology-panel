@@ -70,7 +70,7 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
   return {
     nodes: [
       {
-        id: 'n-cf', name: 'Cloudflare edge', role: 'CDN / WAF', type: 'cloudflare',
+        id: 'n-cdn', name: 'CDN Edge', role: 'CDN / WAF', type: 'cloudflare',
         position: { x: 245, y: 20 }, compact: false, width: 180,
         metrics: [
           { id: 'cf-rps', label: 'rps', datasourceUid: '', query: '', format: '${value}', section: 'Traffic', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 15000, color: 'yellow' }, { value: 25000, color: 'red' }], showSparkline: true },
@@ -80,8 +80,8 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
         ],
       },
       {
-        id: 'n-pa1', name: 'PA_FW01', role: 'active', type: 'firewall',
-        position: { x: 70, y: 175 }, compact: false, width: 200, groupId: 'grp-pa',
+        id: 'n-fw1', name: 'Firewall 01', role: 'active', type: 'firewall',
+        position: { x: 70, y: 175 }, compact: false, width: 200, groupId: 'grp-fw',
         metrics: [
           { id: 'pa1-sess', label: 'sessions', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
           { id: 'pa1-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
@@ -90,8 +90,8 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
         ],
       },
       {
-        id: 'n-pa2', name: 'PA_FW02', role: 'passive', type: 'firewall',
-        position: { x: 400, y: 175 }, compact: false, width: 200, groupId: 'grp-pa',
+        id: 'n-fw2', name: 'Firewall 02', role: 'passive', type: 'firewall',
+        position: { x: 400, y: 175 }, compact: false, width: 200, groupId: 'grp-fw',
         metrics: [
           { id: 'pa2-sess', label: 'sessions', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
           { id: 'pa2-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
@@ -99,8 +99,8 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
         ],
       },
       {
-        id: 'n-f51', name: 'F5_LTM01', role: 'active', type: 'loadbalancer',
-        position: { x: 70, y: 335 }, compact: false, width: 200, groupId: 'grp-f5',
+        id: 'n-lb1', name: 'Load Balancer 01', role: 'active', type: 'loadbalancer',
+        position: { x: 70, y: 335 }, compact: false, width: 200, groupId: 'grp-lb',
         metrics: [
           { id: 'f51-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: true },
           { id: 'f51-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
@@ -109,8 +109,8 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
         ],
       },
       {
-        id: 'n-f52', name: 'F5_LTM02', role: 'standby', type: 'loadbalancer',
-        position: { x: 400, y: 335 }, compact: false, width: 200, groupId: 'grp-f5',
+        id: 'n-lb2', name: 'Load Balancer 02', role: 'standby', type: 'loadbalancer',
+        position: { x: 400, y: 335 }, compact: false, width: 200, groupId: 'grp-lb',
         metrics: [
           { id: 'f52-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
           { id: 'f52-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
@@ -119,7 +119,7 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
         ],
       },
       {
-        id: 'n-vs', name: 'VS Angular 443', role: 'virtual server', type: 'virtualserver',
+        id: 'n-vs', name: 'VS Web 443', role: 'virtual server', type: 'virtualserver',
         position: { x: 175, y: 470 }, compact: false, width: 150,
         metrics: [
           { id: 'vs-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
@@ -129,7 +129,7 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
         ],
       },
       {
-        id: 'n-pl', name: 'Pool Angular', role: '6/6 up', type: 'pool',
+        id: 'n-pl', name: 'Web Pool', role: '6/6 up', type: 'pool',
         position: { x: 370, y: 470 }, compact: false, width: 150,
         metrics: [
           { id: 'pl-act', label: 'active', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
@@ -139,26 +139,26 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
         ],
       },
       ...Array.from({ length: 6 }, (_, i) => ({
-        id: `n-p${i + 1}`, name: `PP0${i + 1}`, role: '', type: 'server' as const,
-        position: { x: 15 + i * 110, y: 570 }, compact: true, width: 100, groupId: 'grp-iis',
+        id: `n-s${i + 1}`, name: `Server 0${i + 1}`, role: '', type: 'server' as const,
+        position: { x: 15 + i * 110, y: 570 }, compact: true, width: 100, groupId: 'grp-srv',
         metrics: [
-          { id: `p${i + 1}-cpu`, label: 'cpu', datasourceUid: '', query: '', format: '${value}', section: 'IIS', isSummary: true, thresholds: [t(0, 'green'), t(60, 'yellow'), t(80, 'red')], showSparkline: false },
-          { id: `p${i + 1}-ram`, label: 'ram', datasourceUid: '', query: '', format: '${value}', section: 'IIS', isSummary: true, thresholds: [t(0, 'green'), t(40, 'yellow'), t(70, 'red')], showSparkline: false },
-          { id: `p${i + 1}-rps`, label: 'rps', datasourceUid: '', query: '', format: '${value}', section: 'IIS', isSummary: false, thresholds: [t(0, 'green')], showSparkline: true },
-          { id: `p${i + 1}-5xx`, label: '5xx', datasourceUid: '', query: '', format: '${value}', section: 'IIS', isSummary: false, thresholds: [t(0, 'green'), t(1, 'yellow'), t(5, 'red')], showSparkline: false },
+          { id: `s${i + 1}-cpu`, label: 'cpu', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [t(0, 'green'), t(60, 'yellow'), t(80, 'red')], showSparkline: false },
+          { id: `s${i + 1}-ram`, label: 'ram', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [t(0, 'green'), t(40, 'yellow'), t(70, 'red')], showSparkline: false },
+          { id: `s${i + 1}-rps`, label: 'rps', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: false, thresholds: [t(0, 'green')], showSparkline: true },
+          { id: `s${i + 1}-5xx`, label: '5xx', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: false, thresholds: [t(0, 'green'), t(1, 'yellow'), t(5, 'red')], showSparkline: false },
         ],
       })),
     ],
     edges: [
-      { id: 'e-cf-pa1', sourceId: 'n-cf', targetId: 'n-pa1', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'auto', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '18.2k rps' },
-      { id: 'e-cf-pa2', sourceId: 'n-cf', targetId: 'n-pa2', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '6.1k rps' },
-      { id: 'e-pa1-f51', sourceId: 'n-pa1', targetId: 'n-f51', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'fast', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '34.6k sess' },
-      { id: 'e-pa2-f52', sourceId: 'n-pa2', targetId: 'n-f52', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: 'standby' },
-      { id: 'e-f51-vs', sourceId: 'n-f51', targetId: 'n-vs', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
-      { id: 'e-f52-vs', sourceId: 'n-f52', targetId: 'n-vs', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
+      { id: 'e-cdn-fw1', sourceId: 'n-cdn', targetId: 'n-fw1', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'auto', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '18.2k rps' },
+      { id: 'e-cdn-fw2', sourceId: 'n-cdn', targetId: 'n-fw2', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '6.1k rps' },
+      { id: 'e-fw1-lb1', sourceId: 'n-fw1', targetId: 'n-lb1', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'fast', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '34.6k sess' },
+      { id: 'e-fw2-lb2', sourceId: 'n-fw2', targetId: 'n-lb2', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: 'standby' },
+      { id: 'e-lb1-vs', sourceId: 'n-lb1', targetId: 'n-vs', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
+      { id: 'e-lb2-vs', sourceId: 'n-lb2', targetId: 'n-vs', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
       { id: 'e-vs-pl', sourceId: 'n-vs', targetId: 'n-pl', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '128' },
       ...Array.from({ length: 6 }, (_, i) => ({
-        id: `e-pl-p${i + 1}`, sourceId: 'n-pl', targetId: `n-p${i + 1}`, type: 'traffic' as const,
+        id: `e-pl-s${i + 1}`, sourceId: 'n-pl', targetId: `n-s${i + 1}`, type: 'traffic' as const,
         thicknessMode: 'fixed' as const, thicknessMin: 1.5, thicknessMax: 4,
         thresholds: [{ value: 0, color: 'green' as const }],
         flowAnimation: true, flowSpeed: 'auto' as const,
@@ -166,9 +166,9 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
       })),
     ],
     groups: [
-      { id: 'grp-pa', label: 'HA — Palo Alto', type: 'ha_pair', nodeIds: ['n-pa1', 'n-pa2'], style: 'dashed' },
-      { id: 'grp-f5', label: 'HA — F5 BIG-IP', type: 'ha_pair', nodeIds: ['n-f51', 'n-f52'], style: 'dashed' },
-      { id: 'grp-iis', label: 'IIS backend — Angular Portal', type: 'cluster', nodeIds: ['n-p1', 'n-p2', 'n-p3', 'n-p4', 'n-p5', 'n-p6'], style: 'dashed' },
+      { id: 'grp-fw', label: 'HA — Firewalls', type: 'ha_pair', nodeIds: ['n-fw1', 'n-fw2'], style: 'dashed' },
+      { id: 'grp-lb', label: 'HA — Load Balancers', type: 'ha_pair', nodeIds: ['n-lb1', 'n-lb2'], style: 'dashed' },
+      { id: 'grp-srv', label: 'Web Server Cluster', type: 'cluster', nodeIds: ['n-s1', 'n-s2', 'n-s3', 'n-s4', 'n-s5', 'n-s6'], style: 'dashed' },
     ],
   };
 }

@@ -2,7 +2,7 @@
 
 ## Project overview
 This is a custom Grafana panel plugin (`sid2-grafana-topology`) that renders interactive E2E topology diagrams with live metrics from any Grafana datasource. It is built for platform engineering teams to visualize infrastructure flows like:
-- Cloudflare → Palo Alto → F5 → IIS (Angular Portal frontend)
+- CDN → Firewall → Load Balancer → Web Server (any tiered frontend)
 - Any tiered application architecture
 
 ## Technology stack (exact versions and usage)
@@ -153,10 +153,8 @@ npm run build
 ```
 
 ## Grafana instance
-- URL: https://grafana.mcoreops.com
+- URL: (configure per deployment)
 - Org: 1
-- Existing dashboard: "Sauron's Eye — Angular Portal Full Traffic Trace"
-- Dashboard UID: 4f24ec2b-765f-4701-8fc2-c78d7d469e57
 
 ## Known TODOs (Phase 2+)
 - [ ] Visual node/edge editor in panel editor (drag-to-connect)

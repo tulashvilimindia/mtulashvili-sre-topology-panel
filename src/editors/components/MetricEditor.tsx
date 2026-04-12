@@ -64,7 +64,7 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
 
   // Existing sections used by sibling metrics (for Section dropdown)
   const sectionOptions = useMemo(() => {
-    const common = ['System', 'Traffic', 'Performance', 'Security', 'TMM', 'VS', 'IIS', 'Pool', 'Monitor', 'HA', 'Connections', 'General'];
+    const common = ['System', 'Traffic', 'Performance', 'Security', 'Network', 'Application', 'Pool', 'Monitor', 'Health', 'Connections', 'Throughput', 'General'];
     return common.map((s) => ({ label: s, value: s }));
   }, []);
 

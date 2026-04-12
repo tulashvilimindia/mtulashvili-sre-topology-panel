@@ -144,14 +144,14 @@ volumes:
 
 ### 2. Load Example Topology
 
-The plugin ships with a built-in example topology (Angular Portal E2E stack):
+The plugin ships with a built-in example topology (Sample E2E stack):
 
 - Open the panel editor
 - Scroll down to the **custom editor section**
-- Click **"Load example topology (Angular Portal E2E)"**
+- Click **"Load example topology (Sample E2E)"**
 - Click **Apply**
 
-This loads a complete topology: **Cloudflare > Palo Alto (HA) > F5 (HA) > Virtual Server > Pool > 6x IIS servers**
+This loads a complete topology: **Cloudflare > Firewall (HA) > F5 (HA) > Virtual Server > Pool > 6x IIS servers**
 
 ### 3. Interact
 
@@ -277,7 +277,7 @@ The topology is configured via the panel's JSON options. Each topology consists 
 ```json
 {
   "id": "grp-pa",
-  "label": "HA -- Palo Alto",
+  "label": "HA -- Firewall",
   "type": "ha_pair",
   "nodeIds": ["n-pa1", "n-pa2"],
   "style": "dashed"
@@ -309,7 +309,7 @@ curl -s http://your-grafana/api/datasources | jq '.[].uid'
 | Type | Icon | Default Color | Typical Use |
 |------|------|---------------|-------------|
 | `cloudflare` | CF | Gold | CDN / WAF edge |
-| `firewall` | PA | Red | Firewall (Palo Alto, etc.) |
+| `firewall` | PA | Red | Firewall (Firewall, etc.) |
 | `loadbalancer` | F5 | Orange | Load balancer (F5, HAProxy) |
 | `virtualserver` | VS | Purple | Virtual server / VIP |
 | `pool` | PL | Green | Server pool |
@@ -492,24 +492,24 @@ Every dependency listed with its exact resolved version, what it does in this pr
 
 ---
 
-## Example: Angular Portal E2E Stack
+## Example: Sample E2E Stack
 
 The built-in example topology visualizes this infrastructure flow:
 
 ```
 Cloudflare Edge (CDN/WAF)
     |
-    +-- PA_FW01 (active)  --+  HA Pair
-    +-- PA_FW02 (passive) --+
+    +-- Firewall_01 (active)  --+  HA Pair
+    +-- Firewall_02 (passive) --+
             |
-    +-- F5_LTM01 (active)  --+  HA Pair
-    +-- F5_LTM02 (standby) --+
+    +-- LB_01 (active)  --+  HA Pair
+    +-- LB_02 (standby) --+
             |
-        VS Angular 443 -- Pool Angular
+        VS Web 443 -- Web Pool
             |
     +---+---+---+---+---+---+
-   PP01 PP02 PP03 PP04 PP05 PP06
-         IIS Backend Cluster
+   SRV01 SRV02 SRV03 SRV04 SRV05 SRV06
+         Web Server Cluster
 ```
 
 ---

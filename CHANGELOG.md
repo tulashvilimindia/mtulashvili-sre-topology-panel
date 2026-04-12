@@ -9,5 +9,5 @@
 - Click-to-expand metric panels per node
 - HA pair and cluster group containers
 - Auto-layout via topological sort
-- Example topology (Angular Portal E2E stack)
+- Example topology (sample E2E infrastructure stack)
 - Nord-inspired dark theme

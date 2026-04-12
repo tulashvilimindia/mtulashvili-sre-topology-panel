@@ -6,7 +6,7 @@
     "description": "Interactive E2E topology diagram with live metrics, drag-and-drop positioning, animated flow connections, and expandable metric panels per node",
     "author": {
       "name": "SID2 Platform Engineering",
-      "url": "https://grafana.mcoreops.com"
+      "url": "https://github.com/tulashvilimindia/sid2-grafana-topology"
     },
     "keywords": ["topology", "diagram", "e2e", "architecture", "flow", "network"],
     "logos": {

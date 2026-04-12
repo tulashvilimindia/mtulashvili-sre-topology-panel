@@ -36,7 +36,7 @@ export interface DatasourceQueryConfig {
   namespace?: string;
   /** CloudWatch: metric name (e.g. "RequestCount") */
   metricName?: string;
-  /** CloudWatch: dimensions (e.g. {"LoadBalancer": "app/sb-prod..."}) */
+  /** CloudWatch: dimensions (e.g. {"LoadBalancer": "app/my-alb/abc123"}) */
   dimensions?: Record<string, string>;
   /** CloudWatch: stat (e.g. "Sum", "Average") */
   stat?: string;
