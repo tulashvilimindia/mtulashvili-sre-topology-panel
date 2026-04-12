@@ -6,7 +6,6 @@ import {
 } from '../types';
 import { getAnchorPoint, getBezierPath, getBezierMidpoint, EDGE_TYPE_STYLES } from '../utils/edges';
 import { ViewportState, DEFAULT_VIEWPORT, zoomAtPoint, fitToView } from '../utils/viewport';
-import { NodePopup } from './NodePopup';
 
 interface CanvasProps {
   nodes: TopologyNode[];
@@ -225,7 +224,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
         </defs>
 
         {/* Pre-compute parallel edge offsets */}
-        {edges.map((edge, edgeIndex) => {
+        {edges.map((edge) => {
           const sourceRect = getNodeRect(edge.sourceId);
           const targetId = edge.targetId;
           if (!sourceRect || !targetId) {return null;}
@@ -337,7 +336,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
         const memberPositions = group.nodeIds
           .map((id) => {
             const pos = nodePositions.get(id);
-            const node = nodes.find((n) => n.id === id);
+            const node = nodeById.get(id);
             if (!pos || !node) {return null;}
             const w = node.width || (node.compact ? 110 : 180);
             const h = 90;
@@ -363,7 +362,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               top: minY,
               width: maxX - minX,
               height: maxY - minY,
-              border: group.style === 'dashed' ? '1px dashed #2d374866' : '1px solid #2d374844',
+              border: group.style === 'dashed' ? '1px dashed #2d374866' : group.style === 'solid' ? '1px solid #2d374844' : 'none',
               borderRadius: 10,
               zIndex: 1,
               pointerEvents: 'none',

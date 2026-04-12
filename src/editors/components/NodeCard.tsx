@@ -78,7 +78,7 @@ function useMetricDiscovery(datasourceUid: string, job: string, instance: string
       try {
         const query = job
           ? `{job="${sanitizeLabel(job)}", instance="${sanitizeLabel(instance)}"}`
-          : `{instance="${instance}"}`;
+          : `{instance="${sanitizeLabel(instance)}"}`;
         const resp = await fetch(
           `/api/datasources/proxy/uid/${datasourceUid}/api/v1/series?` +
           new URLSearchParams({

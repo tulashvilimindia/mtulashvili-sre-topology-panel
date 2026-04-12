@@ -65,9 +65,13 @@ function useSelfQueries(
     return uncovered;
   }, [nodes, edges, panelSeries]);
 
+  // Track whether results exist via ref to avoid adding results to deps (which causes infinite loop)
+  const hasResultsRef = useRef(false);
+  hasResultsRef.current = results.size > 0;
+
   useEffect(() => {
     if (uncoveredMetrics.length === 0) {
-      if (results.size > 0) {
+      if (hasResultsRef.current) {
         setResults(new Map());
       }
       return;
@@ -97,7 +101,7 @@ function useSelfQueries(
         clearTimeout(fetchTimerRef.current);
       }
     };
-  }, [uncoveredMetrics, replaceVars, historicalTime, results]);
+  }, [uncoveredMetrics, replaceVars, historicalTime]);
 
   return { data: results, isLoading };
 }
