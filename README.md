@@ -30,7 +30,7 @@ The plugin supports three relationship patterns that cover all common topologies
 
 | Pattern | Example | Description |
 |---------|---------|-------------|
-| **1:1 direct** | CF -> PA | Single source, single target, one metric drives edge |
+| **1:1 direct** | CDN -> FW | Single source, single target, one metric drives edge |
 | **1:N fan-out** | Pool -> Members | One source fans out to multiple targets |
 | **HA pair bond** | PA1 <-> PA2 | Bidirectional edge with state mapping |
 
@@ -151,7 +151,7 @@ The plugin ships with a built-in example topology (Sample E2E stack):
 - Click **"Load example topology (Sample E2E)"**
 - Click **Apply**
 
-This loads a complete topology: **Cloudflare > Firewall (HA) > F5 (HA) > Virtual Server > Pool > 6x IIS servers**
+This loads a complete topology: **CDN > Firewall (HA) > Load Balancer (HA) > Virtual Server > Pool > 6x Web Servers**
 
 ### 3. Interact
 
@@ -309,11 +309,11 @@ curl -s http://your-grafana/api/datasources | jq '.[].uid'
 | Type | Icon | Default Color | Typical Use |
 |------|------|---------------|-------------|
 | `cloudflare` | CF | Gold | CDN / WAF edge |
-| `firewall` | PA | Red | Firewall (Firewall, etc.) |
-| `loadbalancer` | F5 | Orange | Load balancer (F5, HAProxy) |
+| `firewall` | FW | Red | Firewall |
+| `loadbalancer` | LB | Orange | Load balancer |
 | `virtualserver` | VS | Purple | Virtual server / VIP |
 | `pool` | PL | Green | Server pool |
-| `server` | IIS | Cyan | Application server |
+| `server` | SRV | Cyan | Application server |
 | `database` | DB | Blue | Database |
 | `cache` | RD | Red | Cache (Redis, etc.) |
 | `queue` | MQ | Gold | Message queue |

@@ -74,7 +74,7 @@ export interface TopologyNode {
   width?: number;
   /** Group this node belongs to (e.g. "ha-paloalto") */
   groupId?: string;
-  /** Whether this node is compact (mini node like IIS servers) */
+  /** Whether this node is compact (mini node for dense clusters) */
   compact: boolean;
   /** Annotation/notes for this node */
   description?: string;
@@ -309,11 +309,11 @@ export const DEFAULT_PANEL_OPTIONS: TopologyPanelOptions = {
 
 export const NODE_TYPE_CONFIG: Record<NodeType, { icon: string; color: string; defaultRole: string }> = {
   cloudflare: { icon: 'CF', color: '#ebcb8b', defaultRole: 'CDN / WAF' },
-  firewall: { icon: 'PA', color: '#bf616a', defaultRole: 'Firewall' },
-  loadbalancer: { icon: 'F5', color: '#d08770', defaultRole: 'Load Balancer' },
+  firewall: { icon: 'FW', color: '#bf616a', defaultRole: 'Firewall' },
+  loadbalancer: { icon: 'LB', color: '#d08770', defaultRole: 'Load Balancer' },
   virtualserver: { icon: 'VS', color: '#b48ead', defaultRole: 'Virtual Server' },
   pool: { icon: 'PL', color: '#a3be8c', defaultRole: 'Pool' },
-  server: { icon: 'IIS', color: '#88c0d0', defaultRole: 'Server' },
+  server: { icon: 'SRV', color: '#88c0d0', defaultRole: 'Server' },
   database: { icon: 'DB', color: '#5e81ac', defaultRole: 'Database' },
   cache: { icon: 'RD', color: '#bf616a', defaultRole: 'Cache' },
   queue: { icon: 'MQ', color: '#ebcb8b', defaultRole: 'Message Queue' },

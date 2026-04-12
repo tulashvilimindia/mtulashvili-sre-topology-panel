@@ -102,20 +102,20 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
         id: 'n-lb1', name: 'Load Balancer 01', role: 'active', type: 'loadbalancer',
         position: { x: 70, y: 335 }, compact: false, width: 200, groupId: 'grp-lb',
         metrics: [
-          { id: 'f51-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: true },
-          { id: 'f51-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
-          { id: 'f51-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'VS', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
-          { id: 'f51-ssl', label: 'ssl tps', datasourceUid: '', query: '', format: '${value}', section: 'VS', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 800, color: 'yellow' }, { value: 1200, color: 'red' }], showSparkline: false },
+          { id: 'lb1-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: true },
+          { id: 'lb1-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
+          { id: 'lb1-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
+          { id: 'lb1-ssl', label: 'ssl tps', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 800, color: 'yellow' }, { value: 1200, color: 'red' }], showSparkline: false },
         ],
       },
       {
         id: 'n-lb2', name: 'Load Balancer 02', role: 'standby', type: 'loadbalancer',
         position: { x: 400, y: 335 }, compact: false, width: 200, groupId: 'grp-lb',
         metrics: [
-          { id: 'f52-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
-          { id: 'f52-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'TMM', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
-          { id: 'f52-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'VS', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
-          { id: 'f52-sync', label: 'sync', datasourceUid: '', query: '', format: '${value}', section: 'HA', isSummary: false, thresholds: [], showSparkline: false },
+          { id: 'lb2-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
+          { id: 'lb2-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
+          { id: 'lb2-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
+          { id: 'lb2-sync', label: 'sync', datasourceUid: '', query: '', format: '${value}', section: 'HA', isSummary: false, thresholds: [], showSparkline: false },
         ],
       },
       {

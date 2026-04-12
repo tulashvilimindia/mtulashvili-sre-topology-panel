@@ -140,8 +140,8 @@ const BulkImport: React.FC<{ existingNodes: TopologyNode[]; onImport: (nodes: To
     const metricNames = [...selectedMetrics];
     const newNodes: TopologyNode[] = [...selectedHosts].map((instance, idx) => {
       const nodeMetrics: NodeMetricConfig[] = metricNames.map((name, mIdx) => ({
-        id: `${instance.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${name.replace(/^(windows_|cloudflare_|f5_|pan)/, '').substring(0, 15)}`,
-        label: name.replace(/^(windows_|cloudflare_|f5_|pan)/, '').replace(/_total$/, '').substring(0, 20),
+        id: `${instance.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${name.replace(/^(windows_|cloudflare_|node_|kube_|container_)/, '').substring(0, 15)}`,
+        label: name.replace(/^(windows_|cloudflare_|node_|kube_|container_)/, '').replace(/_total$/, '').substring(0, 20),
         datasourceUid: dsUid,
         query: name,
         format: '${value}',
@@ -232,7 +232,7 @@ const BulkImport: React.FC<{ existingNodes: TopologyNode[]; onImport: (nodes: To
             <Input
               value={metricFilter}
               onChange={(e) => setMetricFilter(e.currentTarget.value)}
-              placeholder="Filter metrics... (cpu, iis, mem...)"
+              placeholder="Filter metrics... (cpu, mem, request...)"
               prefix={<span style={{ fontSize: 10 }}>🔍</span>}
             />
           </div>

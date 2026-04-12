@@ -150,7 +150,7 @@ async function queryCloudWatch(
 }
 
 /**
- * Query Infinity datasource (NR, Kibana, Cloudflare) via /api/ds/query.
+ * Query Infinity datasource via Grafana's /api/ds/query endpoint.
  * Requires queryConfig with url, rootSelector, and optionally body/method.
  */
 async function queryInfinity(

@@ -118,7 +118,7 @@ src/
 
 ## Relationship model
 Three patterns cover all topologies:
-1. **1:1 direct**: CF → PA — single source, single target, one metric drives edge
+1. **1:1 direct**: CDN → FW — single source, single target, one metric drives edge
 2. **1:N fan-out with target_query**: Pool → members — auto-creates edges per pool member from Prometheus query
 3. **HA pair bond**: PA1 ↔ PA2 — bidirectional ha_sync edge with state mapping
 

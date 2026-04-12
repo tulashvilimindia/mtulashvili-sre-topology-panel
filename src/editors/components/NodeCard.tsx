@@ -147,7 +147,7 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
   const handleApplyMetrics = useCallback(() => {
     const newMetrics: NodeMetricConfig[] = [...selectedMetricNames].map((name, idx) => ({
       id: generateId('m'),
-      label: name.replace(/^(windows_|cloudflare_|f5_|pan)/, '').replace(/_total$/, '').substring(0, 20),
+      label: name.replace(/^(windows_|cloudflare_|node_|kube_|container_)/, '').replace(/_total$/, '').substring(0, 20),
       datasourceUid: dsUid,
       query: name,
       format: '${value}',
