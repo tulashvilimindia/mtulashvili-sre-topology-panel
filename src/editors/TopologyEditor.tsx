@@ -1,30 +1,26 @@
 import React from 'react';
+import { StandardEditorProps } from '@grafana/data';
 import { TopologyPanelOptions, ThresholdStep } from '../types';
 
-interface EditorProps {
-  options: TopologyPanelOptions;
-  onOptionsChange: (options: TopologyPanelOptions) => void;
-}
+type Props = StandardEditorProps<unknown, object, TopologyPanelOptions>;
 
 /**
- * TopologyEditor - Custom editor panel for configuring nodes, edges, and groups.
- * Registered via PanelPlugin.setEditor(), so it receives { options, onOptionsChange }.
+ * TopologyEditor - Custom editor widget for topology configuration info.
+ * Registered via addCustomEditor() in the Topology category.
+ * Displays node/edge/group counts and setup instructions.
+ * The "Load example" action lives in the TopologyPanel toolbar.
  */
-export const TopologyEditor: React.FC<EditorProps> = ({
-  options,
-  onOptionsChange,
-}) => {
+export const TopologyEditor: React.FC<Props> = ({ context }) => {
+  const options = context.options;
   const nodeCount = options?.nodes?.length || 0;
   const edgeCount = options?.edges?.length || 0;
   const groupCount = options?.groups?.length || 0;
 
   return (
-    <div style={{ padding: '12px' }}>
-      <h5 style={{ marginBottom: '8px' }}>Topology configuration</h5>
-      
-      <div style={{ 
-        background: '#1e2228', 
-        borderRadius: '6px', 
+    <div style={{ padding: '4px 0' }}>
+      <div style={{
+        background: '#1e2228',
+        borderRadius: '6px',
         padding: '12px',
         marginBottom: '12px',
         fontSize: '13px',
@@ -44,7 +40,8 @@ export const TopologyEditor: React.FC<EditorProps> = ({
         lineHeight: '1.6'
       }}>
         <p style={{ marginBottom: '8px' }}>
-          <strong>V1 Setup:</strong> Configure topology via the dashboard JSON editor.
+          <strong>Setup:</strong> Configure topology via dashboard JSON editor
+          or use the <em>Load example</em> button in the panel toolbar.
         </p>
         <p style={{ marginBottom: '8px' }}>
           1. Click the dashboard settings gear icon<br/>
@@ -56,38 +53,20 @@ export const TopologyEditor: React.FC<EditorProps> = ({
           See project documentation for the full JSON schema and example configurations.
         </p>
       </div>
-
-      <div style={{ marginTop: '12px' }}>
-        <button
-          style={{
-            background: '#2d3748',
-            border: '1px solid #4c566a',
-            color: '#d8dee9',
-            padding: '6px 16px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            width: '100%',
-          }}
-          onClick={() => {
-            // Load example topology
-            const exampleTopology = getExampleTopology();
-            onOptionsChange({ ...options, ...exampleTopology } as TopologyPanelOptions);
-          }}
-        >
-          Load example topology (Angular Portal E2E)
-        </button>
-      </div>
     </div>
   );
 };
+
+// ============================================================
+// Example topology data — exported for use by TopologyPanel toolbar
+// ============================================================
 
 // Helper to type threshold colors as literal union
 function t(value: number, color: 'green' | 'yellow' | 'red'): ThresholdStep {
   return { value, color };
 }
 
-function getExampleTopology(): Partial<TopologyPanelOptions> {
+export function getExampleTopology(): Partial<TopologyPanelOptions> {
   return {
     nodes: [
       {

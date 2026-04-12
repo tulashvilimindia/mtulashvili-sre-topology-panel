@@ -1,10 +1,11 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import {
   TopologyNode, TopologyEdge, NodeGroup,
   NodeRuntimeState, EdgeRuntimeState, TopologyPanelOptions,
   NODE_TYPE_CONFIG, STATUS_COLORS
 } from '../types';
 import { getAnchorPoint, getBezierPath, getBezierMidpoint, EDGE_TYPE_STYLES } from '../utils/edges';
+import { ViewportState, DEFAULT_VIEWPORT, zoomAtPoint, fitToView } from '../utils/viewport';
 
 interface CanvasProps {
   nodes: TopologyNode[];
@@ -31,6 +32,56 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [dragging, setDragging] = useState<{ nodeId: string; offX: number; offY: number } | null>(null);
   const hasMovedRef = useRef(false);
+
+  // Viewport zoom/pan state
+  const [viewport, setViewport] = useState<ViewportState>(DEFAULT_VIEWPORT);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+
+  // Mouse wheel zoom
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) {return;}
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+      setViewport((prev) => zoomAtPoint(prev, e.deltaY, cursorX, cursorY));
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  // Middle-mouse or Ctrl+drag pan
+  const handleCanvasPointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+      setIsPanning(true);
+      panStartRef.current = { x: e.clientX, y: e.clientY, tx: viewport.translateX, ty: viewport.translateY };
+      e.preventDefault();
+    }
+  }, [viewport.translateX, viewport.translateY]);
+
+  useEffect(() => {
+    if (!isPanning) {return;}
+    const handleMove = (e: PointerEvent) => {
+      if (!panStartRef.current) {return;}
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      setViewport((prev) => ({ ...prev, translateX: panStartRef.current!.tx + dx, translateY: panStartRef.current!.ty + dy }));
+    };
+    const handleUp = () => { setIsPanning(false); panStartRef.current = null; };
+    document.addEventListener('pointermove', handleMove);
+    document.addEventListener('pointerup', handleUp);
+    return () => { document.removeEventListener('pointermove', handleMove); document.removeEventListener('pointerup', handleUp); };
+  }, [isPanning]);
+
+  // Fit-to-view: compute and set viewport to show all nodes
+  const handleFitToView = useCallback(() => {
+    const widths = new Map<string, number>();
+    nodes.forEach((n) => { widths.set(n.id, n.width || (n.compact ? 110 : 180)); });
+    setViewport(fitToView(nodePositions, widths, width, height));
+  }, [nodePositions, nodes, width, height]);
   const onNodeDragRef = useRef(onNodeDrag);
   onNodeDragRef.current = onNodeDrag;
 
@@ -101,8 +152,11 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     <div
       ref={canvasRef}
       className="topology-canvas"
-      style={{ width, height, position: 'relative', overflow: 'hidden', ...gridStyle }}
+      style={{ width, height, position: 'relative', overflow: 'hidden', cursor: isPanning ? 'grabbing' : 'default', ...gridStyle }}
+      onPointerDown={handleCanvasPointerDown}
     >
+      {/* Viewport transform wrapper */}
+      <div style={{ transform: `translate(${viewport.translateX}px, ${viewport.translateY}px) scale(${viewport.scale})`, transformOrigin: '0 0', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
       {/* SVG Layer for edges */}
       <svg
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
@@ -119,6 +173,9 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           </marker>
           <marker id="topo-arrow-crit" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
             <path d="M2 2L8 5L2 8" fill="none" stroke="#bf616a" strokeWidth="1.5" strokeLinecap="round" />
+          </marker>
+          <marker id="topo-arrow-response" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M2 2L8 5L2 8" fill="none" stroke="#5e81ac" strokeWidth="1.5" strokeLinecap="round" />
           </marker>
         </defs>
 
@@ -141,18 +198,26 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           const flowSpeed = es?.animationSpeed || 0;
           const label = es?.formattedLabel;
 
-          const arrowId = edgeColor === '#bf616a' ? 'topo-arrow-crit'
+          const isResponse = edge.type === 'response';
+          const arrowId = isResponse ? 'topo-arrow-response'
+            : edgeColor === '#bf616a' ? 'topo-arrow-crit'
             : edgeColor === '#ebcb8b' ? 'topo-arrow-warn'
             : edgeColor === '#a3be8c' ? 'topo-arrow-ok'
             : 'topo-arrow-dim';
+          // Response edges render from target→source (reverse direction)
+          const renderFrom = isResponse ? to : from;
+          const renderTo = isResponse ? from : to;
+
+          const renderPath = getBezierPath(renderFrom, renderTo);
+          const renderColor = isResponse ? '#5e81ac' : edgeColor;
 
           return (
             <g key={edge.id}>
               {/* Base wire */}
               <path
-                d={fwdPath}
+                d={renderPath}
                 fill="none"
-                stroke="#2d3748"
+                stroke={isResponse ? '#2d374899' : '#2d3748'}
                 strokeWidth={thickness}
                 strokeDasharray={edgeStyle.dashArray}
                 markerEnd={`url(#${arrowId})`}
@@ -160,12 +225,12 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               {/* Animated flow overlay */}
               {flowSpeed > 0 && (
                 <path
-                  d={fwdPath}
+                  d={renderPath}
                   fill="none"
-                  stroke={edgeColor}
+                  stroke={renderColor}
                   strokeWidth={Math.max(thickness + 1, 2.5)}
                   strokeDasharray="6 10"
-                  opacity={0.55}
+                  opacity={isResponse ? 0.4 : 0.55}
                   style={{ animation: `topoFlow ${flowSpeed}s linear infinite` }}
                 />
               )}
@@ -364,6 +429,12 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           </div>
         );
       })}
+      </div>{/* end viewport transform wrapper */}
+      {/* Zoom controls overlay */}
+      <div style={{ position: 'absolute', bottom: 6, right: 6, display: 'flex', gap: 3, zIndex: 20 }}>
+        <button className="topology-btn" onClick={handleFitToView} title="Fit to view">Fit</button>
+        <button className="topology-btn" onClick={() => setViewport(DEFAULT_VIEWPORT)} title="Reset zoom">1:1</button>
+      </div>
     </div>
   );
 };

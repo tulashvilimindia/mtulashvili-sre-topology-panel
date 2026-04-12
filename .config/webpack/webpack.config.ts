@@ -92,7 +92,7 @@ const config = async (env: Env): Promise<Configuration> => {
             options: {
               jsc: {
                 baseUrl: '.',
-                target: 'es2015',
+                target: 'es2020',
                 loose: false,
                 parser: {
                   syntax: 'typescript',

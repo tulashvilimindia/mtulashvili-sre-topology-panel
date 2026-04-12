@@ -111,6 +111,30 @@ export function autoLayout(
 
   // Sort tier numbers
   const sortedTiers = [...tierGroups.keys()].sort((a, b) => a - b);
+  const tierCount = sortedTiers.length;
+
+  // Auto-reduce tier spacing for deep topologies to fit in canvas
+  let effectiveTierSpacing = config.tierSpacing;
+  if (config.direction === 'top-down' && tierCount > 5) {
+    const maxHeight = config.canvasHeight - 60;
+    const neededHeight = tierCount * config.tierSpacing;
+    if (neededHeight > maxHeight) {
+      effectiveTierSpacing = Math.max(60, Math.floor(maxHeight / tierCount));
+    }
+  }
+
+  // Sort nodes within tiers: grouped nodes stay adjacent
+  sortedTiers.forEach((tierNum) => {
+    const nodesInTier = tierGroups.get(tierNum)!;
+    nodesInTier.sort((a, b) => {
+      const gA = a.groupId || '';
+      const gB = b.groupId || '';
+      if (gA !== gB) {
+        return gA.localeCompare(gB);
+      }
+      return a.name.localeCompare(b.name);
+    });
+  });
 
   // Position each tier — compute total width/height from actual node dimensions
   sortedTiers.forEach((tierNum, tierIndex) => {
@@ -119,16 +143,30 @@ export function autoLayout(
     const nodeWidths = nodesInTier.map((n) => n.width || (n.compact ? 110 : 180));
 
     if (config.direction === 'top-down') {
-      const totalWidth = nodeWidths.reduce((sum, w) => sum + w, 0) + (nodeCount - 1) * config.nodeSpacing;
+      // Add extra spacing between groups within the same tier
+      let totalWidth = 0;
+      nodesInTier.forEach((node, idx) => {
+        totalWidth += nodeWidths[idx];
+        if (idx < nodeCount - 1) {
+          const nextNode = nodesInTier[idx + 1];
+          const sameGroup = node.groupId && node.groupId === nextNode.groupId;
+          totalWidth += sameGroup ? config.nodeSpacing : config.nodeSpacing * 2;
+        }
+      });
+
       const startX = Math.max(20, (config.canvasWidth - totalWidth) / 2);
       let xCursor = startX;
 
       nodesInTier.forEach((node, nodeIndex) => {
         positions.set(node.id, {
           x: xCursor,
-          y: 30 + tierIndex * config.tierSpacing,
+          y: 30 + tierIndex * effectiveTierSpacing,
         });
-        xCursor += nodeWidths[nodeIndex] + config.nodeSpacing;
+        if (nodeIndex < nodeCount - 1) {
+          const nextNode = nodesInTier[nodeIndex + 1];
+          const sameGroup = node.groupId && node.groupId === nextNode.groupId;
+          xCursor += nodeWidths[nodeIndex] + (sameGroup ? config.nodeSpacing : config.nodeSpacing * 2);
+        }
       });
     } else {
       // Left-right layout
@@ -137,7 +175,7 @@ export function autoLayout(
 
       nodesInTier.forEach((node, nodeIndex) => {
         positions.set(node.id, {
-          x: 30 + tierIndex * config.tierSpacing,
+          x: 30 + tierIndex * effectiveTierSpacing,
           y: startY + nodeIndex * (80 + config.nodeSpacing),
         });
       });

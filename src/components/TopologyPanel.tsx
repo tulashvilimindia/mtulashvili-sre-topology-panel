@@ -1,14 +1,103 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { PanelProps } from '@grafana/data';
-import { TopologyPanelOptions, NodeRuntimeState, NodeStatus, EdgeRuntimeState, MetricValue } from '../types';
+import { PanelProps, DataFrame } from '@grafana/data';
+import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, DatasourceQueryConfig, NODE_TYPE_CONFIG, STATUS_COLORS } from '../types';
 import { TopologyCanvas } from './TopologyCanvas';
 import { autoLayout } from '../utils/layout';
-import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed } from '../utils/edges';
+import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus } from '../utils/edges';
+import { queryDatasource } from '../utils/datasourceQuery';
+import { getExampleTopology } from '../editors/TopologyEditor';
 import './TopologyPanel.css';
 
 interface Props extends PanelProps<TopologyPanelOptions> {}
 
-export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data, width, height }) => {
+// ─── Auto-fetch: query datasources for metrics not covered by panel queries ───
+interface UncoveredMetric {
+  metricId: string;
+  dsUid: string;
+  query: string;
+  dsType?: string;
+  queryConfig?: DatasourceQueryConfig;
+}
+
+function useSelfQueries(
+  nodes: TopologyNode[],
+  edges: TopologyEdge[],
+  panelSeries: DataFrame[],
+  replaceVars?: (value: string) => string
+): Map<string, number | null> {
+  const [results, setResults] = useState<Map<string, number | null>>(new Map());
+  const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Collect node + edge metrics that need self-querying
+  const uncoveredMetrics = useMemo(() => {
+    const covered = new Set(panelSeries.map((f) => f.refId).filter(Boolean));
+    const uncovered: UncoveredMetric[] = [];
+
+    // Node metrics
+    nodes.forEach((node) => {
+      node.metrics.forEach((m) => {
+        if (m.datasourceUid && m.query && !covered.has(m.id)) {
+          uncovered.push({
+            metricId: m.id,
+            dsUid: m.datasourceUid,
+            query: m.query,
+            dsType: m.datasourceType,
+            queryConfig: m.queryConfig,
+          });
+        }
+      });
+    });
+
+    // Edge metrics
+    edges.forEach((edge) => {
+      if (edge.metric?.datasourceUid && edge.metric?.query && !covered.has(edge.id)) {
+        uncovered.push({
+          metricId: edge.id,
+          dsUid: edge.metric.datasourceUid,
+          query: edge.metric.query,
+        });
+      }
+    });
+
+    return uncovered;
+  }, [nodes, edges, panelSeries]);
+
+  useEffect(() => {
+    if (uncoveredMetrics.length === 0) {
+      if (results.size > 0) {
+        setResults(new Map());
+      }
+      return;
+    }
+
+    if (fetchTimerRef.current) {
+      clearTimeout(fetchTimerRef.current);
+    }
+
+    fetchTimerRef.current = setTimeout(async () => {
+      const newResults = new Map<string, number | null>();
+
+      // Query all uncovered metrics using the multi-DS abstraction
+      const promises = uncoveredMetrics.map(async (m) => {
+        const value = await queryDatasource(m.dsUid, m.query, m.dsType, m.queryConfig, replaceVars);
+        newResults.set(m.metricId, value);
+      });
+
+      await Promise.all(promises);
+      setResults(newResults);
+    }, 500);
+
+    return () => {
+      if (fetchTimerRef.current) {
+        clearTimeout(fetchTimerRef.current);
+      }
+    };
+  }, [uncoveredMetrics, replaceVars]);
+
+  return results;
+}
+
+export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data, width, height, replaceVariables }) => {
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
@@ -16,6 +105,9 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   const edges = useMemo(() => options.edges || [], [options.edges]);
   const groups = useMemo(() => options.groups || [], [options.groups]);
   const { canvas, animation, layout, display } = options;
+
+  // Auto-fetch metrics not covered by panel queries (supports Prometheus, CloudWatch, Infinity)
+  const selfQueryResults = useSelfQueries(nodes, edges, data.series, replaceVariables);
 
   // Ref to read current positions without triggering useEffect re-runs
   const nodePositionsRef = useRef(nodePositions);
@@ -28,8 +120,6 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     }
 
     const currentPositions = nodePositionsRef.current;
-
-    // Skip if all current nodes already have positions
     const allPositioned = nodes.every((n) => currentPositions.has(n.id));
     if (allPositioned) {
       return;
@@ -39,7 +129,6 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     let needsAutoLayout = false;
 
     nodes.forEach((node) => {
-      // Preserve existing drag positions for nodes that already have them
       const existing = currentPositions.get(node.id);
       if (existing) {
         positions.set(node.id, existing);
@@ -68,7 +157,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     setNodePositions(positions);
   }, [nodes, edges, layout, width, height]);
 
-  // Compute runtime state from data frames
+  // Compute runtime state from data frames + self-queried results
   const nodeStates = useMemo<Map<string, NodeRuntimeState>>(() => {
     const states = new Map<string, NodeRuntimeState>();
 
@@ -76,48 +165,53 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       const metricValues: Record<string, MetricValue> = {};
       let worstStatus: NodeStatus = node.metrics.length === 0 ? 'nodata' : 'ok';
 
-      // Match data frames to node metrics
       node.metrics.forEach((metricConfig) => {
+        // Try panel data first
         const matchingFrame = data.series.find(
           (frame) => frame.refId === metricConfig.id || frame.name === metricConfig.label
         );
 
+        let raw: number | null = null;
+        let sparklineValues: number[] | undefined;
+
         if (matchingFrame && matchingFrame.fields.length > 1) {
           const valueField = matchingFrame.fields.find((f) => f.type === 'number');
           if (valueField && valueField.values.length > 0) {
-            const raw = valueField.values[valueField.values.length - 1] as number;
-
-            // Evaluate thresholds
-            let status: 'ok' | 'warning' | 'critical' = 'ok';
-            for (const t of [...metricConfig.thresholds].sort((a, b) => b.value - a.value)) {
-              if (raw >= t.value) {
-                status = t.color === 'red' ? 'critical' : t.color === 'yellow' ? 'warning' : 'ok';
-                break;
-              }
+            raw = valueField.values[valueField.values.length - 1] as number;
+            if (metricConfig.showSparkline) {
+              sparklineValues = Array.from(valueField.values).slice(-12) as number[];
             }
-
-            // Track worst status
-            if (status === 'critical') {
-              worstStatus = 'critical';
-            } else if (status === 'warning' && worstStatus !== 'critical') {
-              worstStatus = 'warning';
-            }
-
-            // Collect sparkline data
-            const sparklineData = metricConfig.showSparkline
-              ? (Array.from(valueField.values).slice(-12) as number[])
-              : undefined;
-
-            metricValues[metricConfig.id] = {
-              raw,
-              formatted: metricConfig.format.replace('${value}', formatNumber(raw)),
-              status,
-              sparklineData,
-            };
           }
         }
 
-        // If no matching data, set nodata
+        // Fallback: try self-queried data
+        if (raw === null && selfQueryResults.has(metricConfig.id)) {
+          raw = selfQueryResults.get(metricConfig.id) ?? null;
+        }
+
+        if (raw !== null) {
+          let status: 'ok' | 'warning' | 'critical' = 'ok';
+          for (const t of [...metricConfig.thresholds].sort((a, b) => b.value - a.value)) {
+            if (raw >= t.value) {
+              status = t.color === 'red' ? 'critical' : t.color === 'yellow' ? 'warning' : 'ok';
+              break;
+            }
+          }
+
+          if (status === 'critical') {
+            worstStatus = 'critical';
+          } else if (status === 'warning' && worstStatus !== 'critical') {
+            worstStatus = 'warning';
+          }
+
+          metricValues[metricConfig.id] = {
+            raw,
+            formatted: metricConfig.format.replace('${value}', formatNumber(raw)),
+            status,
+            sparklineData: sparklineValues,
+          };
+        }
+
         if (!metricValues[metricConfig.id]) {
           metricValues[metricConfig.id] = {
             raw: null,
@@ -136,7 +230,27 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
 
     return states;
-  }, [nodes, data, expandedNodes]);
+  }, [nodes, data, expandedNodes, selfQueryResults]);
+
+  // Compute health summary: worst status per node type for toolbar indicator
+  const healthSummary = useMemo<Array<{ type: NodeType; icon: string; color: string; status: NodeStatus }>>(() => {
+    const byType = new Map<NodeType, NodeStatus>();
+    nodes.forEach((node) => {
+      const state = nodeStates.get(node.id);
+      const currentWorst = byType.get(node.type) || 'ok';
+      if (state && isWorseStatus(state.status, currentWorst)) {
+        byType.set(node.type, state.status);
+      } else if (!byType.has(node.type)) {
+        byType.set(node.type, state?.status || 'nodata');
+      }
+    });
+    return Array.from(byType).map(([type, status]) => ({
+      type,
+      icon: NODE_TYPE_CONFIG[type]?.icon || '?',
+      color: STATUS_COLORS[status] || '#4c566a',
+      status,
+    }));
+  }, [nodes, nodeStates]);
 
   // Compute edge runtime state from data frames
   const edgeStates = useMemo<Map<string, EdgeRuntimeState>>(() => {
@@ -145,7 +259,6 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     edges.forEach((edge) => {
       let value: number | null = null;
 
-      // Match data frame to edge metric
       if (edge.metric) {
         const matchingFrame = data.series.find(
           (frame) => frame.refId === edge.id || frame.name === edge.metric!.alias
@@ -158,6 +271,11 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         }
       }
 
+      // Fallback: try self-queried edge metric data
+      if (value === null && selfQueryResults.has(edge.id)) {
+        value = selfQueryResults.get(edge.id) ?? null;
+      }
+
       const status = calculateEdgeStatus(value, edge.thresholds);
       const color = getEdgeColor(status);
       const thickness = calculateThickness(value, edge.thicknessMode, edge.thicknessMin, edge.thicknessMax, edge.thresholds);
@@ -166,7 +284,6 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         ? calculateFlowSpeed(value, effectiveFlowSpeed, edge.thresholds)
         : 0;
 
-      // Interpolate label template
       let formattedLabel: string | undefined;
       if (edge.labelTemplate) {
         if (value !== null) {
@@ -188,9 +305,9 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
 
     return states;
-  }, [edges, data, animation.flowEnabled, animation.defaultFlowSpeed]);
+  }, [edges, data, animation.flowEnabled, animation.defaultFlowSpeed, selfQueryResults]);
 
-  // Persist positions to panel options after drag ends (debounced)
+  // Persist positions
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistPositions = useCallback((positions: Map<string, { x: number; y: number }>) => {
     if (persistTimerRef.current) {
@@ -205,7 +322,6 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     }, 300);
   }, [nodes, options, onOptionsChange]);
 
-  // Handle node drag
   const handleNodeDrag = useCallback(
     (nodeId: string, x: number, y: number) => {
       setNodePositions((prev) => {
@@ -225,20 +341,14 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     [canvas.snapToGrid, canvas.gridSize, persistPositions]
   );
 
-  // Handle node expand/collapse
   const handleNodeToggle = useCallback((nodeId: string) => {
     setExpandedNodes((prev) => {
       const next = new Set(prev);
-      if (next.has(nodeId)) {
-        next.delete(nodeId);
-      } else {
-        next.add(nodeId);
-      }
+      if (next.has(nodeId)) { next.delete(nodeId); } else { next.add(nodeId); }
       return next;
     });
   }, []);
 
-  // Reset layout
   const handleResetLayout = useCallback(() => {
     const autoPositions = autoLayout(nodes, edges, {
       direction: layout.direction,
@@ -251,12 +361,14 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     setExpandedNodes(new Set());
   }, [nodes, edges, layout, width, height]);
 
-  // Expand/collapse all
+  const handleLoadExample = useCallback(() => {
+    const exampleTopology = getExampleTopology();
+    onOptionsChange({ ...options, ...exampleTopology } as TopologyPanelOptions);
+  }, [options, onOptionsChange]);
+
   const handleExpandAll = useCallback(() => {
     setExpandedNodes((prev) => {
-      if (prev.size === nodes.length) {
-        return new Set();
-      }
+      if (prev.size === nodes.length) { return new Set(); }
       return new Set(nodes.map((n) => n.id));
     });
   }, [nodes]);
@@ -265,6 +377,18 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     <div className="topology-panel" style={{ width, height }}>
       <div className="topology-toolbar">
         <span className="topology-title">E2E topology</span>
+        {healthSummary.length > 0 && (
+          <div className="topology-health-bar">
+            {healthSummary.map((h) => (
+              <span
+                key={h.type}
+                className="topology-health-dot"
+                style={{ background: h.color }}
+                title={`${h.icon} ${h.type}: ${h.status}`}
+              />
+            ))}
+          </div>
+        )}
         <div className="topology-toolbar-spacer" />
         <button className="topology-btn" onClick={handleResetLayout}>
           Auto layout
@@ -272,6 +396,11 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         <button className="topology-btn" onClick={handleExpandAll}>
           {expandedNodes.size === nodes.length ? 'Collapse all' : 'Expand all'}
         </button>
+        {nodes.length === 0 && (
+          <button className="topology-btn" onClick={handleLoadExample}>
+            Load example
+          </button>
+        )}
       </div>
       <TopologyCanvas
         nodes={nodes}
@@ -284,7 +413,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         animationOptions={animation}
         displayOptions={display}
         width={width}
-        height={height - 36} // subtract toolbar height
+        height={height - 36}
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
       />

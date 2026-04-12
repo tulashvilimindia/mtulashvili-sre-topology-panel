@@ -1,7 +1,8 @@
-import React from 'react';
 import { PanelPlugin } from '@grafana/data';
 import { TopologyPanel } from './components/TopologyPanel';
-import { TopologyEditor } from './editors/TopologyEditor';
+import { NodesEditor } from './editors/NodesEditor';
+import { EdgesEditor } from './editors/EdgesEditor';
+import { GroupsEditor } from './editors/GroupsEditor';
 import { TopologyPanelOptions, DEFAULT_PANEL_OPTIONS } from './types';
 
 export const plugin = new PanelPlugin<TopologyPanelOptions>(TopologyPanel)
@@ -78,8 +79,26 @@ export const plugin = new PanelPlugin<TopologyPanelOptions>(TopologyPanel)
         name: 'Max summary metrics',
         description: 'Number of metrics shown in collapsed node view (1-6)',
         defaultValue: DEFAULT_PANEL_OPTIONS.display.maxSummaryMetrics,
+      })
+      .addCustomEditor({
+        id: 'topology-nodes',
+        path: 'nodes',
+        name: 'Nodes',
+        editor: NodesEditor,
+        category: ['Topology'],
+      })
+      .addCustomEditor({
+        id: 'topology-edges',
+        path: 'edges',
+        name: 'Relationships',
+        editor: EdgesEditor,
+        category: ['Topology'],
+      })
+      .addCustomEditor({
+        id: 'topology-groups',
+        path: 'groups',
+        name: 'Groups',
+        editor: GroupsEditor,
+        category: ['Topology'],
       });
-  })
-  // setEditor() SDK type requires ComponentClass but FC works at runtime in Grafana 10.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Grafana SDK type mismatch: setEditor expects class component, FC is compatible at runtime
-  .setEditor(TopologyEditor as unknown as React.ComponentClass<any>);
+  });

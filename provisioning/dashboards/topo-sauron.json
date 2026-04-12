@@ -1,0 +1,597 @@
+{
+  "dashboard": {
+    "title": "Topology \u2014 Sauron's Eye (Full Stack)",
+    "uid": "topo-sauron",
+    "panels": [
+      {
+        "id": 1,
+        "type": "sid2-grafana-topology",
+        "title": "Topology \u2014 Sauron's Eye (Full Stack)",
+        "gridPos": {
+          "h": 28,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "datasource": {
+          "uid": "prod-prometheus",
+          "type": "prometheus"
+        },
+        "targets": [],
+        "options": {
+          "canvas": {
+            "showGrid": true,
+            "gridSize": 20,
+            "snapToGrid": true,
+            "backgroundColor": "transparent"
+          },
+          "animation": {
+            "flowEnabled": true,
+            "defaultFlowSpeed": "auto",
+            "pulseOnCritical": true
+          },
+          "layout": {
+            "autoLayout": false,
+            "direction": "top-down",
+            "tierSpacing": 120,
+            "nodeSpacing": 20
+          },
+          "display": {
+            "showEdgeLabels": true,
+            "showNodeStatus": true,
+            "compactMode": false,
+            "maxSummaryMetrics": 4
+          },
+          "nodes": [
+            {
+              "id": "cf",
+              "name": "Cloudflare CDN",
+              "role": "60+ zones",
+              "type": "cloudflare",
+              "position": {
+                "x": 300,
+                "y": 0
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "cf-rps",
+                  "label": "rps",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "sum(rate(cloudflare_zone_requests_total[5m]))",
+                  "format": "${value} rps",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 100,
+                      "color": "yellow"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "pa",
+              "name": "PA Firewall",
+              "role": "HA pair",
+              "type": "firewall",
+              "position": {
+                "x": 300,
+                "y": 100
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "pa-sess",
+                  "label": "sessions",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "panSessionActive{job=\"snmp-pan\",instance=\"52.184.65.181\"}",
+                  "format": "${value}",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "f51",
+              "name": "F5 LTM01",
+              "role": "active",
+              "type": "loadbalancer",
+              "position": {
+                "x": 150,
+                "y": 200
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "f51-cpu",
+                  "label": "cpu",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "f5_system_tmmCpu{job=\"f5\",instance=\"PRD-NG-LTM01\"}",
+                  "format": "${value}%",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 60,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 80,
+                      "color": "red"
+                    }
+                  ]
+                },
+                {
+                  "id": "f51-mem",
+                  "label": "mem",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "f5_system_tmmMemory{job=\"f5\",instance=\"PRD-NG-LTM01\"}",
+                  "format": "${value}%",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "f52",
+              "name": "F5 LTM02",
+              "role": "standby",
+              "type": "loadbalancer",
+              "position": {
+                "x": 450,
+                "y": 200
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "f52-cpu",
+                  "label": "cpu",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "f5_system_tmmCpu{job=\"f5\",instance=\"PRD-NG-LTM02\"}",
+                  "format": "${value}%",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 60,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 80,
+                      "color": "red"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "alb",
+              "name": "AWS ALB",
+              "role": "8 load balancers",
+              "type": "loadbalancer",
+              "position": {
+                "x": 300,
+                "y": 300
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "iis",
+              "name": "IIS EC2",
+              "role": "Angular Portal",
+              "type": "server",
+              "position": {
+                "x": 150,
+                "y": 400
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "eks",
+              "name": "EKS Cluster",
+              "role": "K8s pods",
+              "type": "server",
+              "position": {
+                "x": 450,
+                "y": 400
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "redis",
+              "name": "Redis Cache",
+              "role": "3-node cluster",
+              "type": "cache",
+              "position": {
+                "x": 300,
+                "y": 500
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "nlb",
+              "name": "NLB",
+              "role": "DB gateway",
+              "type": "loadbalancer",
+              "position": {
+                "x": 300,
+                "y": 600
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "db1",
+              "name": "MSPORTSDB1",
+              "role": "primary",
+              "type": "database",
+              "position": {
+                "x": 200,
+                "y": 700
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "db1-batch",
+                  "label": "batch/s",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "rate(mssql_batch_requests{instance=\"MSPORTSDB1\"}[5m])",
+                  "format": "${value}",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db2",
+              "name": "ODDSDB1",
+              "role": "primary",
+              "type": "database",
+              "position": {
+                "x": 400,
+                "y": 700
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "db2-batch",
+                  "label": "batch/s",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "rate(mssql_batch_requests{instance=\"ODDSDB1\"}[5m])",
+                  "format": "${value}",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "sourceId": "cf",
+              "targetId": "pa",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e2",
+              "sourceId": "pa",
+              "targetId": "f51",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "fast",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e3",
+              "sourceId": "pa",
+              "targetId": "f52",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "slow",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e4",
+              "sourceId": "f51",
+              "targetId": "alb",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e5",
+              "sourceId": "f52",
+              "targetId": "alb",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e6",
+              "sourceId": "alb",
+              "targetId": "iis",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e7",
+              "sourceId": "alb",
+              "targetId": "eks",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e8",
+              "sourceId": "iis",
+              "targetId": "redis",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e9",
+              "sourceId": "eks",
+              "targetId": "redis",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e10",
+              "sourceId": "redis",
+              "targetId": "nlb",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e11",
+              "sourceId": "nlb",
+              "targetId": "db1",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "e12",
+              "sourceId": "nlb",
+              "targetId": "db2",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            }
+          ],
+          "groups": [
+            {
+              "id": "grp-f5",
+              "label": "HA \u2014 F5 BIG-IP",
+              "type": "ha_pair",
+              "nodeIds": [
+                "f51",
+                "f52"
+              ],
+              "style": "dashed"
+            },
+            {
+              "id": "grp-db",
+              "label": "MSSQL Cluster",
+              "type": "cluster",
+              "nodeIds": [
+                "db1",
+                "db2"
+              ],
+              "style": "dashed"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}

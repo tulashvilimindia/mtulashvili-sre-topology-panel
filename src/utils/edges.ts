@@ -1,4 +1,25 @@
-import { TopologyNode, TopologyEdge, AnchorPoint, EdgeStatus, STATUS_COLORS, ThresholdStep } from '../types';
+import { TopologyNode, TopologyEdge, AnchorPoint, EdgeStatus, NodeStatus, STATUS_COLORS, ThresholdStep } from '../types';
+
+/** Status severity ranking: higher number = worse status */
+const STATUS_SEVERITY: Record<string, number> = {
+  ok: 0,
+  healthy: 0,
+  nodata: 1,
+  unknown: 1,
+  warning: 2,
+  saturated: 2,
+  critical: 3,
+  degraded: 3,
+  down: 4,
+};
+
+/** Returns true if candidate is worse than current status */
+export function isWorseStatus(candidate: NodeStatus | undefined, current: NodeStatus): boolean {
+  if (!candidate) {
+    return false;
+  }
+  return (STATUS_SEVERITY[candidate] || 0) > (STATUS_SEVERITY[current] || 0);
+}
 
 interface Rect {
   x: number;
@@ -175,5 +196,6 @@ export const EDGE_TYPE_STYLES: Record<string, { dashArray: string; opacity: numb
   ha_sync: { dashArray: '6 4', opacity: 0.8 },
   failover: { dashArray: '2 4', opacity: 0.5 },
   monitor: { dashArray: '1 3', opacity: 0.6 },
+  response: { dashArray: '4 6', opacity: 0.7 },
   custom: { dashArray: '', opacity: 1 },
 };

@@ -13,9 +13,9 @@ This is a custom Grafana panel plugin (`sid2-grafana-topology`) that renders int
 |---------|-----------------|----------------------------|------------|
 | **React** | 18.3.1 | UI framework. All nodes, edges, toolbar, editor are React FC with hooks (useState, useEffect, useMemo, useCallback, useRef). Provided by Grafana at runtime via AMD externals. | `TopologyPanel.tsx`, `TopologyCanvas.tsx`, `TopologyEditor.tsx` |
 | **React DOM** | 18.3.1 | React renderer for browser DOM. Grafana external. | Implicit via React |
-| **@grafana/data** | 10.4.19 | Grafana SDK core. Provides `PanelPlugin` (plugin registration), `PanelProps` (panel component props with options/data/width/height/onOptionsChange), `DataFrames` (query result structure), `FieldType` (data field matching). | `module.ts` — PanelPlugin registration; `TopologyPanel.tsx` — PanelProps, data.series matching |
-| **@grafana/runtime** | 10.4.19 | Grafana SDK runtime services. Provides `replaceVariables()` for dashboard template variable interpolation ($cf_zone, $app). Loaded as external. | Reserved for Phase 2 template variable support |
-| **@grafana/ui** | 10.4.19 | Grafana SDK React components (Button, Icon, Select, Input). Loaded as external. Currently unused — plugin uses custom CSS for Nord theme consistency. | Available for Phase 3 visual editor |
+| **@grafana/data** | 12.0.10 | Grafana SDK core. Provides `PanelPlugin` (plugin registration), `PanelProps` (panel component props with options/data/width/height/onOptionsChange), `DataFrames` (query result structure), `FieldType` (data field matching). | `module.ts` — PanelPlugin registration; `TopologyPanel.tsx` — PanelProps, data.series matching |
+| **@grafana/runtime** | 12.0.10 | Grafana SDK runtime services. Provides `replaceVariables()` for dashboard template variable interpolation ($cf_zone, $app). Loaded as external. | Reserved for Phase 2 template variable support |
+| **@grafana/ui** | 12.0.10 | Grafana SDK React components (Button, Icon, Select, Input). Loaded as external. Currently unused — plugin uses custom CSS for Nord theme consistency. | Available for Phase 3 visual editor |
 | **Lodash** | 4.18.1 | Utility library. Grafana external. Currently unused in source but declared as webpack external. | Webpack externals only |
 
 ### Build system
@@ -50,7 +50,7 @@ This is a custom Grafana panel plugin (`sid2-grafana-topology`) that renders int
 | **@swc/jest** | 0.2.39 | Jest transformer using SWC. 5-10x faster than ts-jest for TS/TSX compilation in tests. | `.config/jest.config.js` — transform |
 | **@testing-library/react** | 14.3.1 | React testing utilities: `render()`, `screen`, `fireEvent`. Tests components from user perspective. | Test files (`*.test.tsx`) |
 | **@testing-library/jest-dom** | 6.9.1 | Custom matchers: `toBeInTheDocument()`, `toHaveClass()`, `toBeVisible()`. | `jest-setup.js` → `.config/jest-setup.js` |
-| **@grafana/plugin-e2e** | 1.0.0 | Grafana's Playwright-based E2E framework for plugin testing against running Grafana. | Reserved for Phase 2 E2E tests |
+| **@grafana/plugin-e2e** | 3.4.12 | Grafana's Playwright-based E2E framework for plugin testing against running Grafana. | Reserved for Phase 2 E2E tests |
 | **identity-obj-proxy** | 3.0.0 | Mocks CSS imports in Jest: `import styles from './X.css'` → `{ className: 'className' }`. | `.config/jest.config.js` — moduleNameMapper |
 
 ### Code quality
@@ -80,7 +80,7 @@ This is a custom Grafana panel plugin (`sid2-grafana-topology`) that renders int
 | **Node.js** | 24.14.0 (>=18 required) | JS runtime for build tools. Requires `TS_NODE_COMPILER_OPTIONS` workaround on v24+. | `package.json` engines |
 | **npm** | 11.9.0 | Package manager. Lockfile: `package-lock.json`. | Standard |
 | **Docker** | Host system | Runs local Grafana 10.4.0 via `docker-compose.yaml`. Builds from `.config/Dockerfile` (Alpine + supervisord). | `docker-compose.yaml` |
-| **Grafana Enterprise** | 10.4.0 | Target host for the panel plugin. Docker image with anonymous auth (Admin role), unsigned plugin allowlist, debug logging. Dev port: **13100**. | `docker-compose.yaml` — build args, environment, ports |
+| **Grafana Enterprise** | 12.0.0 | Target host for the panel plugin. Docker image with anonymous auth (Admin role), unsigned plugin allowlist, debug logging. Dev port: **13100**. | `docker-compose.yaml` — build args, environment, ports |
 | **supervisord** | Alpine pkg | Process manager inside Docker. Runs Grafana's `/run.sh` with stdout logging to container. | `.config/supervisord/supervisord.conf` |
 
 ## Key architecture decisions

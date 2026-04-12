@@ -1,0 +1,679 @@
+{
+  "dashboard": {
+    "title": "Topology \u2014 E2E Full Lifecycle",
+    "uid": "topo-lifecycle",
+    "panels": [
+      {
+        "id": 1,
+        "type": "sid2-grafana-topology",
+        "title": "Topology \u2014 E2E Full Lifecycle",
+        "gridPos": {
+          "h": 28,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "datasource": {
+          "uid": "prod-prometheus",
+          "type": "prometheus"
+        },
+        "targets": [],
+        "options": {
+          "canvas": {
+            "showGrid": true,
+            "gridSize": 20,
+            "snapToGrid": true,
+            "backgroundColor": "transparent"
+          },
+          "animation": {
+            "flowEnabled": true,
+            "defaultFlowSpeed": "auto",
+            "pulseOnCritical": true
+          },
+          "layout": {
+            "autoLayout": false,
+            "direction": "top-down",
+            "tierSpacing": 120,
+            "nodeSpacing": 20
+          },
+          "display": {
+            "showEdgeLabels": true,
+            "showNodeStatus": true,
+            "compactMode": false,
+            "maxSummaryMetrics": 4
+          },
+          "nodes": [
+            {
+              "id": "cf3",
+              "name": "Cloudflare",
+              "role": "CDN/WAF",
+              "type": "cloudflare",
+              "position": {
+                "x": 300,
+                "y": 0
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "cf3-rps",
+                  "label": "rps",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "sum(rate(cloudflare_zone_requests_total{zone=\"cnmglobal04.com\"}[5m]))",
+                  "format": "${value} rps",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "ga3",
+              "name": "Global Accelerator",
+              "role": "AWS",
+              "type": "custom",
+              "position": {
+                "x": 300,
+                "y": 100
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "alb3",
+              "name": "ALB Fleet",
+              "role": "8 ALBs",
+              "type": "loadbalancer",
+              "position": {
+                "x": 300,
+                "y": 200
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "eks3",
+              "name": "EKS Cluster",
+              "role": "8 deployments",
+              "type": "server",
+              "position": {
+                "x": 150,
+                "y": 320
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "feed3",
+              "name": "Data Feeds",
+              "role": "8 SPOFs",
+              "type": "queue",
+              "position": {
+                "x": 500,
+                "y": 320
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "redis3a",
+              "name": "Redis Primary",
+              "role": "sb-prod",
+              "type": "cache",
+              "position": {
+                "x": 50,
+                "y": 440
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "redis3b",
+              "name": "Redis BetGenius",
+              "role": "betgenius",
+              "type": "cache",
+              "position": {
+                "x": 250,
+                "y": 440
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "redis3c",
+              "name": "Redis GoldenOdds",
+              "role": "goldenodds",
+              "type": "cache",
+              "position": {
+                "x": 450,
+                "y": 440
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "nlb3",
+              "name": "NLB Fleet",
+              "role": "3 NLBs",
+              "type": "loadbalancer",
+              "position": {
+                "x": 300,
+                "y": 540
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": []
+            },
+            {
+              "id": "db3a",
+              "name": "MSPORTSDB1",
+              "role": "primary",
+              "type": "database",
+              "position": {
+                "x": 100,
+                "y": 650
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "db3a-batch",
+                  "label": "batch/s",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "rate(mssql_batch_requests{instance=\"MSPORTSDB1\"}[5m])",
+                  "format": "${value}",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                },
+                {
+                  "id": "db3a-ple",
+                  "label": "PLE",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "mssql_page_life_expectancy_seconds{instance=\"MSPORTSDB1\"}",
+                  "format": "${value}s",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db3b",
+              "name": "MSPORTSDB2",
+              "role": "replica",
+              "type": "database",
+              "position": {
+                "x": 250,
+                "y": 650
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "db3b-batch",
+                  "label": "batch/s",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "rate(mssql_batch_requests{instance=\"MSPORTSDB2\"}[5m])",
+                  "format": "${value}",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db3c",
+              "name": "ODDSDB1",
+              "role": "primary",
+              "type": "database",
+              "position": {
+                "x": 400,
+                "y": 650
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "db3c-batch",
+                  "label": "batch/s",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "rate(mssql_batch_requests{instance=\"ODDSDB1\"}[5m])",
+                  "format": "${value}",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db3d",
+              "name": "ODDSDB2",
+              "role": "replica",
+              "type": "database",
+              "position": {
+                "x": 550,
+                "y": 650
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "db3d-batch",
+                  "label": "batch/s",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "rate(mssql_batch_requests{instance=\"ODDSDB2\"}[5m])",
+                  "format": "${value}",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "probe3",
+              "name": "Synthetics",
+              "role": "NR + isitup",
+              "type": "custom",
+              "position": {
+                "x": 550,
+                "y": 100
+              },
+              "compact": false,
+              "width": 180,
+              "metrics": [
+                {
+                  "id": "probe3-up",
+                  "label": "SB UP",
+                  "datasourceUid": "prod-prometheus",
+                  "query": "avg(isitup_target_up{deviceGroup=~\"SB.*\"})",
+                  "format": "${value}",
+                  "section": "General",
+                  "isSummary": true,
+                  "showSparkline": false,
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "t3e1",
+              "sourceId": "cf3",
+              "targetId": "ga3",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e2",
+              "sourceId": "ga3",
+              "targetId": "alb3",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e3",
+              "sourceId": "alb3",
+              "targetId": "eks3",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e4",
+              "sourceId": "alb3",
+              "targetId": "feed3",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e5",
+              "sourceId": "eks3",
+              "targetId": "redis3a",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e6",
+              "sourceId": "eks3",
+              "targetId": "redis3b",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e7",
+              "sourceId": "feed3",
+              "targetId": "redis3c",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e8",
+              "sourceId": "redis3a",
+              "targetId": "nlb3",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e9",
+              "sourceId": "redis3b",
+              "targetId": "nlb3",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e10",
+              "sourceId": "redis3c",
+              "targetId": "nlb3",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e11",
+              "sourceId": "nlb3",
+              "targetId": "db3a",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e12",
+              "sourceId": "nlb3",
+              "targetId": "db3b",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e13",
+              "sourceId": "nlb3",
+              "targetId": "db3c",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e14",
+              "sourceId": "nlb3",
+              "targetId": "db3d",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            },
+            {
+              "id": "t3e15",
+              "sourceId": "cf3",
+              "targetId": "probe3",
+              "type": "traffic",
+              "thicknessMode": "fixed",
+              "thicknessMin": 1.5,
+              "thicknessMax": 4,
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "green"
+                }
+              ],
+              "flowAnimation": true,
+              "flowSpeed": "auto",
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto"
+            }
+          ],
+          "groups": [
+            {
+              "id": "grp-redis3",
+              "label": "Redis Fleet",
+              "type": "cluster",
+              "nodeIds": [
+                "redis3a",
+                "redis3b",
+                "redis3c"
+              ],
+              "style": "dashed"
+            },
+            {
+              "id": "grp-db3",
+              "label": "MSSQL Fleet",
+              "type": "cluster",
+              "nodeIds": [
+                "db3a",
+                "db3b",
+                "db3c",
+                "db3d"
+              ],
+              "style": "dashed"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}

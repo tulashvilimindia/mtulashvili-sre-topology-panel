@@ -1,10 +1,8 @@
-import { DataQuery } from '@grafana/data';
-
 // ============================================================
 // NODE TYPES
 // ============================================================
 
-export type NodeType = 'cloudflare' | 'firewall' | 'loadbalancer' | 'virtualserver' | 'pool' | 'server' | 'database' | 'cache' | 'queue' | 'custom';
+export type NodeType = 'cloudflare' | 'firewall' | 'loadbalancer' | 'virtualserver' | 'pool' | 'server' | 'database' | 'cache' | 'queue' | 'alb' | 'nlb' | 'nat' | 'kubernetes' | 'accelerator' | 'logs' | 'probe' | 'custom';
 export type NodeStatus = 'ok' | 'warning' | 'critical' | 'unknown' | 'nodata';
 
 export interface NodeMetricConfig {
@@ -26,6 +24,32 @@ export interface NodeMetricConfig {
   thresholds: ThresholdStep[];
   /** Show sparkline in expanded view */
   showSparkline: boolean;
+  /** Datasource type hint for query routing (auto-detected if not set) */
+  datasourceType?: string;
+  /** Extra config for non-Prometheus datasources (CloudWatch dimensions, Infinity URL/rootSelector) */
+  queryConfig?: DatasourceQueryConfig;
+}
+
+/** Configuration for non-Prometheus datasource queries */
+export interface DatasourceQueryConfig {
+  /** CloudWatch: namespace (e.g. "AWS/ApplicationELB") */
+  namespace?: string;
+  /** CloudWatch: metric name (e.g. "RequestCount") */
+  metricName?: string;
+  /** CloudWatch: dimensions (e.g. {"LoadBalancer": "app/sb-prod..."}) */
+  dimensions?: Record<string, string>;
+  /** CloudWatch: stat (e.g. "Sum", "Average") */
+  stat?: string;
+  /** CloudWatch: period in seconds */
+  period?: number;
+  /** Infinity: URL to query */
+  url?: string;
+  /** Infinity: JSON root selector (e.g. "data.viewer.zones.0.httpRequestsAdaptiveGroups") */
+  rootSelector?: string;
+  /** Infinity: HTTP method */
+  method?: string;
+  /** Infinity: POST body */
+  body?: string;
 }
 
 export interface ThresholdStep {
@@ -52,6 +76,8 @@ export interface TopologyNode {
   groupId?: string;
   /** Whether this node is compact (mini node like IIS servers) */
   compact: boolean;
+  /** Annotation/notes for this node */
+  description?: string;
 }
 
 // ============================================================
@@ -75,7 +101,7 @@ export interface NodeGroup {
 // EDGE / RELATIONSHIP TYPES
 // ============================================================
 
-export type EdgeType = 'traffic' | 'ha_sync' | 'failover' | 'monitor' | 'custom';
+export type EdgeType = 'traffic' | 'ha_sync' | 'failover' | 'monitor' | 'response' | 'custom';
 export type EdgeStatus = 'healthy' | 'saturated' | 'degraded' | 'down' | 'nodata';
 export type ThicknessMode = 'fixed' | 'proportional' | 'threshold';
 export type FlowSpeed = 'auto' | 'slow' | 'normal' | 'fast' | 'none';
@@ -125,6 +151,10 @@ export interface TopologyEdge {
   anchorTarget: AnchorPoint;
   /** State mapping for non-numeric metrics (e.g. HA sync) */
   stateMap?: Record<string, string>;
+  /** Annotation/notes for this edge */
+  description?: string;
+  /** Latency label (e.g. "p95: 12ms") displayed alongside metric label */
+  latencyLabel?: string;
 }
 
 /** For edges where targets are discovered from a metric query */
@@ -283,6 +313,13 @@ export const NODE_TYPE_CONFIG: Record<NodeType, { icon: string; color: string; d
   database: { icon: 'DB', color: '#5e81ac', defaultRole: 'Database' },
   cache: { icon: 'RD', color: '#bf616a', defaultRole: 'Cache' },
   queue: { icon: 'MQ', color: '#ebcb8b', defaultRole: 'Message Queue' },
+  alb: { icon: 'ALB', color: '#d08770', defaultRole: 'Application LB' },
+  nlb: { icon: 'NLB', color: '#d08770', defaultRole: 'Network LB' },
+  nat: { icon: 'NAT', color: '#b48ead', defaultRole: 'NAT Gateway' },
+  kubernetes: { icon: 'K8s', color: '#326ce5', defaultRole: 'Kubernetes' },
+  accelerator: { icon: 'GA', color: '#ebcb8b', defaultRole: 'Global Accelerator' },
+  logs: { icon: 'LOG', color: '#5e81ac', defaultRole: 'Log Aggregator' },
+  probe: { icon: 'PRB', color: '#88c0d0', defaultRole: 'Synthetic Probe' },
   custom: { icon: '?', color: '#4c566a', defaultRole: '' },
 };
 

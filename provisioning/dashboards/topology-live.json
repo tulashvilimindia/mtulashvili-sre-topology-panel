@@ -1,0 +1,157 @@
+{
+  "dashboard": {
+    "title": "E2E Topology — Live Production Data",
+    "uid": "topology-live-test",
+    "panels": [{
+      "id": 1,
+      "type": "sid2-grafana-topology",
+      "title": "Angular Portal E2E",
+      "gridPos": {"h": 24, "w": 24, "x": 0, "y": 0},
+      "datasource": {"uid": "prod-prometheus", "type": "prometheus"},
+      "targets": [
+        {"refId": "cf-rps", "datasource": {"uid": "prod-prometheus"}, "expr": "sum(rate(cloudflare_zone_requests_total{zone=\"cnmglobal04.com\"}[5m]))", "instant": true},
+        {"refId": "cf-cache", "datasource": {"uid": "prod-prometheus"}, "expr": "sum(rate(cloudflare_zone_bandwidth_cached{zone=\"cnmglobal04.com\"}[5m])) / sum(rate(cloudflare_zone_bandwidth_total{zone=\"cnmglobal04.com\"}[5m])) * 100", "instant": true},
+
+        {"refId": "pa1-sess", "datasource": {"uid": "prod-prometheus"}, "expr": "panSessionActive{job=\"snmp-pan\", instance=\"52.184.65.181\"}", "instant": true},
+        {"refId": "pa1-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "panSessionUtilization{job=\"snmp-pan\", instance=\"52.184.65.181\"}", "instant": true},
+
+        {"refId": "f51-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "f5_system_tmmCpu{job=\"f5\", instance=\"PRD-NG-LTM01\"}", "instant": true},
+        {"refId": "f51-mem", "datasource": {"uid": "prod-prometheus"}, "expr": "f5_system_tmmMemory{job=\"f5\", instance=\"PRD-NG-LTM01\"}", "instant": true},
+        {"refId": "f51-conns", "datasource": {"uid": "prod-prometheus"}, "expr": "sum(f5_clientside_curConns{job=\"f5\", instance=\"PRD-NG-LTM01\"})", "instant": true},
+        {"refId": "f51-ssl", "datasource": {"uid": "prod-prometheus"}, "expr": "f5_system_throughputPerformance_sslTps_current{job=\"f5\", instance=\"PRD-NG-LTM01\"}", "instant": true},
+
+        {"refId": "f52-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "f5_system_tmmCpu{job=\"f5\", instance=\"PRD-NG-LTM02\"}", "instant": true},
+        {"refId": "f52-mem", "datasource": {"uid": "prod-prometheus"}, "expr": "f5_system_tmmMemory{job=\"f5\", instance=\"PRD-NG-LTM02\"}", "instant": true},
+        {"refId": "f52-conns", "datasource": {"uid": "prod-prometheus"}, "expr": "sum(f5_clientside_curConns{job=\"f5\", instance=\"PRD-NG-LTM02\"})", "instant": true},
+
+        {"refId": "vs-conns", "datasource": {"uid": "prod-prometheus"}, "expr": "f5_clientside_curConns{job=\"f5\", instance=\"PRD-NG-LTM01\", virtualServers=\"/Common/ANGULAR_iNMANPR_PP_443\"}", "instant": true},
+
+        {"refId": "pl-act", "datasource": {"uid": "prod-prometheus"}, "expr": "f5_activeMemberCnt{job=\"f5\", instance=\"PRD-NG-LTM01\", pools=\"/Common/ANGULAR_iNMANPR_PP.pool_80\"}", "instant": true},
+
+        {"refId": "p1-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "100 - (avg by (instance) (rate(windows_cpu_time_total{instance=~\".*PP01.*\", job=\"angular-prd-servers\", mode=\"idle\"}[5m])) * 100)", "instant": true},
+        {"refId": "p1-ram", "datasource": {"uid": "prod-prometheus"}, "expr": "(1 - sum by(instance) (windows_os_physical_memory_free_bytes{instance=~\".*PP01.*\", job=\"angular-prd-servers\"}) / sum by(instance) (windows_cs_physical_memory_bytes{instance=~\".*PP01.*\", job=\"angular-prd-servers\"})) * 100", "instant": true},
+        {"refId": "p1-rps", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_requests_total{instance=~\".*PP01.*\", job=\"angular-prd-servers\"}[5m]))", "instant": true},
+        {"refId": "p1-5xx", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_worker_request_errors_total{instance=~\".*PP01.*\", job=\"angular-prd-servers\"}[5m])) * 60", "instant": true},
+
+        {"refId": "p2-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "100 - (avg by (instance) (rate(windows_cpu_time_total{instance=~\".*PP02.*\", job=\"angular-prd-servers\", mode=\"idle\"}[5m])) * 100)", "instant": true},
+        {"refId": "p2-ram", "datasource": {"uid": "prod-prometheus"}, "expr": "(1 - sum by(instance) (windows_os_physical_memory_free_bytes{instance=~\".*PP02.*\", job=\"angular-prd-servers\"}) / sum by(instance) (windows_cs_physical_memory_bytes{instance=~\".*PP02.*\", job=\"angular-prd-servers\"})) * 100", "instant": true},
+        {"refId": "p2-rps", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_requests_total{instance=~\".*PP02.*\", job=\"angular-prd-servers\"}[5m]))", "instant": true},
+        {"refId": "p2-5xx", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_worker_request_errors_total{instance=~\".*PP02.*\", job=\"angular-prd-servers\"}[5m])) * 60", "instant": true},
+
+        {"refId": "p3-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "100 - (avg by (instance) (rate(windows_cpu_time_total{instance=~\".*PP03.*\", job=\"angular-prd-servers\", mode=\"idle\"}[5m])) * 100)", "instant": true},
+        {"refId": "p3-ram", "datasource": {"uid": "prod-prometheus"}, "expr": "(1 - sum by(instance) (windows_os_physical_memory_free_bytes{instance=~\".*PP03.*\", job=\"angular-prd-servers\"}) / sum by(instance) (windows_cs_physical_memory_bytes{instance=~\".*PP03.*\", job=\"angular-prd-servers\"})) * 100", "instant": true},
+        {"refId": "p3-rps", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_requests_total{instance=~\".*PP03.*\", job=\"angular-prd-servers\"}[5m]))", "instant": true},
+        {"refId": "p3-5xx", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_worker_request_errors_total{instance=~\".*PP03.*\", job=\"angular-prd-servers\"}[5m])) * 60", "instant": true},
+
+        {"refId": "p4-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "100 - (avg by (instance) (rate(windows_cpu_time_total{instance=~\".*PP04.*\", job=\"angular-prd-servers\", mode=\"idle\"}[5m])) * 100)", "instant": true},
+        {"refId": "p4-ram", "datasource": {"uid": "prod-prometheus"}, "expr": "(1 - sum by(instance) (windows_os_physical_memory_free_bytes{instance=~\".*PP04.*\", job=\"angular-prd-servers\"}) / sum by(instance) (windows_cs_physical_memory_bytes{instance=~\".*PP04.*\", job=\"angular-prd-servers\"})) * 100", "instant": true},
+        {"refId": "p4-rps", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_requests_total{instance=~\".*PP04.*\", job=\"angular-prd-servers\"}[5m]))", "instant": true},
+        {"refId": "p4-5xx", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_worker_request_errors_total{instance=~\".*PP04.*\", job=\"angular-prd-servers\"}[5m])) * 60", "instant": true},
+
+        {"refId": "p5-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "100 - (avg by (instance) (rate(windows_cpu_time_total{instance=~\".*PP05.*\", job=\"angular-prd-servers\", mode=\"idle\"}[5m])) * 100)", "instant": true},
+        {"refId": "p5-ram", "datasource": {"uid": "prod-prometheus"}, "expr": "(1 - sum by(instance) (windows_os_physical_memory_free_bytes{instance=~\".*PP05.*\", job=\"angular-prd-servers\"}) / sum by(instance) (windows_cs_physical_memory_bytes{instance=~\".*PP05.*\", job=\"angular-prd-servers\"})) * 100", "instant": true},
+        {"refId": "p5-rps", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_requests_total{instance=~\".*PP05.*\", job=\"angular-prd-servers\"}[5m]))", "instant": true},
+        {"refId": "p5-5xx", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_worker_request_errors_total{instance=~\".*PP05.*\", job=\"angular-prd-servers\"}[5m])) * 60", "instant": true},
+
+        {"refId": "p6-cpu", "datasource": {"uid": "prod-prometheus"}, "expr": "100 - (avg by (instance) (rate(windows_cpu_time_total{instance=~\".*PP06.*\", job=\"angular-prd-servers\", mode=\"idle\"}[5m])) * 100)", "instant": true},
+        {"refId": "p6-ram", "datasource": {"uid": "prod-prometheus"}, "expr": "(1 - sum by(instance) (windows_os_physical_memory_free_bytes{instance=~\".*PP06.*\", job=\"angular-prd-servers\"}) / sum by(instance) (windows_cs_physical_memory_bytes{instance=~\".*PP06.*\", job=\"angular-prd-servers\"})) * 100", "instant": true},
+        {"refId": "p6-rps", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_requests_total{instance=~\".*PP06.*\", job=\"angular-prd-servers\"}[5m]))", "instant": true},
+        {"refId": "p6-5xx", "datasource": {"uid": "prod-prometheus"}, "expr": "sum by(instance) (rate(windows_iis_worker_request_errors_total{instance=~\".*PP06.*\", job=\"angular-prd-servers\"}[5m])) * 60", "instant": true}
+      ],
+      "options": {
+        "nodes": [
+          {"id": "n-cf", "name": "Cloudflare edge", "role": "CDN / WAF", "type": "cloudflare", "position": {"x": 245, "y": 20}, "compact": false, "width": 180, "metrics": [
+            {"id": "cf-rps", "label": "rps", "datasourceUid": "prod-prometheus", "query": "", "format": "${value} rps", "section": "Traffic", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 100, "color": "yellow"}, {"value": 500, "color": "red"}], "showSparkline": false},
+            {"id": "cf-cache", "label": "cache", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "Traffic", "isSummary": true, "thresholds": [{"value": 0, "color": "red"}, {"value": 30, "color": "yellow"}, {"value": 50, "color": "green"}], "showSparkline": false}
+          ]},
+          {"id": "n-pa1", "name": "PA_FW01", "role": "active", "type": "firewall", "position": {"x": 120, "y": 170}, "compact": false, "width": 200, "groupId": "grp-pa", "metrics": [
+            {"id": "pa1-sess", "label": "sessions", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "System", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 100000, "color": "yellow"}, {"value": 200000, "color": "red"}], "showSparkline": false},
+            {"id": "pa1-cpu", "label": "util %", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "System", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-pa2", "name": "PA_FW02", "role": "passive", "type": "firewall", "position": {"x": 400, "y": 170}, "compact": false, "width": 200, "groupId": "grp-pa", "metrics": [
+            {"id": "pa2-sess", "label": "sessions", "datasourceUid": "", "query": "", "format": "${value}", "section": "System", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false},
+            {"id": "pa2-cpu", "label": "util %", "datasourceUid": "", "query": "", "format": "${value}%", "section": "System", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-f51", "name": "F5_LTM01", "role": "active", "type": "loadbalancer", "position": {"x": 70, "y": 330}, "compact": false, "width": 200, "groupId": "grp-f5", "metrics": [
+            {"id": "f51-cpu", "label": "tmm cpu", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "TMM", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "f51-mem", "label": "tmm mem", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "TMM", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "f51-conns", "label": "conns", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "VS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false},
+            {"id": "f51-ssl", "label": "ssl tps", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "VS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}, {"value": 800, "color": "yellow"}, {"value": 1200, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-f52", "name": "F5_LTM02", "role": "standby", "type": "loadbalancer", "position": {"x": 400, "y": 330}, "compact": false, "width": 200, "groupId": "grp-f5", "metrics": [
+            {"id": "f52-cpu", "label": "tmm cpu", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "TMM", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "f52-mem", "label": "tmm mem", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "TMM", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "f52-conns", "label": "conns", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "VS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false}
+          ]},
+          {"id": "n-vs", "name": "VS Angular 443", "role": "virtual server", "type": "virtualserver", "position": {"x": 175, "y": 480}, "compact": false, "width": 150, "metrics": [
+            {"id": "vs-conns", "label": "conns", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "Connections", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 500, "color": "yellow"}, {"value": 1000, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-pl", "name": "Pool Angular", "role": "6/6 up", "type": "pool", "position": {"x": 370, "y": 480}, "compact": false, "width": 150, "metrics": [
+            {"id": "pl-act", "label": "active", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}/6", "section": "Pool", "isSummary": true, "thresholds": [{"value": 0, "color": "red"}, {"value": 4, "color": "yellow"}, {"value": 6, "color": "green"}], "showSparkline": false}
+          ]},
+          {"id": "n-p1", "name": "PP01", "role": "", "type": "server", "position": {"x": 15, "y": 590}, "compact": true, "width": 100, "groupId": "grp-iis", "metrics": [
+            {"id": "p1-cpu", "label": "cpu", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "p1-ram", "label": "ram", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 85, "color": "red"}], "showSparkline": false},
+            {"id": "p1-rps", "label": "rps", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false},
+            {"id": "p1-5xx", "label": "5xx/m", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}, {"value": 1, "color": "yellow"}, {"value": 5, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-p2", "name": "PP02", "role": "", "type": "server", "position": {"x": 125, "y": 590}, "compact": true, "width": 100, "groupId": "grp-iis", "metrics": [
+            {"id": "p2-cpu", "label": "cpu", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "p2-ram", "label": "ram", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 85, "color": "red"}], "showSparkline": false},
+            {"id": "p2-rps", "label": "rps", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false},
+            {"id": "p2-5xx", "label": "5xx/m", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}, {"value": 1, "color": "yellow"}, {"value": 5, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-p3", "name": "PP03", "role": "", "type": "server", "position": {"x": 235, "y": 590}, "compact": true, "width": 100, "groupId": "grp-iis", "metrics": [
+            {"id": "p3-cpu", "label": "cpu", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "p3-ram", "label": "ram", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 85, "color": "red"}], "showSparkline": false},
+            {"id": "p3-rps", "label": "rps", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false},
+            {"id": "p3-5xx", "label": "5xx/m", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}, {"value": 1, "color": "yellow"}, {"value": 5, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-p4", "name": "PP04", "role": "", "type": "server", "position": {"x": 345, "y": 590}, "compact": true, "width": 100, "groupId": "grp-iis", "metrics": [
+            {"id": "p4-cpu", "label": "cpu", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "p4-ram", "label": "ram", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 85, "color": "red"}], "showSparkline": false},
+            {"id": "p4-rps", "label": "rps", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false},
+            {"id": "p4-5xx", "label": "5xx/m", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}, {"value": 1, "color": "yellow"}, {"value": 5, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-p5", "name": "PP05", "role": "", "type": "server", "position": {"x": 455, "y": 590}, "compact": true, "width": 100, "groupId": "grp-iis", "metrics": [
+            {"id": "p5-cpu", "label": "cpu", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "p5-ram", "label": "ram", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 85, "color": "red"}], "showSparkline": false},
+            {"id": "p5-rps", "label": "rps", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false},
+            {"id": "p5-5xx", "label": "5xx/m", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}, {"value": 1, "color": "yellow"}, {"value": 5, "color": "red"}], "showSparkline": false}
+          ]},
+          {"id": "n-p6", "name": "PP06", "role": "", "type": "server", "position": {"x": 565, "y": 590}, "compact": true, "width": 100, "groupId": "grp-iis", "metrics": [
+            {"id": "p6-cpu", "label": "cpu", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 60, "color": "yellow"}, {"value": 80, "color": "red"}], "showSparkline": false},
+            {"id": "p6-ram", "label": "ram", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}%", "section": "IIS", "isSummary": true, "thresholds": [{"value": 0, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 85, "color": "red"}], "showSparkline": false},
+            {"id": "p6-rps", "label": "rps", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}], "showSparkline": false},
+            {"id": "p6-5xx", "label": "5xx/m", "datasourceUid": "prod-prometheus", "query": "", "format": "${value}", "section": "IIS", "isSummary": false, "thresholds": [{"value": 0, "color": "green"}, {"value": 1, "color": "yellow"}, {"value": 5, "color": "red"}], "showSparkline": false}
+          ]}
+        ],
+        "edges": [
+          {"id": "e-cf-pa1", "sourceId": "n-cf", "targetId": "n-pa1", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "auto", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-cf-pa2", "sourceId": "n-cf", "targetId": "n-pa2", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "slow", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-pa1-f51", "sourceId": "n-pa1", "targetId": "n-f51", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "fast", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-pa2-f52", "sourceId": "n-pa2", "targetId": "n-f52", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "slow", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-f51-vs", "sourceId": "n-f51", "targetId": "n-vs", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "normal", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-f52-vs", "sourceId": "n-f52", "targetId": "n-vs", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "slow", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-vs-pl", "sourceId": "n-vs", "targetId": "n-pl", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "normal", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-pl-p1", "sourceId": "n-pl", "targetId": "n-p1", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "auto", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-pl-p2", "sourceId": "n-pl", "targetId": "n-p2", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "auto", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-pl-p3", "sourceId": "n-pl", "targetId": "n-p3", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "auto", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-pl-p4", "sourceId": "n-pl", "targetId": "n-p4", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "auto", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-pl-p5", "sourceId": "n-pl", "targetId": "n-p5", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "auto", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"},
+          {"id": "e-pl-p6", "sourceId": "n-pl", "targetId": "n-p6", "type": "traffic", "thicknessMode": "fixed", "thicknessMin": 1.5, "thicknessMax": 4, "thresholds": [{"value": 0, "color": "green"}], "flowAnimation": true, "flowSpeed": "auto", "bidirectional": false, "anchorSource": "auto", "anchorTarget": "auto"}
+        ],
+        "groups": [
+          {"id": "grp-pa", "label": "HA — Palo Alto", "type": "ha_pair", "nodeIds": ["n-pa1", "n-pa2"], "style": "dashed"},
+          {"id": "grp-f5", "label": "HA — F5 BIG-IP", "type": "ha_pair", "nodeIds": ["n-f51", "n-f52"], "style": "dashed"},
+          {"id": "grp-iis", "label": "IIS backend — Angular Portal", "type": "cluster", "nodeIds": ["n-p1", "n-p2", "n-p3", "n-p4", "n-p5", "n-p6"], "style": "dashed"}
+        ],
+        "canvas": {"showGrid": true, "gridSize": 20, "snapToGrid": true, "backgroundColor": "transparent"},
+        "animation": {"flowEnabled": true, "defaultFlowSpeed": "auto", "pulseOnCritical": true},
+        "layout": {"autoLayout": false, "direction": "top-down", "tierSpacing": 120, "nodeSpacing": 20},
+        "display": {"showEdgeLabels": true, "showNodeStatus": true, "compactMode": false, "maxSummaryMetrics": 4}
+      }
+    }]
+  },
+  "overwrite": true
+}
