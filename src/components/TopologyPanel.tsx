@@ -97,7 +97,7 @@ function useSelfQueries(
         clearTimeout(fetchTimerRef.current);
       }
     };
-  }, [uncoveredMetrics, replaceVars, historicalTime]);
+  }, [uncoveredMetrics, replaceVars, historicalTime, results]);
 
   return { data: results, isLoading };
 }
@@ -112,6 +112,12 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   const edges = useMemo(() => options.edges || [], [options.edges]);
   const groups = useMemo(() => options.groups || [], [options.groups]);
   const { canvas, animation, layout, display } = options;
+
+  // Refs for stable closures in debounced/callback functions (CR-6, CR-7)
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
 
   // Time travel: compute historical timestamp (0 = now/live)
   const historicalTime = useMemo(() => {
@@ -345,13 +351,15 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       clearTimeout(persistTimerRef.current);
     }
     persistTimerRef.current = setTimeout(() => {
-      const updatedNodes = nodes.map((n) => {
+      const currentNodes = nodesRef.current;
+      const currentOptions = optionsRef.current;
+      const updatedNodes = currentNodes.map((n) => {
         const pos = positions.get(n.id);
         return pos ? { ...n, position: pos } : n;
       });
-      onOptionsChange({ ...options, nodes: updatedNodes });
+      onOptionsChange({ ...currentOptions, nodes: updatedNodes });
     }, 300);
-  }, [nodes, options, onOptionsChange]);
+  }, [onOptionsChange]);
 
   const handleNodeDrag = useCallback(
     (nodeId: string, x: number, y: number) => {
@@ -376,7 +384,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     const isEditMode = window.location.search.includes('editPanel');
     if (isEditMode) {
       // Canvas-sidebar sync: write selected node to options so editor can auto-expand it
-      onOptionsChange({ ...options, _selectedNodeId: nodeId } as TopologyPanelOptions);
+      onOptionsChange({ ...optionsRef.current, _selectedNodeId: nodeId } as TopologyPanelOptions);
     } else {
       // View mode: toggle popup (click again to close)
       setPopupNodeId((prev) => (prev === nodeId ? null : nodeId));
@@ -386,7 +394,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       if (next.has(nodeId)) { next.delete(nodeId); } else { next.add(nodeId); }
       return next;
     });
-  }, [options, onOptionsChange]);
+  }, [onOptionsChange]);
 
   const handleResetLayout = useCallback(() => {
     const autoPositions = autoLayout(nodes, edges, {
@@ -530,9 +538,15 @@ function formatDuration(seconds: number): string {
 }
 
 /** Format a metric value using its format template, with time-unit detection */
+/**
+ * Format a metric value using its format template.
+ * XSS safety: React JSX auto-escapes rendered text. The format.replace(<>) guard
+ * prevents angle brackets from appearing even if rendered outside React in the future.
+ */
 function formatMetricValue(raw: number, format: string): string {
+  const safeFormat = format.replace(/[<>]/g, '');
   // Detect time-unit format templates: "${value}s", "${value}ms", "${value}m", "${value}h"
-  const timeMatch = format.match(/\$\{value\}(ms|s|m|h)$/);
+  const timeMatch = safeFormat.match(/\$\{value\}(ms|s|m|h)$/);
   if (timeMatch) {
     const unit = timeMatch[1];
     let seconds = raw;
@@ -545,5 +559,5 @@ function formatMetricValue(raw: number, format: string): string {
     }
     return formatDuration(seconds);
   }
-  return format.replace('${value}', formatNumber(raw));
+  return safeFormat.replace('${value}', formatNumber(raw));
 }

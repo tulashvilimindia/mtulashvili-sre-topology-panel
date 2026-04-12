@@ -318,7 +318,7 @@ useEffect(() => {
 - **Default to empty arrays** for optional array props: `options.nodes || []`
 - **Bounds check drag positions**: clamp to canvas width/height
 - **Guard sparkline math**: prevent division by zero with `Math.max(denominator, 1)`
-- **Status hierarchy**: critical > warning > ok > nodata — track worst status per node
+- **Status hierarchy**: down > critical = degraded > warning = saturated > nodata = unknown > ok = healthy — track worst status per node
 
 ### File Organization
 

@@ -2,7 +2,7 @@ import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react'
 import {
   TopologyNode, TopologyEdge, NodeGroup,
   NodeRuntimeState, EdgeRuntimeState, TopologyPanelOptions,
-  NODE_TYPE_CONFIG, STATUS_COLORS
+  NODE_TYPE_CONFIG, STATUS_COLORS, ACCENT_COLOR
 } from '../types';
 import { getAnchorPoint, getBezierPath, getBezierMidpoint, EDGE_TYPE_STYLES } from '../utils/edges';
 import { ViewportState, DEFAULT_VIEWPORT, zoomAtPoint, fitToView } from '../utils/viewport';
@@ -93,11 +93,13 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
 
   // Auto fit-to-view on first render (when nodes load for the first time)
   const prevNodeCountRef = useRef(0);
+  const autoFitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (prevNodeCountRef.current === 0 && nodes.length > 0) {
-      setTimeout(handleFitToView, 100);
+      autoFitTimerRef.current = setTimeout(handleFitToView, 100);
     }
     prevNodeCountRef.current = nodes.length;
+    return () => { if (autoFitTimerRef.current) { clearTimeout(autoFitTimerRef.current); } };
   }, [nodes.length, handleFitToView]);
 
   const onNodeDragRef = useRef(onNodeDrag);
@@ -159,10 +161,25 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     }
   }, [onNodeToggle]);
 
+  // Pre-computed node lookup map for O(1) access in edge rendering (CR-11)
+  const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+
+  // Pre-computed parallel edge map to avoid O(E²) in render path (CR-12)
+  const parallelEdgeMap = useMemo(() => {
+    const map = new Map<string, TopologyEdge[]>();
+    edges.forEach((e) => {
+      if (!e.targetId) { return; }
+      const key = [e.sourceId, e.targetId].sort().join('-');
+      if (!map.has(key)) { map.set(key, []); }
+      map.get(key)!.push(e);
+    });
+    return map;
+  }, [edges]);
+
   // Get node rect for edge calculations (uses scoped ref map, not global DOM)
   const getNodeRect = (nodeId: string) => {
     const pos = nodePositions.get(nodeId);
-    const node = nodes.find(n => n.id === nodeId);
+    const node = nodeById.get(nodeId);
     if (!pos || !node) {return null;}
     const el = nodeElRefs.current.get(nodeId);
     const w = el?.offsetWidth || node.width || (node.compact ? 110 : 180);
@@ -215,13 +232,9 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           const targetRect = getNodeRect(targetId);
           if (!targetRect) {return null;}
 
-          // Detect parallel edges: same source-target pair (either direction)
+          // Detect parallel edges via pre-computed map (CR-12: O(1) instead of O(E²))
           const pairKey = [edge.sourceId, targetId].sort().join('-');
-          const parallelEdges = edges.filter((e) => {
-            if (!e.targetId) {return false;}
-            const key = [e.sourceId, e.targetId].sort().join('-');
-            return key === pairKey;
-          });
+          const parallelEdges = parallelEdgeMap.get(pairKey) || [edge];
           const parallelIndex = parallelEdges.indexOf(edge);
           const parallelOffset = parallelEdges.length > 1 ? (parallelIndex - (parallelEdges.length - 1) / 2) * 15 : 0;
 
@@ -251,7 +264,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           const renderTo = isResponse ? from : to;
 
           const renderPath = getBezierPath(renderFrom, renderTo);
-          const renderColor = isResponse ? '#5e81ac' : edgeColor;
+          const renderColor = isResponse ? ACCENT_COLOR : edgeColor;
 
           return (
             <g key={edge.id}>
@@ -391,7 +404,9 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               zIndex: isDragging ? 10 : 2,
             }}
             onPointerDown={(e) => handlePointerDown(e, node.id)}
+            tabIndex={0}
             onClick={(e) => { e.stopPropagation(); handleNodeClick(node.id); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNodeClick(node.id); } }}
           >
             {/* Header */}
             <div className="topo-node-header">
@@ -456,7 +471,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
                                         className="topo-spark-bar"
                                         style={{
                                           height: `${Math.max(5, (v / Math.max(...val.sparklineData!, 1)) * 100)}%`,
-                                          background: STATUS_COLORS[val.status] || '#5e81ac',
+                                          background: STATUS_COLORS[val.status] || ACCENT_COLOR,
                                         }}
                                       />
                                     ))}

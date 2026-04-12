@@ -1,12 +1,15 @@
 import { TopologyNode, NodeGroup, NODE_TYPE_CONFIG, NodeType } from '../../types';
 
-let counter = 0;
+/** Sanitize a value for safe PromQL label interpolation — strips characters that could inject matchers */
+export function sanitizeLabel(value: string): string {
+  return value.replace(/["{}\\\n\r]/g, '');
+}
 
-/** Generate a unique ID with prefix (e.g. 'n-a3f1', 'e-b2c4', 'grp-d5e6') */
+/** Generate a unique ID with prefix (e.g. 'n-k1abc', 'e-k2def') — uses timestamp to survive hot reloads */
 export function generateId(prefix: string): string {
-  counter++;
-  const random = Math.random().toString(36).substring(2, 8);
-  return `${prefix}-${random}${counter}`;
+  const time = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 6);
+  return `${prefix}-${time}${random}`;
 }
 
 /** Build Select options from nodes array */

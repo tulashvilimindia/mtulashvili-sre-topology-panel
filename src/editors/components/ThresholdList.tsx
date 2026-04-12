@@ -34,10 +34,14 @@ export const ThresholdList: React.FC<Props> = ({ thresholds, onChange }) => {
   return (
     <div>
       {thresholds.map((t, idx) => (
-        <div key={idx} className="topo-threshold-row">
+        <div key={`${t.value}-${t.color}-${idx}`} className="topo-threshold-row">
           <div
             className={`topo-threshold-color ${t.color}`}
+            role="button"
+            tabIndex={0}
+            aria-label={`Color: ${t.color} (click to cycle)`}
             onClick={() => handleColorCycle(idx)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleColorCycle(idx); } }}
             title={`${t.color} (click to change)`}
           />
           <div className="topo-threshold-value">

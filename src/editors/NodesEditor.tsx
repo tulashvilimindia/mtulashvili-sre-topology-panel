@@ -4,7 +4,7 @@ import { Button, Select, Checkbox, Input, CollapsableSection } from '@grafana/ui
 import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
 import { TopologyPanelOptions, TopologyNode, NodeMetricConfig } from '../types';
 import { NodeCard } from './components/NodeCard';
-import { generateId } from './utils/editorUtils';
+import { generateId, sanitizeLabel } from './utils/editorUtils';
 import './editors.css';
 
 type Props = StandardEditorProps<TopologyNode[], object, TopologyPanelOptions>;
@@ -60,7 +60,7 @@ const BulkImport: React.FC<{ existingNodes: TopologyNode[]; onImport: (nodes: To
     (async () => {
       try {
         const resp = await fetch(
-          `/api/datasources/proxy/uid/${dsUid}/api/v1/query?query=${encodeURIComponent(`up{job="${selectedJob}"}`)}`
+          `/api/datasources/proxy/uid/${dsUid}/api/v1/query?query=${encodeURIComponent(`up{job="${sanitizeLabel(selectedJob)}"}`)}`
         );
         if (cancelled) { return; }
         const data = await resp.json();
@@ -89,7 +89,7 @@ const BulkImport: React.FC<{ existingNodes: TopologyNode[]; onImport: (nodes: To
         const resp = await fetch(
           `/api/datasources/proxy/uid/${dsUid}/api/v1/series?` +
           new URLSearchParams({
-            'match[]': `{job="${selectedJob}", instance="${sampleHost}"}`,
+            'match[]': `{job="${sanitizeLabel(selectedJob)}", instance="${sanitizeLabel(sampleHost)}"}`,
             start: String(Math.floor(Date.now() / 1000) - 300),
             end: String(Math.floor(Date.now() / 1000)),
           })
@@ -315,7 +315,7 @@ export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
     if (selectedNodeId && !expandedIds.has(selectedNodeId)) {
       setExpandedIds((prev) => new Set(prev).add(selectedNodeId));
     }
-  }, [selectedNodeId]);
+  }, [selectedNodeId, expandedIds]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds((prev) => {

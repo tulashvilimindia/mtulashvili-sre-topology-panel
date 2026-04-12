@@ -327,6 +327,9 @@
   color: #616e88;
   font-size: 14px;
   padding: 0 4px;
+  background: none;
+  border: none;
+  font-family: inherit;
 }
 
 .topology-popup-close:hover {

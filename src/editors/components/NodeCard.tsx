@@ -1,9 +1,9 @@
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { CollapsableSection, Input, Select, Checkbox, IconButton, Button, TextArea } from '@grafana/ui';
 import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
-import { TopologyNode, NodeMetricConfig, NodeGroup, NODE_TYPE_CONFIG } from '../../types';
+import { TopologyNode, NodeMetricConfig, NodeGroup, NODE_TYPE_CONFIG, ACCENT_COLOR } from '../../types';
 import { MetricEditor } from './MetricEditor';
-import { getNodeTypeOptions, findNodeGroup, generateId } from '../utils/editorUtils';
+import { getNodeTypeOptions, findNodeGroup, generateId, sanitizeLabel } from '../utils/editorUtils';
 import '../editors.css';
 
 interface Props {
@@ -47,7 +47,7 @@ function useHostDiscovery(datasourceUid: string) {
     let cancelled = false;
     (async () => {
       try {
-        const resp = await fetch(`/api/datasources/proxy/uid/${datasourceUid}/api/v1/query?query=${encodeURIComponent(`up{job="${selectedJob}"}`)}`);
+        const resp = await fetch(`/api/datasources/proxy/uid/${datasourceUid}/api/v1/query?query=${encodeURIComponent(`up{job="${sanitizeLabel(selectedJob)}"}`)}`);
         if (cancelled) { return; }
         const data = await resp.json();
         const hosts: Array<{ instance: string; up: string }> = (data?.data?.result || []).map(
@@ -77,7 +77,7 @@ function useMetricDiscovery(datasourceUid: string, job: string, instance: string
     (async () => {
       try {
         const query = job
-          ? `{job="${job}", instance="${instance}"}`
+          ? `{job="${sanitizeLabel(job)}", instance="${sanitizeLabel(instance)}"}`
           : `{instance="${instance}"}`;
         const resp = await fetch(
           `/api/datasources/proxy/uid/${datasourceUid}/api/v1/series?` +
@@ -329,7 +329,7 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
         )}
 
         {memberOfGroup && (
-          <div style={{ fontSize: 10, color: '#5e81ac', padding: '4px 0' }}>
+          <div style={{ fontSize: 10, color: ACCENT_COLOR, padding: '4px 0' }}>
             Group: {memberOfGroup.label}
           </div>
         )}

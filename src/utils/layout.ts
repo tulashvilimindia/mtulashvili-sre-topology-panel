@@ -169,15 +169,18 @@ export function autoLayout(
         }
       });
     } else {
-      // Left-right layout
-      const totalHeight = nodeCount * 80 + (nodeCount - 1) * config.nodeSpacing;
+      // Left-right layout — use actual node heights (CR-27)
+      const nodeHeights = nodesInTier.map((n) => n.compact ? 60 : 90);
+      const totalHeight = nodeHeights.reduce((sum, h) => sum + h, 0) + (nodeCount - 1) * config.nodeSpacing;
       const startY = Math.max(20, (config.canvasHeight - totalHeight) / 2);
+      let yCursor = startY;
 
       nodesInTier.forEach((node, nodeIndex) => {
         positions.set(node.id, {
           x: 30 + tierIndex * effectiveTierSpacing,
-          y: startY + nodeIndex * (80 + config.nodeSpacing),
+          y: yCursor,
         });
+        yCursor += nodeHeights[nodeIndex] + config.nodeSpacing;
       });
     }
   });

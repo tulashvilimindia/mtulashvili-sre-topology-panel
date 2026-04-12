@@ -13,7 +13,11 @@ const STATUS_SEVERITY: Record<NodeStatus | EdgeStatus, number> = {
   down: 4,
 };
 
-/** Returns true if candidate is worse than current status */
+/**
+ * Returns true if candidate is worse than current status.
+ * @param candidate — if undefined, returns false (treated as "not worse than current")
+ * @param current — the baseline status to compare against
+ */
 export function isWorseStatus(candidate: NodeStatus | undefined, current: NodeStatus): boolean {
   if (!candidate) {
     return false;

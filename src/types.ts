@@ -327,6 +327,9 @@ export const NODE_TYPE_CONFIG: Record<NodeType, { icon: string; color: string; d
   custom: { icon: '?', color: '#4c566a', defaultRole: '' },
 };
 
+/** Accent color for non-status visuals (sparklines, edge labels, info text) */
+export const ACCENT_COLOR = '#5e81ac';
+
 export const STATUS_COLORS: Record<NodeStatus | EdgeStatus, string> = {
   ok: '#a3be8c',
   healthy: '#a3be8c',

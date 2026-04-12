@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { TopologyNode, NodeMetricConfig, STATUS_COLORS } from '../types';
+import { TopologyNode, NodeMetricConfig, STATUS_COLORS, ACCENT_COLOR } from '../types';
 
 interface PopupProps {
   node: TopologyNode;
@@ -20,7 +20,7 @@ interface MetricTimeseries {
 }
 
 /** Fetch range query data for a metric over the last 1h */
-async function fetchTimeseries(dsUid: string, query: string): Promise<TimeseriesPoint[]> {
+async function fetchTimeseries(dsUid: string, query: string, signal?: AbortSignal): Promise<TimeseriesPoint[]> {
   if (!dsUid || !query) {
     return [];
   }
@@ -29,7 +29,8 @@ async function fetchTimeseries(dsUid: string, query: string): Promise<Timeseries
     const start = end - 3600;
     const resp = await fetch(
       `/api/datasources/proxy/uid/${dsUid}/api/v1/query_range?` +
-      new URLSearchParams({ query, start: String(start), end: String(end), step: '60' })
+      new URLSearchParams({ query, start: String(start), end: String(end), step: '60' }),
+      signal ? { signal } : undefined
     );
     if (!resp.ok) {
       return [];
@@ -50,9 +51,13 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, onClose }) => 
   const [seriesData, setSeriesData] = useState<MetricTimeseries[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch timeseries for all summary metrics
+  // Stable dependency: metric IDs string instead of array reference (CR-25)
+  const metricIds = node.metrics.map((m) => m.id).join(',');
+
+  // Fetch timeseries for all summary metrics (CR-15: with AbortController)
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
 
     const fetchAll = async () => {
@@ -60,7 +65,7 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, onClose }) => 
       const results: MetricTimeseries[] = [];
 
       for (const metric of summaryMetrics) {
-        const points = await fetchTimeseries(metric.datasourceUid, metric.query);
+        const points = await fetchTimeseries(metric.datasourceUid, metric.query, controller.signal);
         if (cancelled) {
           return;
         }
@@ -79,8 +84,8 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, onClose }) => 
     };
 
     fetchAll();
-    return () => { cancelled = true; };
-  }, [node.id, node.metrics]);
+    return () => { cancelled = true; controller.abort(); };
+  }, [node.id, metricIds]);
 
   return (
     <div
@@ -90,7 +95,7 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, onClose }) => 
     >
       <div className="topology-popup-header">
         <span className="topology-popup-title">{node.name}</span>
-        <span className="topology-popup-close" onClick={onClose}>x</span>
+        <button className="topology-popup-close" onClick={onClose} aria-label="Close">&times;</button>
       </div>
       {loading && <div className="topology-popup-loading">Loading trends...</div>}
       {!loading && seriesData.map((series) => (
@@ -135,7 +140,7 @@ const MiniSparkline: React.FC<{ points: TimeseriesPoint[]; height: number }> = (
 
   return (
     <svg width={width} height={height} style={{ display: 'block' }}>
-      <path d={pathData} fill="none" stroke="#5e81ac" strokeWidth="1.5" strokeLinecap="round" />
+      <path d={pathData} fill="none" stroke={ACCENT_COLOR} strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 };
