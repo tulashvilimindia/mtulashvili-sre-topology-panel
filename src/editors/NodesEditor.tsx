@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { StandardEditorProps } from '@grafana/data';
 import { Button, Select, Checkbox, Input, CollapsableSection } from '@grafana/ui';
 import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
@@ -272,11 +272,50 @@ const BulkImport: React.FC<{ existingNodes: TopologyNode[]; onImport: (nodes: To
   );
 };
 
+// ─── Import/Export helpers (pure, no React) ───
+function exportTopologyJSON(options: TopologyPanelOptions): void {
+  const payload = { nodes: options.nodes || [], edges: options.edges || [], groups: options.groups || [] };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'topology-export.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importTopologyJSON(file: File, currentNodes: TopologyNode[], onChange: (nodes: TopologyNode[]) => void): void {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target?.result as string);
+      if (Array.isArray(data.nodes)) {
+        onChange([...currentNodes, ...data.nodes]);
+      }
+    } catch {
+      // Silently fail on invalid JSON
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ─── Main NodesEditor ───
 export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
   const nodes = value || [];
+  const edges = context.options?.edges || [];
   const groups = context.options?.groups || [];
+  const selectedNodeId = (context.options as TopologyPanelOptions)?._selectedNodeId;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [filterText, setFilterText] = useState('');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Canvas-sidebar sync: auto-expand node clicked on canvas
+  useEffect(() => {
+    if (selectedNodeId && !expandedIds.has(selectedNodeId)) {
+      setExpandedIds((prev) => new Set(prev).add(selectedNodeId));
+    }
+  }, [selectedNodeId]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds((prev) => {
@@ -314,12 +353,22 @@ export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
     [nodes, onChange]
   );
 
-  const handleDelete = useCallback(
-    (id: string) => {
+  // Delete with confirmation: count orphan edges first
+  const handleDeleteRequest = useCallback((id: string) => {
+    const orphanCount = edges.filter((e) => e.sourceId === id || e.targetId === id).length;
+    if (orphanCount > 0) {
+      setPendingDeleteId(id);
+    } else {
       onChange(nodes.filter((n) => n.id !== id));
-    },
-    [nodes, onChange]
-  );
+    }
+  }, [nodes, edges, onChange]);
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (pendingDeleteId) {
+      onChange(nodes.filter((n) => n.id !== pendingDeleteId));
+      setPendingDeleteId(null);
+    }
+  }, [pendingDeleteId, nodes, onChange]);
 
   const handleDuplicate = useCallback(
     (node: TopologyNode) => {
@@ -336,26 +385,96 @@ export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
     [nodes, onChange]
   );
 
+  // Filter nodes by search text
+  const filteredNodes = useMemo(() => {
+    if (!filterText) { return nodes; }
+    const lower = filterText.toLowerCase();
+    return nodes.filter((n) =>
+      n.name.toLowerCase().includes(lower) ||
+      n.role.toLowerCase().includes(lower) ||
+      n.type.toLowerCase().includes(lower)
+    );
+  }, [nodes, filterText]);
+
+  // Orphan edge count for pending delete
+  const pendingDeleteOrphanCount = useMemo(() => {
+    if (!pendingDeleteId) { return 0; }
+    return edges.filter((e) => e.sourceId === pendingDeleteId || e.targetId === pendingDeleteId).length;
+  }, [pendingDeleteId, edges]);
+
+  const pendingDeleteName = useMemo(() => {
+    if (!pendingDeleteId) { return ''; }
+    return nodes.find((n) => n.id === pendingDeleteId)?.name || pendingDeleteId;
+  }, [pendingDeleteId, nodes]);
+
   return (
     <div>
       {/* Bulk Import */}
       <BulkImport existingNodes={nodes} onImport={handleBulkImport} />
 
-      {/* Header */}
+      {/* Header with actions */}
       <div className="topo-editor-header">
         <span className="topo-editor-header-title">
           Nodes<span className="topo-editor-count">({nodes.length})</span>
         </span>
+        <Button size="sm" variant="secondary" icon="import" onClick={() => fileInputRef.current?.click()} tooltip="Import topology JSON">
+          Import
+        </Button>
+        <Button size="sm" variant="secondary" icon="download-alt" onClick={() => exportTopologyJSON(context.options as TopologyPanelOptions)} tooltip="Export topology JSON">
+          Export
+        </Button>
         <Button size="sm" variant="secondary" icon="plus" onClick={handleAdd}>
           Add
         </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) { importTopologyJSON(file, nodes, onChange); }
+            e.target.value = '';
+          }}
+        />
       </div>
+
+      {/* Search filter */}
+      {nodes.length > 3 && (
+        <div className="topo-editor-field">
+          <Input
+            value={filterText}
+            onChange={(e) => setFilterText(e.currentTarget.value)}
+            placeholder="Filter nodes by name, role, type..."
+            prefix={<span style={{ fontSize: 10, color: '#616e88' }}>Search</span>}
+          />
+        </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {pendingDeleteId && (
+        <div style={{ background: '#2d1b1b', border: '1px solid #bf616a', borderRadius: 6, padding: 10, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: '#e5e9f0', marginBottom: 6 }}>
+            Delete <strong>{pendingDeleteName}</strong>?
+          </div>
+          <div style={{ fontSize: 10, color: '#bf616a', marginBottom: 8 }}>
+            {pendingDeleteOrphanCount} edge(s) reference this node and will become orphaned.
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Button size="sm" variant="destructive" onClick={handleDeleteConfirm}>Delete anyway</Button>
+            <Button size="sm" variant="secondary" onClick={() => setPendingDeleteId(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
 
       {/* Node list */}
       {nodes.length === 0 && (
         <div className="topo-editor-empty">No nodes defined. Use Bulk Import above or Add single nodes.</div>
       )}
-      {nodes.map((node) => (
+      {filterText && filteredNodes.length === 0 && (
+        <div className="topo-editor-empty">No nodes match &quot;{filterText}&quot;</div>
+      )}
+      {filteredNodes.map((node) => (
         <NodeCard
           key={node.id}
           node={node}
@@ -363,7 +482,7 @@ export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
           isOpen={expandedIds.has(node.id)}
           onToggle={() => toggleExpand(node.id)}
           onChange={handleChange}
-          onDelete={() => handleDelete(node.id)}
+          onDelete={() => handleDeleteRequest(node.id)}
           onDuplicate={() => handleDuplicate(node)}
         />
       ))}

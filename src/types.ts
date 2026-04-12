@@ -239,6 +239,8 @@ export interface TopologyPanelOptions {
     compactMode: boolean;
     maxSummaryMetrics: number;
   };
+  /** Internal: canvas-sidebar sync — last clicked node ID in edit mode */
+  _selectedNodeId?: string;
 }
 
 // ============================================================

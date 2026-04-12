@@ -347,7 +347,12 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       if (next.has(nodeId)) { next.delete(nodeId); } else { next.add(nodeId); }
       return next;
     });
-  }, []);
+    // Canvas-sidebar sync: write selected node to options so editor can auto-expand it
+    const isEditMode = window.location.search.includes('editPanel');
+    if (isEditMode) {
+      onOptionsChange({ ...options, _selectedNodeId: nodeId } as TopologyPanelOptions);
+    }
+  }, [options, onOptionsChange]);
 
   const handleResetLayout = useCallback(() => {
     const autoPositions = autoLayout(nodes, edges, {
