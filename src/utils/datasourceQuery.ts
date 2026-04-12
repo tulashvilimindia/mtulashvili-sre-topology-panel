@@ -37,27 +37,28 @@ export function detectDatasourceType(dsUid: string): string {
  * @param dsType - Optional type hint (auto-detected if not provided)
  * @param queryConfig - Optional config for CloudWatch/Infinity queries
  * @param replaceVars - Optional template variable interpolation function
+ * @param historicalTime - Optional Unix timestamp for time travel queries
  */
 export async function queryDatasource(
   dsUid: string,
   query: string,
   dsType?: string,
   queryConfig?: DatasourceQueryConfig,
-  replaceVars?: (value: string) => string
+  replaceVars?: (value: string) => string,
+  historicalTime?: number
 ): Promise<number | null> {
   const type = dsType || detectDatasourceType(dsUid);
   const interpolatedQuery = replaceVars ? replaceVars(query) : query;
 
   switch (type) {
     case 'prometheus':
-      return queryPrometheus(dsUid, interpolatedQuery);
+      return queryPrometheus(dsUid, interpolatedQuery, historicalTime);
     case 'cloudwatch':
       return queryCloudWatch(dsUid, queryConfig);
     case 'yesoreyeram-infinity-datasource':
       return queryInfinity(dsUid, queryConfig);
     default:
-      // Fallback: try Prometheus-style query (works for many datasources)
-      return queryPrometheus(dsUid, interpolatedQuery);
+      return queryPrometheus(dsUid, interpolatedQuery, historicalTime);
   }
 }
 
@@ -65,11 +66,15 @@ export async function queryDatasource(
  * Query Prometheus via datasource proxy API.
  * Uses instant query endpoint, returns the latest value.
  */
-async function queryPrometheus(dsUid: string, query: string): Promise<number | null> {
+async function queryPrometheus(dsUid: string, query: string, historicalTime?: number): Promise<number | null> {
   try {
+    const params: Record<string, string> = { query };
+    if (historicalTime) {
+      params.time = String(historicalTime);
+    }
     const resp = await fetch(
       `/api/datasources/proxy/uid/${dsUid}/api/v1/query?` +
-      new URLSearchParams({ query })
+      new URLSearchParams(params)
     );
     if (!resp.ok) {
       return null;

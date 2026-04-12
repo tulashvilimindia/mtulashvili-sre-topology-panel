@@ -24,7 +24,8 @@ function useSelfQueries(
   nodes: TopologyNode[],
   edges: TopologyEdge[],
   panelSeries: DataFrame[],
-  replaceVars?: (value: string) => string
+  replaceVars?: (value: string) => string,
+  historicalTime?: number
 ): Map<string, number | null> {
   const [results, setResults] = useState<Map<string, number | null>>(new Map());
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,7 +81,7 @@ function useSelfQueries(
 
       // Query all uncovered metrics using the multi-DS abstraction
       const promises = uncoveredMetrics.map(async (m) => {
-        const value = await queryDatasource(m.dsUid, m.query, m.dsType, m.queryConfig, replaceVars);
+        const value = await queryDatasource(m.dsUid, m.query, m.dsType, m.queryConfig, replaceVars, historicalTime);
         newResults.set(m.metricId, value);
       });
 
@@ -93,7 +94,7 @@ function useSelfQueries(
         clearTimeout(fetchTimerRef.current);
       }
     };
-  }, [uncoveredMetrics, replaceVars]);
+  }, [uncoveredMetrics, replaceVars, historicalTime]);
 
   return results;
 }
@@ -102,14 +103,23 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [popupNodeId, setPopupNodeId] = useState<string | null>(null);
+  const [timeOffset, setTimeOffset] = useState<number>(0); // 0 = now, negative = minutes ago
 
   const nodes = useMemo(() => options.nodes || [], [options.nodes]);
   const edges = useMemo(() => options.edges || [], [options.edges]);
   const groups = useMemo(() => options.groups || [], [options.groups]);
   const { canvas, animation, layout, display } = options;
 
+  // Time travel: compute historical timestamp (0 = now/live)
+  const historicalTime = useMemo(() => {
+    if (timeOffset === 0) {
+      return undefined;
+    }
+    return Math.floor(Date.now() / 1000) + timeOffset * 60;
+  }, [timeOffset]);
+
   // Auto-fetch metrics not covered by panel queries (supports Prometheus, CloudWatch, Infinity)
-  const selfQueryResults = useSelfQueries(nodes, edges, data.series, replaceVariables);
+  const selfQueryResults = useSelfQueries(nodes, edges, data.series, replaceVariables, historicalTime);
 
   // Ref to read current positions without triggering useEffect re-runs
   const nodePositionsRef = useRef(nodePositions);
@@ -420,6 +430,21 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
             Load example
           </button>
         )}
+        <select
+          className="topology-btn"
+          value={timeOffset}
+          onChange={(e) => setTimeOffset(parseInt(e.target.value, 10))}
+          title="Time travel: view topology at a past time"
+        >
+          <option value={0}>Live</option>
+          <option value={-5}>5m ago</option>
+          <option value={-15}>15m ago</option>
+          <option value={-30}>30m ago</option>
+          <option value={-60}>1h ago</option>
+          <option value={-180}>3h ago</option>
+          <option value={-360}>6h ago</option>
+          <option value={-1440}>24h ago</option>
+        </select>
       </div>
       <TopologyCanvas
         nodes={nodes}
