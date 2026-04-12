@@ -542,3 +542,268 @@ npm run build        # webpack compiled successfully
 # Console: 0 errors from plugin
 # Verify: git diff --name-only shows only expected files
 ```
+
+---
+
+# QA FINDINGS — Post-Implementation (Phase 1-5 Complete)
+
+## Bugs Found
+
+| ID | Severity | Bug | Root Cause |
+|----|----------|-----|-----------|
+| B1 | MEDIUM | ALB/EKS/NLB nodes show wrong icon (F5/IIS instead of ALB/K8s/NLB) | Dashboard JSON uses old types (loadbalancer, server) instead of new types (alb, kubernetes, nlb) |
+| B2 | LOW | Cloudflare shows "warning" at 168 rps — thresholds too low | CF threshold set to 100 yellow, should be 10k+ for production |
+| B3 | LOW | 5/11 Sauron nodes show "nodata" | No metrics configured — needs CloudWatch queryConfig |
+
+## UX Gaps Found
+
+| ID | Severity | Gap | Impact |
+|----|----------|-----|--------|
+| G1 | HIGH | Node popup position ignores zoom/pan viewport transform | Popup appears at wrong position when zoomed |
+| G2 | HIGH | Drag-and-drop doesn't inverse-transform pointer coords for zoom/pan | Node doesn't follow cursor when zoomed in/out |
+| G3 | MEDIUM | No visual indicator for time travel mode (viewing historical data) | Users may confuse historical values with current |
+| G4 | MEDIUM | Parallel edge offset always horizontal, wrong for left-right layout | Edges overlap in left-right direction mode |
+| G5 | MEDIUM | No undo/redo for editor actions | Accidental deletes are irreversible |
+| G6 | LOW | Node popup doesn't close on canvas background click | Must click "x" explicitly |
+| G7 | LOW | Health bar dot doesn't show count per type | "2 nodes" vs "1 node" matters |
+| G8 | LOW | Export only exports from NodesEditor path, not full topology | Import reads nodes only, ignores edges/groups |
+| G9 | LOW | Fit-to-view doesn't auto-trigger on first render | Large topologies overflow initially |
+| G10 | LOW | No loading spinner during auto-fetch | Values show "N/A" briefly before data arrives |
+
+## Functional Gaps
+
+| ID | Gap |
+|----|-----|
+| F1 | CloudWatch auto-fetch untested with real CW data |
+| F2 | Infinity auto-fetch untested with real NR/Kibana data |
+| F3 | Status propagation only fires for `critical`, not `degraded`/`down` |
+| F4 | Canvas-sidebar sync is one-way only (canvas → sidebar, not reverse) |
+| F5 | No edge click/selection/highlighting |
+
+---
+
+# PHASE 6: Bug Fixes & QA Gaps (CRITICAL)
+
+---
+
+## TASK 6.1: Fix Zoom/Pan Coordinate Transform for Drag and Popup
+
+### CONTEXT
+- `src/components/TopologyCanvas.tsx` — drag handlers use raw pointer coords
+- `src/components/TopologyPanel.tsx` — popup position uses raw node position
+- When viewport is zoomed/panned, coordinates are wrong
+
+### OBJECTIVE
+Inverse-transform pointer coordinates by viewport state during drag. Transform popup position by viewport state for correct overlay placement.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyCanvas.tsx` | In `handlePointerDown` and `handleMove`, divide pointer delta by `viewport.scale` and subtract `viewport.translate` |
+| `src/components/TopologyPanel.tsx` | Multiply popup position by viewport scale and add viewport translate |
+
+### IMPLEMENTATION SPEC
+```typescript
+// In drag handleMove:
+let x = (e.clientX - rect.left - dragging.offX - viewport.translateX) / viewport.scale;
+let y = (e.clientY - rect.top - dragging.offY - viewport.translateY) / viewport.scale;
+
+// In popup position:
+position={{ 
+  x: popupPos.x * viewport.scale + viewport.translateX + nodeWidth + 10, 
+  y: popupPos.y * viewport.scale + viewport.translateY + 36 
+}}
+```
+
+### VALIDATION
+```bash
+npm run typecheck && npm run build
+# Browser: zoom in, drag a node — must follow cursor correctly
+# Browser: zoom in, click a node — popup must appear next to it
+```
+
+---
+
+## TASK 6.2: Fix Export/Import to Include Full Topology (nodes + edges + groups)
+
+### CONTEXT
+- `src/editors/NodesEditor.tsx` — `exportTopologyJSON()` exports all three arrays correctly
+- `importTopologyJSON()` only reads `data.nodes`, ignores edges/groups
+
+### OBJECTIVE
+Import function should merge nodes, edges, and groups from the uploaded file.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/editors/NodesEditor.tsx` | `importTopologyJSON` reads and writes all three arrays. Since NodesEditor can only write to `nodes` path, add a note that full import requires dashboard JSON editor for edges/groups. |
+
+---
+
+## TASK 6.3: Add Time Travel Visual Indicator
+
+### CONTEXT
+- `src/components/TopologyPanel.tsx` — `timeOffset` state drives historical queries
+- No visual feedback that data is historical
+
+### OBJECTIVE
+When time travel is active (not "Live"), show a colored banner in the toolbar: "Viewing data from 1h ago".
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyPanel.tsx` | Add conditional banner below toolbar when `timeOffset !== 0` |
+| `src/components/TopologyPanel.css` | Add `.topology-time-banner` styles (amber background) |
+
+---
+
+## TASK 6.4: Add Loading Spinner During Auto-Fetch
+
+### CONTEXT
+- `src/components/TopologyPanel.tsx` — `useSelfQueries` fetches data with 500ms debounce
+- No loading indicator while fetching
+
+### OBJECTIVE
+Show a subtle spinner/text in the toolbar during auto-fetch. Clear when results arrive.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyPanel.tsx` | Add `isLoading` state to `useSelfQueries`. Render spinner in toolbar when true. |
+| `src/components/TopologyPanel.css` | Add `.topology-loading` spinner styles |
+
+---
+
+## TASK 6.5: Fix Status Propagation to Include degraded/down
+
+### CONTEXT
+- `src/utils/edges.ts` — `propagateStatus()` only checks for `critical`
+- `degraded` and `down` should also propagate upstream
+
+### OBJECTIVE
+Propagate any status worse than `ok` to incoming edges.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/utils/edges.ts` | Change condition from `=== 'critical'` to `isWorseStatus(targetStatus, 'ok')` |
+
+---
+
+## TASK 6.6: Auto Fit-to-View on First Render
+
+### CONTEXT
+- `src/components/TopologyCanvas.tsx` — viewport defaults to `DEFAULT_VIEWPORT` (no zoom)
+- Large topologies overflow the panel on first load
+
+### OBJECTIVE
+On first render (when nodes change from 0 to >0), auto-trigger fit-to-view.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyCanvas.tsx` | Add `useEffect` watching `nodes.length` — when it transitions from 0 to >0, call `handleFitToView()` |
+
+---
+
+## TASK 6.7: Close Popup on Canvas Background Click
+
+### CONTEXT
+- `src/components/TopologyPanel.tsx` — popup stays open until "x" clicked
+- Should close when clicking on empty canvas area
+
+### OBJECTIVE
+Add click handler on the panel container that closes the popup when clicking outside any node.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyPanel.tsx` | Add `onClick` on the panel div that calls `setPopupNodeId(null)`. Node click handlers already `stopPropagation`. |
+
+---
+
+## TASK 6.8: Add Health Bar Node Count Per Type
+
+### CONTEXT
+- Health dots show "F5 loadbalancer: ok" but not how many nodes of that type
+- With 6 PP servers, knowing "6 servers: ok" matters
+
+### OBJECTIVE
+Add node count to the health dot title: "IIS server (6): ok".
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyPanel.tsx` | In `healthSummary` useMemo, also count nodes per type. Update title to include count. |
+
+---
+
+# SUMMARY (Updated)
+
+| Phase | Tasks | Status |
+|-------|-------|--------|
+| Phase 1 | 1.1-1.3 | COMPLETE |
+| Phase 2 | 2.1-2.3 | COMPLETE |
+| Phase 3 | 3.1-3.4 | COMPLETE |
+| Phase 4 | 4.1-4.4 | COMPLETE |
+| Phase 5 | 5.1-5.5 | COMPLETE (19/19) |
+| **Phase 6** | **6.1-6.8** | **PENDING** (0/8 — QA fixes) |
+| **Total** | **27 tasks** | **19 complete, 8 pending** |
+
+---
+
+# QA ROUND 2 — Additional Findings (3 Test Cycles)
+
+## Test Cycle 2: Entry to DB (9 nodes)
+| ID | Severity | Finding |
+|----|----------|---------|
+| B4 | MEDIUM | ALB shows "F5" icon, EKS shows "IIS" — dashboard JSON uses old types |
+| B5 | MEDIUM | App Logs, NAT Gateway, Endpoint Probes show "?" icon — uses `custom` type instead of `logs`, `nat`, `probe` |
+| G11 | LOW | No "click to expand" hint on nodes with only summary metrics — correct behavior but users may not realize there's nothing to expand |
+
+## Test Cycle 3: E2E Lifecycle (14 nodes)
+| ID | Severity | Finding |
+|----|----------|---------|
+| B6 | MEDIUM | MSPORTSDB1 PLE metric shows "11.5ks" — `formatNumber(11521)` produces "11.5k" then format "${value}s" makes "11.5ks". Should be "3.2h" or "11.5k s" |
+| B7 | MEDIUM | Global Accelerator/ALB/EKS/NLB all show wrong icons — same root cause as B1 (JSON uses old types) |
+| B8 | LOW | Synthetics node shows "?" icon — should use `probe` type |
+| PASS | - | 0 node overlaps, content fits without overflow, groups correctly sized |
+
+## Test Cycle 4: Angular Portal (12 nodes, reference topology)
+| ID | Severity | Finding |
+|----|----------|---------|
+| B9 | LOW | No edge labels rendering — edges in auto-query dashboard don't have `labelTemplate` configured |
+| G12 | LOW | Health bar all same color when everything healthy — no visual diversity, consider showing type icon letters |
+| PASS | - | 20/20 metrics live, 0 NaN/Infinity/undefined, 0 suspicious values, DOM count reasonable (553) |
+
+## Consolidated Bug + Gap List (All 4 Test Cycles)
+
+### BUGS (need code fix)
+| ID | Severity | Description | Fix |
+|----|----------|-------------|-----|
+| B1-B5,B7,B8 | MEDIUM | Dashboard JSONs use old node types — consolidated fix | Update all 3 Sportsbook topology JSONs to use new types (alb, nlb, nat, kubernetes, probe) |
+| B6 | MEDIUM | `formatNumber()` + format template creates "11.5ks" | Add unit-aware formatting: detect if format ends with time unit, format as duration instead |
+| G1 | HIGH | Popup position wrong when zoomed/panned | Apply inverse viewport transform |
+| G2 | HIGH | Drag-and-drop wrong when zoomed/panned | Apply inverse viewport transform to pointer coords |
+
+### UX GAPS (need design decision)
+| ID | Severity | Description |
+|----|----------|-------------|
+| G3 | MEDIUM | No visual indicator for time travel mode |
+| G4 | MEDIUM | Parallel edge offset wrong for left-right layout |
+| G5 | MEDIUM | No undo/redo |
+| G6 | LOW | Popup doesn't close on background click |
+| G7 | LOW | Health dots don't show node count per type |
+| G8 | LOW | Import only imports nodes, not edges/groups |
+| G9 | LOW | No auto fit-to-view on first render |
+| G10 | LOW | No loading spinner during auto-fetch |
+| G12 | LOW | Health bar all same color when everything healthy |
+
+### FUNCTIONAL GAPS (need data/config work)
+| ID | Description |
+|----|-------------|
+| F1 | CloudWatch auto-fetch untested with real CW data |
+| F2 | Infinity auto-fetch untested with real NR/Kibana data |
+| F3 | Status propagation only fires for critical |
+| F4 | Canvas-sidebar sync one-way only |
+| F5 | No edge click/selection |
