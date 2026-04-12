@@ -807,3 +807,282 @@ Add node count to the health dot title: "IIS server (6): ok".
 | F3 | Status propagation only fires for critical |
 | F4 | Canvas-sidebar sync one-way only |
 | F5 | No edge click/selection |
+
+---
+
+# QA ROUND 3 — Additional Findings (Test Cycles 5-8)
+
+## Test Cycle 5: Negative / Edge Case Testing (Angular Portal)
+| ID | Result | Finding |
+|----|--------|---------|
+| N1-N10 | ALL PASS | No broken paths (0 NaN/Infinity in SVG), no XSS injection, no empty src/href, no overlapping positions, no React error boundaries, all groups have labels, overflow correctly hidden, 553 DOM nodes (healthy) |
+
+## Test Cycle 6: Time Travel Integrity
+| ID | Result | Finding |
+|----|--------|---------|
+| PASS | - | Time select switches to "-60" correctly via DOM event |
+| **G13** | MEDIUM | **No visual feedback when time travel values are loading** — after switching to "1h ago", values stay showing current data until the 500ms debounced fetch completes. User doesn't know if values changed or are still loading. |
+
+## Test Cycle 7: Accessibility Testing
+| ID | Severity | Finding |
+|----|----------|---------|
+| **A1** | HIGH | **Zero aria-labels on nodes** — 0/12 nodes have aria-label or role. Screen readers can't identify topology nodes. |
+| **A2** | MEDIUM | **6/12 node names truncated** — `topo-node-name` with `text-overflow: ellipsis` cuts off long names like "iNMANPR-PP01". No tooltip to see full name. |
+| **A3** | MEDIUM | **Smallest font is 7px** — `.topo-metric-label` at 7px is below WCAG minimum (9px recommended). Hard to read on standard displays. |
+| **A4** | MEDIUM | **Color contrast fails WCAG AA** — nodata status uses #4c566a on #1a1e24 (ratio ~2.5:1, needs 4.5:1). Gray-on-dark-gray is barely visible. |
+| **A5** | LOW | **All toolbar buttons below 44px touch target** — 5/5 buttons are too small for mobile/tablet touch (< 44×44px). |
+
+## Test Cycle 8: Edge Cases + Interaction
+| ID | Result | Finding |
+|----|--------|---------|
+| E1-E8 | ALL PASS | No empty names, no duplicate positions, no duplicate SVG IDs, viewport wrapper exists, panel title correct, DOM count stable (553) |
+| **G14** | LOW | **Time travel state persists across page navigation** — switching to "1h ago" stays on "-60" when coming back. Should reset to "Live" on dashboard navigation or show the historical state clearly. |
+
+## Consolidated New Findings (Rounds 2+3)
+
+### New Bugs
+| ID | Severity | Description |
+|----|----------|-------------|
+| B6 | MEDIUM | formatNumber + format template creates "11.5ks" for PLE values |
+
+### New UX Gaps
+| ID | Severity | Description |
+|----|----------|-------------|
+| G11 | LOW | No expand hint on nodes with only summary metrics |
+| G12 | LOW | Health bar all same color when everything healthy |
+| G13 | MEDIUM | No visual feedback during time travel fetch |
+| G14 | LOW | Time travel state persists across navigation |
+
+### New Accessibility Gaps
+| ID | Severity | Description |
+|----|----------|-------------|
+| A1 | HIGH | Zero aria-labels on topology nodes |
+| A2 | MEDIUM | 6/12 node names truncated, no tooltip for full name |
+| A3 | MEDIUM | 7px font size on metric labels, below WCAG minimum |
+| A4 | MEDIUM | Color contrast fails WCAG AA for nodata status |
+| A5 | LOW | Toolbar buttons below 44px touch target |
+
+---
+
+# PHASE 7: Accessibility & QA Fixes
+
+---
+
+## TASK 7.1: Add ARIA Labels and Roles to Topology Nodes
+
+### CONTEXT
+- `src/components/TopologyCanvas.tsx` — node divs have no aria-label or role
+- Screen readers cannot identify or describe topology nodes
+
+### OBJECTIVE
+Add `role="button"` and `aria-label="{name} ({type}): {status}"` to each node div.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyCanvas.tsx` | Add `role="button"` and `aria-label` to the `.topology-node` div |
+
+---
+
+## TASK 7.2: Add Tooltips for Truncated Node Names
+
+### CONTEXT
+- `src/components/TopologyCanvas.tsx` — node names use CSS `text-overflow: ellipsis`
+- 6/12 nodes show truncated names with no way to see full text
+
+### OBJECTIVE
+Add `title={node.name}` attribute to the `.topo-node-name` span.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyCanvas.tsx` | Add `title={node.name}` to `.topo-node-name` span |
+
+---
+
+## TASK 7.3: Fix Minimum Font Size and Color Contrast
+
+### CONTEXT
+- `src/components/TopologyPanel.css` — `.topo-metric-label` is 7px, fails WCAG
+- `.topo-node-dot.nodata` uses #4c566a on #1a1e24, contrast ratio ~2.5:1
+
+### OBJECTIVE
+Increase label font to 9px minimum. Lighten nodata color to #616e88 for better contrast.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyPanel.css` | Change `.topo-metric-label` font-size from 7px to 9px. Change nodata status text color. |
+
+---
+
+## TASK 7.4: Fix formatNumber Unit Collision ("11.5ks" bug)
+
+### CONTEXT
+- `src/components/TopologyPanel.tsx` — `formatNumber()` compresses numbers, then format template appends unit
+- PLE value 11521 → "11.5k" + "${value}s" → "11.5ks" (nonsensical)
+
+### OBJECTIVE
+When format template ends with a time unit (s, ms, m, h), format as human-readable duration instead of compressed number + raw unit.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyPanel.tsx` | Add `formatDuration()` helper. In metric formatting, detect if format ends with time unit and use duration format instead. |
+
+### IMPLEMENTATION SPEC
+```typescript
+function formatDuration(seconds: number): string {
+  if (seconds >= 86400) return (seconds / 86400).toFixed(1) + 'd';
+  if (seconds >= 3600) return (seconds / 3600).toFixed(1) + 'h';
+  if (seconds >= 60) return (seconds / 60).toFixed(1) + 'm';
+  return seconds.toFixed(1) + 's';
+}
+
+// In metric formatting:
+const isTimeFormat = /\$\{value\}(s|ms|m|h)$/.test(metricConfig.format);
+const formatted = isTimeFormat 
+  ? metricConfig.format.replace('${value}' + timeUnit, formatDuration(raw))
+  : metricConfig.format.replace('${value}', formatNumber(raw));
+```
+
+---
+
+## TASK 7.5: Add Time Travel Visual Banner
+
+### CONTEXT
+- When time travel is active, nothing indicates data is historical
+- Users may confuse historical values with live
+
+### OBJECTIVE
+Show amber banner "Viewing: 1h ago" below toolbar when timeOffset !== 0. Add pulsing dot to distinguish from live mode.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/components/TopologyPanel.tsx` | Add conditional banner render |
+| `src/components/TopologyPanel.css` | Add `.topology-time-banner` styles |
+
+---
+
+# PHASE 8: Multi-Layer Topology (FEATURE REQUEST)
+
+## Understanding of the Request
+
+The user wants to represent **hierarchical/nested infrastructure** where one node can "expand" into a sub-topology showing its internal components:
+
+### Example 1: F5 Multi-Layer
+```
+TIER 1 (Current):
+  F5 LTM01 (single node showing CPU, Memory)
+  
+TIER 2 (Drill-down — what user wants):
+  F5 LTM01
+    ├── VS Angular 443 (connections: 186)
+    │     └── Pool Angular (6 members) → PP01-PP06
+    └── VS Sportsbook 443 (connections: 3244)
+          └── Pool Sportsbook (8 members) → SB01-SB08
+```
+
+The user wants **multiple virtual servers as separate nodes** under one F5, each with their own pool and backend cluster. Currently this is modeled as flat nodes but should be visually hierarchical.
+
+### Example 2: Cloudflare Multi-Zone
+```
+TIER 1 (Current):
+  Cloudflare (single node showing aggregate RPS)
+
+TIER 2 (Drill-down — what user wants):
+  Cloudflare
+    ├── Zone: cnmglobal04.com (rps: 168, cache: 40%)
+    └── Zone: mspjlj.com (rps: 5.2k, cache: 85%)
+```
+
+Each CF zone becomes a **separate node** with its own metrics, instead of one aggregated node.
+
+### Architectural Analysis
+
+This is NOT about nested/sub-topologies or drill-down views. It's about the **data model flexibility** — users want to:
+
+1. **Create multiple instances of the same service type** with different labels and different metrics
+2. **Wire them independently** in the topology (VS1 → Pool1 → Servers1..6, VS2 → Pool2 → Servers7..14)
+3. **See per-instance metrics** (connections per VS, not aggregate)
+
+**The plugin already supports this.** The user just needs to:
+- Add 2 VS nodes instead of 1 (VS Angular 443, VS Sportsbook 443)
+- Add 2 Pool nodes (Pool Angular, Pool Sportsbook)
+- Wire edges separately
+
+What's MISSING is a way to **visually indicate hierarchy** — that both VS nodes belong to the same F5 LTM. This is exactly what **groups** do, but groups are currently flat dashed rectangles. The user wants **nested groups** or **visual parent-child** relationships.
+
+### Proposed Solution
+
+Two approaches:
+
+**Approach A: Nested Groups (recommended)**
+Extend `NodeGroup` to support `parentGroupId`, creating a visual hierarchy:
+```typescript
+interface NodeGroup {
+  // ...existing fields...
+  parentGroupId?: string;  // NEW: nesting support
+}
+```
+Rendering: nested dashed rectangles with indented labels.
+
+**Approach B: Expandable Nodes**
+Extend `TopologyNode` to support `childNodeIds`:
+```typescript
+interface TopologyNode {
+  // ...existing fields...
+  childNodeIds?: string[];  // NEW: nodes inside this node
+  isCollapsed?: boolean;    // NEW: hide/show children
+}
+```
+Rendering: when collapsed, show parent node. When expanded, show parent + children inside a container.
+
+**Recommendation:** Approach A (nested groups) is simpler and works with existing architecture. Users create groups like "F5 LTM01 → Virtual Servers" containing VS Angular + VS Sportsbook nodes.
+
+---
+
+## TASK 8.1: Add Nested Group Support (parentGroupId)
+
+### CONTEXT
+- `src/types.ts` — `NodeGroup` has no nesting support
+- `src/components/TopologyCanvas.tsx` — groups rendered as flat rectangles
+
+### OBJECTIVE
+Allow groups to nest inside other groups. Render nested groups as indented containers.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/types.ts` | Add `parentGroupId?: string` to NodeGroup |
+| `src/components/TopologyCanvas.tsx` | In group rendering, compute nested bounding boxes. Render parent groups first (larger), child groups inside. |
+| `src/editors/components/GroupCard.tsx` | Add "Parent group" Select dropdown |
+
+---
+
+## TASK 8.2: Add Cloudflare Multi-Zone Template
+
+### CONTEXT
+- Users want separate CF zone nodes with per-zone metrics
+- Each zone has different queries: `cloudflare_zone_requests_total{zone="cnmglobal04.com"}` vs `{zone="mspjlj.com"}`
+
+### OBJECTIVE
+Add a "CF Zone" node template that auto-generates zone-specific queries when user selects a zone name.
+
+### MODIFICATION PLAN
+| File path | Change |
+|---|---|
+| `src/editors/NodesEditor.tsx` | In BulkImport, add "Cloudflare Zones" discovery option that lists zones from CF exporter and creates per-zone nodes |
+
+---
+
+# UPDATED SUMMARY
+
+| Phase | Tasks | Status |
+|-------|-------|--------|
+| Phase 1-5 | 19 tasks | COMPLETE (19/19) |
+| Phase 6 | 6.1-6.8 | PENDING (QA bug fixes) |
+| Phase 7 | 7.1-7.5 | PENDING (accessibility + formatting) |
+| Phase 8 | 8.1-8.2 | PENDING (multi-layer feature) |
+| **Total** | **34 tasks** | **19 complete, 15 pending** |
