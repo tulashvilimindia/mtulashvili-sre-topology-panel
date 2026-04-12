@@ -473,10 +473,23 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         height={height - 36 - (timeOffset !== 0 ? 28 : 0)}
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
-        popupNode={popupNodeId ? nodes.find((n) => n.id === popupNodeId) || null : null}
-        popupPosition={popupNodeId ? nodePositions.get(popupNodeId) || null : null}
+        popupNode={null}
+        popupPosition={null}
         onPopupClose={() => setPopupNodeId(null)}
       />
+      {popupNodeId && (() => {
+        const popupNode = nodes.find((n) => n.id === popupNodeId);
+        if (!popupNode) { return null; }
+        return (
+          <div style={{ position: 'absolute', top: 44, right: 8, zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
+            <NodePopup
+              node={popupNode}
+              position={{ x: 0, y: 0 }}
+              onClose={() => setPopupNodeId(null)}
+            />
+          </div>
+        );
+      })()}
     </div>
   );
 };

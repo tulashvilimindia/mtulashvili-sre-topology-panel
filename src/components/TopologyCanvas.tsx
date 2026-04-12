@@ -386,7 +386,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               zIndex: isDragging ? 10 : 2,
             }}
             onPointerDown={(e) => handlePointerDown(e, node.id)}
-            onClick={() => handleNodeClick(node.id)}
+            onClick={(e) => { e.stopPropagation(); handleNodeClick(node.id); }}
           >
             {/* Header */}
             <div className="topo-node-header">
@@ -469,15 +469,8 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           </div>
         );
       })}
-      {/* Node popup — inside viewport wrapper for correct zoom positioning */}
-      {popupNode && popupPosition && onPopupClose && (
-        <NodePopup
-          node={popupNode}
-          position={{ x: popupPosition.x + (popupNode.width || 180) + 10, y: popupPosition.y }}
-          onClose={onPopupClose}
-        />
-      )}
       </div>{/* end viewport transform wrapper */}
+      {/* Popup rendered in TopologyPanel instead (outside canvas overflow:hidden) */}
       {/* Zoom controls overlay */}
       <div style={{ position: 'absolute', bottom: 6, right: 6, display: 'flex', gap: 3, zIndex: 20 }}>
         <button className="topology-btn" onClick={handleFitToView} title="Fit to view">Fit</button>

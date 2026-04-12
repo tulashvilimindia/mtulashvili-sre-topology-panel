@@ -85,7 +85,7 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, onClose }) => 
   return (
     <div
       className="topology-popup"
-      style={{ left: position.x, top: position.y }}
+      style={{ position: 'relative', left: 0, top: 0 }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="topology-popup-header">
