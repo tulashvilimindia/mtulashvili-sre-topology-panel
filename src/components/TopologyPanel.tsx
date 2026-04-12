@@ -336,6 +336,10 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
 
   // Persist positions
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cleanup persist timer on unmount
+  useEffect(() => {
+    return () => { if (persistTimerRef.current) { clearTimeout(persistTimerRef.current); } };
+  }, []);
   const persistPositions = useCallback((positions: Map<string, { x: number; y: number }>) => {
     if (persistTimerRef.current) {
       clearTimeout(persistTimerRef.current);

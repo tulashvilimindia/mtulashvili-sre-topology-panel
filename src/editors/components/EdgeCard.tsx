@@ -11,6 +11,7 @@ const EDGE_TYPES = [
   { label: 'HA sync', value: 'ha_sync' as const },
   { label: 'Failover', value: 'failover' as const },
   { label: 'Monitor', value: 'monitor' as const },
+  { label: 'Response', value: 'response' as const },
   { label: 'Custom', value: 'custom' as const },
 ];
 

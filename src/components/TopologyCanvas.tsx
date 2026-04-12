@@ -40,6 +40,8 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
 
   // Viewport zoom/pan state
   const [viewport, setViewport] = useState<ViewportState>(DEFAULT_VIEWPORT);
+  const viewportRef = useRef(viewport);
+  viewportRef.current = viewport;
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
 
@@ -62,10 +64,11 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
       setIsPanning(true);
-      panStartRef.current = { x: e.clientX, y: e.clientY, tx: viewport.translateX, ty: viewport.translateY };
+      const vp = viewportRef.current;
+      panStartRef.current = { x: e.clientX, y: e.clientY, tx: vp.translateX, ty: vp.translateY };
       e.preventDefault();
     }
-  }, [viewport.translateX, viewport.translateY]);
+  }, []);
 
   useEffect(() => {
     if (!isPanning) {return;}
@@ -107,9 +110,10 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) {return;}
     // Inverse-transform pointer coords by viewport for correct drag at any zoom level
-    const scale = viewport.scale || 1;
-    const worldX = (e.clientX - rect.left - viewport.translateX) / scale;
-    const worldY = (e.clientY - rect.top - viewport.translateY) / scale;
+    const vp = viewportRef.current;
+    const scale = vp.scale || 1;
+    const worldX = (e.clientX - rect.left - vp.translateX) / scale;
+    const worldY = (e.clientY - rect.top - vp.translateY) / scale;
     setDragging({
       nodeId,
       offX: worldX - pos.x,
@@ -127,10 +131,11 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
       hasMovedRef.current = true;
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) {return;}
-      // Inverse-transform pointer coords by viewport
-      const scale = viewport.scale || 1;
-      const worldX = (e.clientX - rect.left - viewport.translateX) / scale;
-      const worldY = (e.clientY - rect.top - viewport.translateY) / scale;
+      // Inverse-transform pointer coords by viewport (use ref to avoid stale closure)
+      const vp = viewportRef.current;
+      const scale = vp.scale || 1;
+      const worldX = (e.clientX - rect.left - vp.translateX) / scale;
+      const worldY = (e.clientY - rect.top - vp.translateY) / scale;
       let x = worldX - dragging.offX;
       let y = worldY - dragging.offY;
       x = Math.max(0, Math.min(width / scale - 100, x));
@@ -373,7 +378,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
         return (
           <div
             key={node.id}
-            ref={(el) => { if (el) {nodeElRefs.current.set(node.id, el);} }}
+            ref={(el) => { if (el) {nodeElRefs.current.set(node.id, el);} else {nodeElRefs.current.delete(node.id);} }}
             className={`topology-node ${node.compact ? 'compact' : ''} st-${status} ${isExpanded ? 'open' : ''} ${isDragging ? 'dragging' : ''}`}
             role="button"
             aria-label={`${node.name} (${node.type}): ${status}`}

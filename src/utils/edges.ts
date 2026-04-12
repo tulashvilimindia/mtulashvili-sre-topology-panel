@@ -1,7 +1,7 @@
-import { TopologyNode, TopologyEdge, AnchorPoint, EdgeStatus, NodeStatus, STATUS_COLORS, ThresholdStep } from '../types';
+import { TopologyNode, TopologyEdge, AnchorPoint, EdgeType, EdgeStatus, NodeStatus, STATUS_COLORS, ThresholdStep } from '../types';
 
 /** Status severity ranking: higher number = worse status */
-const STATUS_SEVERITY: Record<string, number> = {
+const STATUS_SEVERITY: Record<NodeStatus | EdgeStatus, number> = {
   ok: 0,
   healthy: 0,
   nodata: 1,
@@ -191,7 +191,7 @@ export function getBezierMidpoint(from: Point, to: Point): Point {
 /**
  * Edge style config per edge type
  */
-export const EDGE_TYPE_STYLES: Record<string, { dashArray: string; opacity: number }> = {
+export const EDGE_TYPE_STYLES: Record<EdgeType, { dashArray: string; opacity: number }> = {
   traffic: { dashArray: '', opacity: 1 },
   ha_sync: { dashArray: '6 4', opacity: 0.8 },
   failover: { dashArray: '2 4', opacity: 0.5 },
