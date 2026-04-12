@@ -179,15 +179,29 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           </marker>
         </defs>
 
-        {edges.map((edge) => {
+        {/* Pre-compute parallel edge offsets */}
+        {edges.map((edge, edgeIndex) => {
           const sourceRect = getNodeRect(edge.sourceId);
           const targetId = edge.targetId;
           if (!sourceRect || !targetId) {return null;}
           const targetRect = getNodeRect(targetId);
           if (!targetRect) {return null;}
 
-          const from = getAnchorPoint(sourceRect, edge.anchorSource, targetRect);
-          const to = getAnchorPoint(targetRect, edge.anchorTarget, sourceRect);
+          // Detect parallel edges: same source-target pair (either direction)
+          const pairKey = [edge.sourceId, targetId].sort().join('-');
+          const parallelEdges = edges.filter((e) => {
+            if (!e.targetId) {return false;}
+            const key = [e.sourceId, e.targetId].sort().join('-');
+            return key === pairKey;
+          });
+          const parallelIndex = parallelEdges.indexOf(edge);
+          const parallelOffset = parallelEdges.length > 1 ? (parallelIndex - (parallelEdges.length - 1) / 2) * 15 : 0;
+
+          const fromRaw = getAnchorPoint(sourceRect, edge.anchorSource, targetRect);
+          const toRaw = getAnchorPoint(targetRect, edge.anchorTarget, sourceRect);
+          // Apply parallel offset perpendicular to edge direction
+          const from = { x: fromRaw.x + parallelOffset, y: fromRaw.y };
+          const to = { x: toRaw.x + parallelOffset, y: toRaw.y };
           const fwdPath = getBezierPath(from, to);
           const mid = getBezierMidpoint(from, to);
 
@@ -354,7 +368,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
                 className="topo-node-icon"
                 style={{ background: typeConfig.color + '22', color: typeConfig.color }}
               >
-                {typeConfig.icon}
+                {node.iconOverride || typeConfig.icon}
               </div>
               <div className="topo-node-info">
                 <div className="topo-node-name">{node.name}</div>

@@ -3,9 +3,10 @@ import { PanelProps, DataFrame } from '@grafana/data';
 import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, DatasourceQueryConfig, NODE_TYPE_CONFIG, STATUS_COLORS } from '../types';
 import { TopologyCanvas } from './TopologyCanvas';
 import { autoLayout } from '../utils/layout';
-import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus } from '../utils/edges';
+import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
 import { queryDatasource } from '../utils/datasourceQuery';
 import { getExampleTopology } from '../editors/TopologyEditor';
+import { NodePopup } from './NodePopup';
 import './TopologyPanel.css';
 
 interface Props extends PanelProps<TopologyPanelOptions> {}
@@ -100,6 +101,7 @@ function useSelfQueries(
 export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data, width, height, replaceVariables }) => {
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [popupNodeId, setPopupNodeId] = useState<string | null>(null);
 
   const nodes = useMemo(() => options.nodes || [], [options.nodes]);
   const edges = useMemo(() => options.edges || [], [options.edges]);
@@ -252,6 +254,13 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     }));
   }, [nodes, nodeStates]);
 
+  // Status propagation: find edges leading to critical nodes
+  const propagatedEdgeIds = useMemo(() => {
+    const statuses = new Map<string, NodeStatus>();
+    nodeStates.forEach((state, id) => { statuses.set(id, state.status); });
+    return propagateStatus(statuses, edges);
+  }, [nodeStates, edges]);
+
   // Compute edge runtime state from data frames
   const edgeStates = useMemo<Map<string, EdgeRuntimeState>>(() => {
     const states = new Map<string, EdgeRuntimeState>();
@@ -277,7 +286,9 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       }
 
       const status = calculateEdgeStatus(value, edge.thresholds);
-      const color = getEdgeColor(status);
+      // Apply status propagation: edges leading to critical nodes show degraded color
+      const effectiveStatus = propagatedEdgeIds.has(edge.id) && status === 'healthy' ? 'degraded' : status;
+      const color = getEdgeColor(effectiveStatus);
       const thickness = calculateThickness(value, edge.thicknessMode, edge.thicknessMin, edge.thicknessMax, edge.thresholds);
       const effectiveFlowSpeed = edge.flowSpeed || animation.defaultFlowSpeed || 'auto';
       const animationSpeed = animation.flowEnabled && edge.flowAnimation
@@ -305,7 +316,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
 
     return states;
-  }, [edges, data, animation.flowEnabled, animation.defaultFlowSpeed, selfQueryResults]);
+  }, [edges, data, animation.flowEnabled, animation.defaultFlowSpeed, selfQueryResults, propagatedEdgeIds]);
 
   // Persist positions
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -342,16 +353,19 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   );
 
   const handleNodeToggle = useCallback((nodeId: string) => {
+    const isEditMode = window.location.search.includes('editPanel');
+    if (isEditMode) {
+      // Canvas-sidebar sync: write selected node to options so editor can auto-expand it
+      onOptionsChange({ ...options, _selectedNodeId: nodeId } as TopologyPanelOptions);
+    } else {
+      // View mode: toggle popup (click again to close)
+      setPopupNodeId((prev) => (prev === nodeId ? null : nodeId));
+    }
     setExpandedNodes((prev) => {
       const next = new Set(prev);
       if (next.has(nodeId)) { next.delete(nodeId); } else { next.add(nodeId); }
       return next;
     });
-    // Canvas-sidebar sync: write selected node to options so editor can auto-expand it
-    const isEditMode = window.location.search.includes('editPanel');
-    if (isEditMode) {
-      onOptionsChange({ ...options, _selectedNodeId: nodeId } as TopologyPanelOptions);
-    }
   }, [options, onOptionsChange]);
 
   const handleResetLayout = useCallback(() => {
@@ -422,6 +436,18 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
       />
+      {popupNodeId && (() => {
+        const popupNode = nodes.find((n) => n.id === popupNodeId);
+        const popupPos = nodePositions.get(popupNodeId);
+        if (!popupNode || !popupPos) { return null; }
+        return (
+          <NodePopup
+            node={popupNode}
+            position={{ x: popupPos.x + (popupNode.width || 180) + 10, y: popupPos.y + 36 }}
+            onClose={() => setPopupNodeId(null)}
+          />
+        );
+      })()}
     </div>
   );
 };

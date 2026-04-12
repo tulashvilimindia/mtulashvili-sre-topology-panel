@@ -199,3 +199,29 @@ export const EDGE_TYPE_STYLES: Record<string, { dashArray: string; opacity: numb
   response: { dashArray: '4 6', opacity: 0.7 },
   custom: { dashArray: '', opacity: 1 },
 };
+
+/**
+ * Propagate critical/degraded status upstream through edges.
+ * When a node is critical, all edges pointing TO it get 'degraded' status,
+ * and source nodes of those edges get a 'propagated' flag.
+ *
+ * Returns a Set of edge IDs that should show propagated (degraded) color.
+ */
+export function propagateStatus(
+  nodeStatuses: Map<string, NodeStatus>,
+  edges: Array<{ id: string; sourceId: string; targetId?: string }>
+): Set<string> {
+  const propagatedEdges = new Set<string>();
+
+  edges.forEach((edge) => {
+    if (!edge.targetId) {
+      return;
+    }
+    const targetStatus = nodeStatuses.get(edge.targetId);
+    if (targetStatus === 'critical') {
+      propagatedEdges.add(edge.id);
+    }
+  });
+
+  return propagatedEdges;
+}

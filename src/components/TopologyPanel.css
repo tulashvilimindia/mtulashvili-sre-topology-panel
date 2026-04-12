@@ -279,3 +279,66 @@
   margin-bottom: 2px;
   flex-wrap: wrap;
 }
+
+/* ============ NODE POPUP ============ */
+.topology-popup {
+  position: absolute;
+  z-index: 50;
+  background: #1a1e24;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  min-width: 220px;
+  max-width: 260px;
+  padding: 8px;
+}
+
+.topology-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2d3748;
+  margin-bottom: 6px;
+}
+
+.topology-popup-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e5e9f0;
+}
+
+.topology-popup-close {
+  cursor: pointer;
+  color: #616e88;
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.topology-popup-close:hover {
+  color: #bf616a;
+}
+
+.topology-popup-loading {
+  font-size: 10px;
+  color: #616e88;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.topology-popup-metric {
+  margin-bottom: 6px;
+}
+
+.topology-popup-metric-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #88c0d0;
+  margin-bottom: 2px;
+}
+
+.topology-popup-metric-value {
+  font-weight: 500;
+  color: #d8dee9;
+}

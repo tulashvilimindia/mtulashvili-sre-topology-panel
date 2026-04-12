@@ -78,6 +78,8 @@ export interface TopologyNode {
   compact: boolean;
   /** Annotation/notes for this node */
   description?: string;
+  /** Custom icon text override (e.g. "SB", "GA") — replaces type default icon */
+  iconOverride?: string;
 }
 
 // ============================================================

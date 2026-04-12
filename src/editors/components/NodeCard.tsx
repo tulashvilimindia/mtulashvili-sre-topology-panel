@@ -341,6 +341,15 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
               <Checkbox label="Compact" value={node.compact} onChange={(e) => handleField('compact', e.currentTarget.checked)} />
             </div>
             <div className="topo-editor-field">
+              <label>Icon override <span style={{ fontSize: 9, color: '#4c566a' }}>2-3 chars, replaces type icon</span></label>
+              <Input
+                value={node.iconOverride || ''}
+                onChange={(e) => handleField('iconOverride', e.currentTarget.value || undefined)}
+                placeholder="SB, GA, API..."
+                width={10}
+              />
+            </div>
+            <div className="topo-editor-field">
               <label>Width (px)</label>
               <Input
                 type="number"
