@@ -128,6 +128,32 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
     [node, onChange]
   );
 
+  // ─── Alert label matchers (local state so half-typed keys don't lose focus) ───
+  const [matcherEntries, setMatcherEntries] = useState<Array<{ key: string; value: string }>>(
+    () => Object.entries(node.alertLabelMatchers || {}).map(([key, value]) => ({ key, value }))
+  );
+
+  const syncMatchers = useCallback((next: Array<{ key: string; value: string }>) => {
+    setMatcherEntries(next);
+    const obj: Record<string, string> = {};
+    next.forEach(({ key, value }) => {
+      if (key) { obj[key] = value; }
+    });
+    handleField('alertLabelMatchers', Object.keys(obj).length > 0 ? obj : undefined);
+  }, [handleField]);
+
+  const addMatcher = useCallback(() => {
+    syncMatchers([...matcherEntries, { key: '', value: '' }]);
+  }, [matcherEntries, syncMatchers]);
+
+  const updateMatcher = useCallback((idx: number, field: 'key' | 'value', val: string) => {
+    syncMatchers(matcherEntries.map((m, i) => (i === idx ? { ...m, [field]: val } : m)));
+  }, [matcherEntries, syncMatchers]);
+
+  const removeMatcher = useCallback((idx: number) => {
+    syncMatchers(matcherEntries.filter((_, i) => i !== idx));
+  }, [matcherEntries, syncMatchers]);
+
   // ─── When user selects a host, auto-fill name ───
   const handleHostSelect = useCallback((instance: string) => {
     setSelectedInstance(instance);
@@ -377,6 +403,51 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
                   width={10}
                 />
               </div>
+            </div>
+            <div className="topo-editor-field">
+              <label>
+                Alert matchers
+                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>
+                  match Grafana alerts by labels (ALL must match)
+                </span>
+              </label>
+              {matcherEntries.length === 0 && (
+                <div style={{ fontSize: 10, color: '#616e88', padding: '4px 0' }}>
+                  No matchers — alert integration disabled for this node
+                </div>
+              )}
+              {matcherEntries.map((entry, idx) => (
+                <div key={idx} className="topo-editor-row" style={{ gap: 4, marginBottom: 2 }}>
+                  <Input
+                    value={entry.key}
+                    onChange={(e) => updateMatcher(idx, 'key', e.currentTarget.value)}
+                    placeholder="label (e.g. instance)"
+                    width={14}
+                  />
+                  <span style={{ color: '#616e88', fontSize: 11 }}>=</span>
+                  <Input
+                    value={entry.value}
+                    onChange={(e) => updateMatcher(idx, 'value', e.currentTarget.value)}
+                    placeholder="value"
+                    width={16}
+                  />
+                  <IconButton
+                    name="trash-alt"
+                    size="sm"
+                    onClick={() => removeMatcher(idx)}
+                    tooltip="Remove matcher"
+                  />
+                </div>
+              ))}
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="plus"
+                onClick={addMatcher}
+                style={{ marginTop: 4 }}
+              >
+                Add matcher
+              </Button>
             </div>
           </CollapsableSection>
         )}
