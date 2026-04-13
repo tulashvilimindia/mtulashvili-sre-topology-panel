@@ -9,9 +9,13 @@
 import { getDataSourceSrv } from '@grafana/runtime';
 import { DatasourceQueryConfig } from '../types';
 
-/** Result of a single metric query */
+/** Categorised error codes for failed queries. Empty results are NOT errors. */
+export type QueryError = 'network' | 'http' | 'parse';
+
+/** Result of a single metric query — value null + error set means fetch failed */
 export interface QueryResult {
   value: number | null;
+  error?: QueryError;
 }
 
 /**
@@ -46,7 +50,7 @@ export async function queryDatasource(
   queryConfig?: DatasourceQueryConfig,
   replaceVars?: (value: string) => string,
   historicalTime?: number
-): Promise<number | null> {
+): Promise<QueryResult> {
   const type = dsType || detectDatasourceType(dsUid);
   const interpolatedQuery = replaceVars ? replaceVars(query) : query;
 
@@ -66,7 +70,7 @@ export async function queryDatasource(
  * Query Prometheus via datasource proxy API.
  * Uses instant query endpoint, returns the latest value.
  */
-async function queryPrometheus(dsUid: string, query: string, historicalTime?: number): Promise<number | null> {
+async function queryPrometheus(dsUid: string, query: string, historicalTime?: number): Promise<QueryResult> {
   try {
     const params: Record<string, string> = { query };
     if (historicalTime) {
@@ -77,17 +81,27 @@ async function queryPrometheus(dsUid: string, query: string, historicalTime?: nu
       new URLSearchParams(params)
     );
     if (!resp.ok) {
-      return null;
+      console.warn('[topology] prom query http error', { dsUid, status: resp.status, query });
+      return { value: null, error: 'http' };
     }
     const data = await resp.json();
     const results = data?.data?.result;
     if (!results || results.length === 0) {
-      return null;
+      // Empty result is NOT an error — legitimate "no samples in window"
+      return { value: null };
     }
     const val = parseFloat(results[0].value[1]);
-    return isNaN(val) ? null : val;
-  } catch {
-    return null;
+    if (isNaN(val)) {
+      console.warn('[topology] prom parse error', { dsUid, query });
+      return { value: null, error: 'parse' };
+    }
+    return { value: val };
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      return { value: null };
+    }
+    console.warn('[topology] prom network error', { dsUid, query, err });
+    return { value: null, error: 'network' };
   }
 }
 
@@ -98,9 +112,10 @@ async function queryPrometheus(dsUid: string, query: string, historicalTime?: nu
 async function queryCloudWatch(
   dsUid: string,
   config?: DatasourceQueryConfig
-): Promise<number | null> {
+): Promise<QueryResult> {
   if (!config?.namespace || !config?.metricName) {
-    return null;
+    // Missing required config — treat as empty, not error (user hasn't finished configuring)
+    return { value: null };
   }
   try {
     const dimensions: Record<string, string[]> = {};
@@ -130,22 +145,31 @@ async function queryCloudWatch(
       }),
     });
     if (!resp.ok) {
-      return null;
+      console.warn('[topology] cloudwatch http error', { dsUid, status: resp.status, metric: config.metricName });
+      return { value: null, error: 'http' };
     }
     const data = await resp.json();
     const frames = data?.results?.A?.frames;
     if (!frames || frames.length === 0) {
-      return null;
+      return { value: null };
     }
     const values = frames[0]?.data?.values;
     if (!values || values.length < 2 || values[1].length === 0) {
-      return null;
+      return { value: null };
     }
     // Last value in the time series
     const val = values[1][values[1].length - 1];
-    return typeof val === 'number' && !isNaN(val) ? val : null;
-  } catch {
-    return null;
+    if (typeof val !== 'number' || isNaN(val)) {
+      console.warn('[topology] cloudwatch parse error', { dsUid, metric: config.metricName });
+      return { value: null, error: 'parse' };
+    }
+    return { value: val };
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      return { value: null };
+    }
+    console.warn('[topology] cloudwatch network error', { dsUid, metric: config.metricName, err });
+    return { value: null, error: 'network' };
   }
 }
 
@@ -156,9 +180,10 @@ async function queryCloudWatch(
 async function queryInfinity(
   dsUid: string,
   config?: DatasourceQueryConfig
-): Promise<number | null> {
+): Promise<QueryResult> {
   if (!config?.url) {
-    return null;
+    // Missing URL — treat as empty, not error (user hasn't finished configuring)
+    return { value: null };
   }
   try {
     const urlOptions: Record<string, string> = {
@@ -190,32 +215,41 @@ async function queryInfinity(
       }),
     });
     if (!resp.ok) {
-      return null;
+      console.warn('[topology] infinity http error', { dsUid, status: resp.status, url: config.url });
+      return { value: null, error: 'http' };
     }
     const data = await resp.json();
     const frames = data?.results?.A?.frames;
     if (!frames || frames.length === 0) {
-      return null;
+      return { value: null };
     }
     const values = frames[0]?.data?.values;
     if (values && values[0] && values[0].length > 0) {
       const val = parseFloat(values[0][0]);
-      return isNaN(val) ? null : val;
+      if (isNaN(val)) {
+        console.warn('[topology] infinity parse error', { dsUid, url: config.url });
+        return { value: null, error: 'parse' };
+      }
+      return { value: val };
     }
     // Fallback: check meta.custom.data for raw response
     const rawData = frames[0]?.schema?.meta?.custom?.data;
     if (typeof rawData === 'number') {
-      return rawData;
+      return { value: rawData };
     }
     if (typeof rawData === 'object' && rawData !== null) {
       // Try common response shapes
       const candidate = rawData.value ?? rawData.count ?? rawData.result;
       if (typeof candidate === 'number') {
-        return candidate;
+        return { value: candidate };
       }
     }
-    return null;
-  } catch {
-    return null;
+    return { value: null };
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      return { value: null };
+    }
+    console.warn('[topology] infinity network error', { dsUid, url: config.url, err });
+    return { value: null, error: 'network' };
   }
 }

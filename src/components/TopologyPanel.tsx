@@ -4,7 +4,7 @@ import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, Nod
 import { TopologyCanvas } from './TopologyCanvas';
 import { autoLayout } from '../utils/layout';
 import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
-import { queryDatasource } from '../utils/datasourceQuery';
+import { queryDatasource, QueryResult, QueryError } from '../utils/datasourceQuery';
 import { fetchAlertRules, matchAlertsToNode } from '../utils/alertRules';
 import { getExampleTopology } from '../editors/TopologyEditor';
 import { NodePopup } from './NodePopup';
@@ -27,8 +27,9 @@ function useSelfQueries(
   panelSeries: DataFrame[],
   replaceVars?: (value: string) => string,
   historicalTime?: number
-): { data: Map<string, number | null>; isLoading: boolean } {
-  const [results, setResults] = useState<Map<string, number | null>>(new Map());
+): { data: Map<string, QueryResult>; isLoading: boolean; failures: Map<string, QueryError> } {
+  const [results, setResults] = useState<Map<string, QueryResult>>(new Map());
+  const [failures, setFailures] = useState<Map<string, QueryError>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,6 +75,7 @@ function useSelfQueries(
     if (uncoveredMetrics.length === 0) {
       if (hasResultsRef.current) {
         setResults(new Map());
+        setFailures(new Map());
       }
       return;
     }
@@ -84,16 +86,21 @@ function useSelfQueries(
 
     fetchTimerRef.current = setTimeout(async () => {
       setIsLoading(true);
-      const newResults = new Map<string, number | null>();
+      const newResults = new Map<string, QueryResult>();
+      const newFailures = new Map<string, QueryError>();
 
       // Query all uncovered metrics using the multi-DS abstraction
       const promises = uncoveredMetrics.map(async (m) => {
-        const value = await queryDatasource(m.dsUid, m.query, m.dsType, m.queryConfig, replaceVars, historicalTime);
-        newResults.set(m.metricId, value);
+        const result = await queryDatasource(m.dsUid, m.query, m.dsType, m.queryConfig, replaceVars, historicalTime);
+        newResults.set(m.metricId, result);
+        if (result.error) {
+          newFailures.set(m.metricId, result.error);
+        }
       });
 
       await Promise.all(promises);
       setResults(newResults);
+      setFailures(newFailures);
       setIsLoading(false);
     }, 500);
 
@@ -104,7 +111,7 @@ function useSelfQueries(
     };
   }, [uncoveredMetrics, replaceVars, historicalTime]);
 
-  return { data: results, isLoading };
+  return { data: results, isLoading, failures };
 }
 
 // ─── Auto-fetch: poll Grafana unified alerting API and match alerts to nodes ───
@@ -193,7 +200,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   }, [timeOffset]);
 
   // Auto-fetch metrics not covered by panel queries (supports Prometheus, CloudWatch, Infinity)
-  const { data: selfQueryResults, isLoading: isFetchingMetrics } = useSelfQueries(nodes, edges, data.series, replaceVariables, historicalTime);
+  const { data: selfQueryResults, isLoading: isFetchingMetrics, failures: selfQueryFailures } = useSelfQueries(nodes, edges, data.series, replaceVariables, historicalTime);
 
   // Auto-fetch Grafana alert rules and match to nodes (only polls if ≥1 node has alertLabelMatchers)
   const alertsByNode = useAlertRules(nodes);
@@ -275,7 +282,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
 
         // Fallback: try self-queried data
         if (raw === null && selfQueryResults.has(metricConfig.id)) {
-          raw = selfQueryResults.get(metricConfig.id) ?? null;
+          raw = selfQueryResults.get(metricConfig.id)?.value ?? null;
         }
 
         if (raw !== null) {
@@ -359,6 +366,17 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     }));
   }, [nodes, nodeStates]);
 
+  // Derive stale-metric summary for toolbar pill
+  const failureSummary = useMemo(() => {
+    const byError: Record<QueryError, number> = { network: 0, http: 0, parse: 0 };
+    const ids: string[] = [];
+    selfQueryFailures.forEach((err, id) => {
+      byError[err]++;
+      ids.push(`${id} (${err})`);
+    });
+    return { total: selfQueryFailures.size, byError, ids };
+  }, [selfQueryFailures]);
+
   // Status propagation: find edges leading to critical nodes
   const propagatedEdgeIds = useMemo(() => {
     const statuses = new Map<string, NodeStatus>();
@@ -387,7 +405,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
 
       // Fallback: try self-queried edge metric data
       if (value === null && selfQueryResults.has(edge.id)) {
-        value = selfQueryResults.get(edge.id) ?? null;
+        value = selfQueryResults.get(edge.id)?.value ?? null;
       }
 
       const status = calculateEdgeStatus(value, edge.thresholds);
@@ -519,6 +537,24 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
               />
             ))}
           </div>
+        )}
+        {failureSummary.total > 0 && (
+          <span
+            style={{
+              fontSize: 10,
+              padding: '2px 6px',
+              borderRadius: 3,
+              background: '#ebcb8b22',
+              color: '#ebcb8b',
+              border: '1px solid #ebcb8b44',
+              marginLeft: 6,
+              whiteSpace: 'nowrap',
+              cursor: 'help',
+            }}
+            title={`Stale metrics (${failureSummary.total}):\n${failureSummary.ids.join('\n')}`}
+          >
+            ⚠ {failureSummary.total} stale
+          </span>
         )}
         <div className="topology-toolbar-spacer" />
         <button className="topology-btn" onClick={handleResetLayout}>
