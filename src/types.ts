@@ -80,6 +80,13 @@ export interface TopologyNode {
   description?: string;
   /** Custom icon text override (e.g. "SB", "GA") — replaces type default icon */
   iconOverride?: string;
+  /**
+   * Opt-in label matchers for Grafana alert rules. When set, any firing/pending
+   * alert whose labels contain ALL these key/value pairs will override the node's
+   * metric-based status (firing → critical, pending → warning).
+   * Omit or leave empty to disable alert integration for this node.
+   */
+  alertLabelMatchers?: Record<string, string>;
 }
 
 // ============================================================
@@ -179,11 +186,21 @@ export interface DynamicTargetQuery {
 // RUNTIME STATE (computed, not persisted)
 // ============================================================
 
+/** A firing or pending Grafana alert instance matched to a node */
+export interface FiringAlert {
+  ruleName: string;
+  state: 'firing' | 'pending';
+  labels: Record<string, string>;
+  activeAt?: string;
+}
+
 export interface NodeRuntimeState {
   nodeId: string;
   status: NodeStatus;
   metricValues: Record<string, MetricValue>;
   expanded: boolean;
+  /** Alerts currently firing/pending against this node (empty/undefined = none) */
+  firingAlerts?: FiringAlert[];
 }
 
 export interface EdgeRuntimeState {

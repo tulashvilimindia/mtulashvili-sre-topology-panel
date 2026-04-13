@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { PanelProps, DataFrame } from '@grafana/data';
-import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, DatasourceQueryConfig, NODE_TYPE_CONFIG, STATUS_COLORS } from '../types';
+import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, DatasourceQueryConfig, FiringAlert, NODE_TYPE_CONFIG, STATUS_COLORS } from '../types';
 import { TopologyCanvas } from './TopologyCanvas';
 import { autoLayout } from '../utils/layout';
 import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
 import { queryDatasource } from '../utils/datasourceQuery';
+import { fetchAlertRules, matchAlertsToNode } from '../utils/alertRules';
 import { getExampleTopology } from '../editors/TopologyEditor';
 import { NodePopup } from './NodePopup';
 import './TopologyPanel.css';
@@ -106,6 +107,66 @@ function useSelfQueries(
   return { data: results, isLoading };
 }
 
+// ─── Auto-fetch: poll Grafana unified alerting API and match alerts to nodes ───
+function useAlertRules(nodes: TopologyNode[]): Map<string, FiringAlert[]> {
+  const [alertsByNode, setAlertsByNode] = useState<Map<string, FiringAlert[]>>(new Map());
+
+  // Only nodes opted-in via alertLabelMatchers trigger polling
+  const nodesWithMatchers = useMemo(
+    () => nodes.filter((n) => n.alertLabelMatchers && Object.keys(n.alertLabelMatchers).length > 0),
+    [nodes]
+  );
+
+  // Avoid adding alertsByNode to deps (would cause infinite loop)
+  const hasAlertsRef = useRef(false);
+  hasAlertsRef.current = alertsByNode.size > 0;
+
+  useEffect(() => {
+    if (nodesWithMatchers.length === 0) {
+      if (hasAlertsRef.current) {
+        setAlertsByNode(new Map());
+      }
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const result = await fetchAlertRules(controller.signal);
+        if (cancelled) {
+          return;
+        }
+        const next = new Map<string, FiringAlert[]>();
+        nodesWithMatchers.forEach((n) => {
+          const matched = matchAlertsToNode(result.alerts, n.alertLabelMatchers);
+          if (matched.length > 0) {
+            next.set(n.id, matched);
+          }
+        });
+        setAlertsByNode(next);
+      } catch (err) {
+        // AbortError is intentional cleanup — swallow silently
+        if ((err as Error).name !== 'AbortError') {
+          console.warn('[topology] useAlertRules run failed', err);
+        }
+      }
+    };
+
+    run();
+    const interval = setInterval(run, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      controller.abort();
+    };
+  }, [nodesWithMatchers]);
+
+  return alertsByNode;
+}
+
 export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data, width, height, replaceVariables }) => {
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -133,6 +194,9 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
 
   // Auto-fetch metrics not covered by panel queries (supports Prometheus, CloudWatch, Infinity)
   const { data: selfQueryResults, isLoading: isFetchingMetrics } = useSelfQueries(nodes, edges, data.series, replaceVariables, historicalTime);
+
+  // Auto-fetch Grafana alert rules and match to nodes (only polls if ≥1 node has alertLabelMatchers)
+  const alertsByNode = useAlertRules(nodes);
 
   // Ref to read current positions without triggering useEffect re-runs
   const nodePositionsRef = useRef(nodePositions);
@@ -246,16 +310,31 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         }
       });
 
+      // Alert-rule override: firing → critical, pending → warning (unless already critical)
+      const matched = alertsByNode.get(node.id);
+      let firingAlerts: FiringAlert[] | undefined;
+      if (matched && matched.length > 0) {
+        firingAlerts = matched;
+        const hasFiring = matched.some((a) => a.state === 'firing');
+        const hasPending = matched.some((a) => a.state === 'pending');
+        if (hasFiring) {
+          worstStatus = 'critical';
+        } else if (hasPending && (worstStatus as NodeStatus) !== 'critical') {
+          worstStatus = 'warning';
+        }
+      }
+
       states.set(node.id, {
         nodeId: node.id,
         status: worstStatus,
         metricValues,
         expanded: expandedNodes.has(node.id),
+        firingAlerts,
       });
     });
 
     return states;
-  }, [nodes, data, expandedNodes, selfQueryResults]);
+  }, [nodes, data, expandedNodes, selfQueryResults, alertsByNode]);
 
   // Compute health summary: worst status per node type for toolbar indicator
   const healthSummary = useMemo<Array<{ type: NodeType; icon: string; color: string; status: NodeStatus; count: number }>>(() => {
@@ -496,11 +575,13 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       {popupNodeId && (() => {
         const popupNode = nodes.find((n) => n.id === popupNodeId);
         if (!popupNode) { return null; }
+        const popupAlerts = nodeStates.get(popupNodeId)?.firingAlerts;
         return (
           <div style={{ position: 'absolute', top: 44, right: 8, zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
             <NodePopup
               node={popupNode}
               position={{ x: 0, y: 0 }}
+              firingAlerts={popupAlerts}
               onClose={() => setPopupNodeId(null)}
             />
           </div>

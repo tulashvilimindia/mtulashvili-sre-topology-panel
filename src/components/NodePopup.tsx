@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { TopologyNode, NodeMetricConfig, STATUS_COLORS, ACCENT_COLOR } from '../types';
+import { TopologyNode, NodeMetricConfig, FiringAlert, STATUS_COLORS, ACCENT_COLOR } from '../types';
 
 interface PopupProps {
   node: TopologyNode;
   position: { x: number; y: number };
+  firingAlerts?: FiringAlert[];
   onClose: () => void;
 }
 
@@ -47,7 +48,7 @@ async function fetchTimeseries(dsUid: string, query: string, signal?: AbortSigna
   }
 }
 
-export const NodePopup: React.FC<PopupProps> = ({ node, position, onClose }) => {
+export const NodePopup: React.FC<PopupProps> = ({ node, position, firingAlerts, onClose }) => {
   const [seriesData, setSeriesData] = useState<MetricTimeseries[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,7 +86,8 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, onClose }) => 
 
     fetchAll();
     return () => { cancelled = true; controller.abort(); };
-  }, [node.id, metricIds]);
+    // metricIds is a stable hash of node.metrics[].id; node.metrics listed to satisfy exhaustive-deps
+  }, [node.id, node.metrics, metricIds]);
 
   return (
     <div
@@ -97,6 +99,38 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, onClose }) => 
         <span className="topology-popup-title">{node.name}</span>
         <button className="topology-popup-close" onClick={onClose} aria-label="Close">&times;</button>
       </div>
+      {firingAlerts && firingAlerts.length > 0 && (
+        <div style={{ padding: '6px 8px', borderBottom: '1px solid #2d3748' }}>
+          <div style={{ fontSize: 10, color: '#616e88', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Firing alerts ({firingAlerts.length})
+          </div>
+          {firingAlerts.map((alert, i) => {
+            const badgeColor = alert.state === 'firing' ? STATUS_COLORS.critical : STATUS_COLORS.warning;
+            return (
+              <div
+                key={`${alert.ruleName}-${i}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, fontSize: 11 }}
+              >
+                <span
+                  style={{
+                    background: badgeColor + '22',
+                    color: badgeColor,
+                    border: `1px solid ${badgeColor}44`,
+                    borderRadius: 2,
+                    padding: '0 4px',
+                    fontSize: 9,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  {alert.state}
+                </span>
+                <span style={{ color: '#d8dee9' }}>{alert.ruleName}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {loading && <div className="topology-popup-loading">Loading trends...</div>}
       {!loading && seriesData.map((series) => (
         <div key={series.metricId} className="topology-popup-metric">
