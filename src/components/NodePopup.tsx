@@ -106,26 +106,79 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, firingAlerts, 
           </div>
           {firingAlerts.map((alert, i) => {
             const badgeColor = alert.state === 'firing' ? STATUS_COLORS.critical : STATUS_COLORS.warning;
+            const ruleHref = alert.ruleUid
+              ? `/alerting/grafana/${alert.ruleUid}/view`
+              : `/alerting/list?search=${encodeURIComponent(alert.ruleName)}`;
+            const summary = alert.annotations?.summary || alert.annotations?.description;
+            const runbookUrl = alert.annotations?.runbook_url;
             return (
-              <div
-                key={`${alert.ruleName}-${i}`}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, fontSize: 11 }}
-              >
-                <span
-                  style={{
-                    background: badgeColor + '22',
-                    color: badgeColor,
-                    border: `1px solid ${badgeColor}44`,
-                    borderRadius: 2,
-                    padding: '0 4px',
-                    fontSize: 9,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.3,
-                  }}
-                >
-                  {alert.state}
-                </span>
-                <span style={{ color: '#d8dee9' }}>{alert.ruleName}</span>
+              <div key={`${alert.ruleName}-${i}`} style={{ marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                  <span
+                    style={{
+                      background: badgeColor + '22',
+                      color: badgeColor,
+                      border: `1px solid ${badgeColor}44`,
+                      borderRadius: 2,
+                      padding: '0 4px',
+                      fontSize: 9,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {alert.state}
+                  </span>
+                  <a
+                    href={ruleHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: badgeColor,
+                      textDecoration: 'none',
+                      borderBottom: `1px dotted ${badgeColor}66`,
+                    }}
+                  >
+                    {alert.ruleName}
+                  </a>
+                  {runbookUrl && (
+                    <a
+                      href={runbookUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        marginLeft: 'auto',
+                        fontSize: 9,
+                        padding: '1px 5px',
+                        borderRadius: 2,
+                        background: '#5e81ac22',
+                        color: '#5e81ac',
+                        border: '1px solid #5e81ac44',
+                        textDecoration: 'none',
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      Runbook
+                    </a>
+                  )}
+                </div>
+                {summary && (
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: '#616e88',
+                      marginLeft: 34,
+                      marginTop: 1,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: 260,
+                    }}
+                    title={summary}
+                  >
+                    {summary}
+                  </div>
+                )}
               </div>
             );
           })}

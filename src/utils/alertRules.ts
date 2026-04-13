@@ -16,12 +16,16 @@ interface GrafanaRuleAlert {
   state: string;
   labels: Record<string, string>;
   activeAt?: string;
+  annotations?: Record<string, string>;
 }
 
 interface GrafanaRule {
   name: string;
   state: string;
   alerts?: GrafanaRuleAlert[];
+  annotations?: Record<string, string>;
+  /** Grafana unified alerting rule UID — not guaranteed on all Grafana versions */
+  uid?: string;
 }
 
 interface GrafanaRuleGroup {
@@ -78,12 +82,21 @@ export async function fetchAlertRules(signal?: AbortSignal): Promise<AlertRulesR
         }
         for (const instance of rule.alerts) {
           if (instance.state === 'firing' || instance.state === 'pending') {
-            alerts.push({
+            // Merge annotations: instance-level overrides rule-level (mirrors Grafana's own semantics)
+            const mergedAnnotations = { ...(rule.annotations || {}), ...(instance.annotations || {}) };
+            const alert: FiringAlert = {
               ruleName: rule.name,
               state: instance.state,
               labels: instance.labels || {},
               activeAt: instance.activeAt,
-            });
+            };
+            if (Object.keys(mergedAnnotations).length > 0) {
+              alert.annotations = mergedAnnotations;
+            }
+            if (rule.uid) {
+              alert.ruleUid = rule.uid;
+            }
+            alerts.push(alert);
           }
         }
       }

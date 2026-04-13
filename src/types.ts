@@ -192,6 +192,10 @@ export interface FiringAlert {
   state: 'firing' | 'pending';
   labels: Record<string, string>;
   activeAt?: string;
+  /** Merged rule-level + instance-level annotations (e.g. summary, description, runbook_url) */
+  annotations?: Record<string, string>;
+  /** Grafana rule UID for deep-linking to /alerting/grafana/{uid}/view (may be absent on older Grafana) */
+  ruleUid?: string;
 }
 
 export interface NodeRuntimeState {
