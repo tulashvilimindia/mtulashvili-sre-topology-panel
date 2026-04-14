@@ -11,6 +11,7 @@ import { useDynamicTargets } from '../hooks/useDynamicTargets';
 import { emitNodeClicked, emitNodeEditRequest, emitEdgeEditRequest, emitOrphanEdgeCleanup, onOrphanEdgeCleanup, onTopologyImport } from '../utils/panelEvents';
 import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
+import { EdgePopup } from './EdgePopup';
 import { ContextMenu, ContextMenuTarget } from './ContextMenu';
 import { generateId } from '../editors/utils/editorUtils';
 import './TopologyPanel.css';
@@ -29,6 +30,10 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     target: ContextMenuTarget;
     position: { x: number; y: number };
   } | null>(null);
+  // Edge-popup state (Phase 4). Kept separate from the node popup so the
+  // two popup lifecycles don't collide. Opening one closes the other.
+  const [popupEdgeId, setPopupEdgeId] = useState<string | null>(null);
+  const [popupEdgePosition, setPopupEdgePosition] = useState<{ x: number; y: number } | null>(null);
   const [timeOffset, setTimeOffset] = useState<number>(0); // 0 = now, negative = minutes ago
   const [exampleBannerVisible, setExampleBannerVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -421,6 +426,10 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
   );
 
   const handleNodeToggle = useCallback((nodeId: string, rect?: DOMRect) => {
+    // Opening a node popup closes any open edge popup so only one
+    // floating UI is visible at a time.
+    setPopupEdgeId(null);
+    setPopupEdgePosition(null);
     const isEditMode = window.location.search.includes('editPanel');
     if (isEditMode) {
       // Edit mode: sidebar is the expansion target. Emit the event so
@@ -541,6 +550,27 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     }
   }, [onOptionsChange]);
 
+  // Left-click on an edge (Phase 4): open an EdgePopup at the click point,
+  // clamped to panel bounds the same way handleNodeToggle does for nodes.
+  // Opening the edge popup also closes any open node popup.
+  const handleEdgeClick = useCallback((edgeId: string, clientX: number, clientY: number) => {
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (!rect) { return; }
+    const POPUP_W = 240;
+    const POPUP_H = 260;
+    let x = clientX - rect.left + 8;
+    let y = clientY - rect.top;
+    if (x + POPUP_W > rect.width) { x = Math.max(8, clientX - rect.left - POPUP_W - 8); }
+    if (x < 8) { x = 8; }
+    if (y + POPUP_H > rect.height) { y = Math.max(8, rect.height - POPUP_H - 8); }
+    if (y < 8) { y = 8; }
+    setPopupNodeId(null);
+    setPopupPosition(null);
+    setContextMenu(null);
+    setPopupEdgeId(edgeId);
+    setPopupEdgePosition({ x, y });
+  }, []);
+
   const handleContextDelete = useCallback((target: ContextMenuTarget) => {
     const current = optionsRef.current;
     if (target.type === 'node') {
@@ -652,7 +682,13 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
       ref={panelRef}
       className="topology-panel"
       style={{ width, height, backgroundColor: canvas.backgroundColor }}
-      onClick={() => { setPopupNodeId(null); setPopupPosition(null); setContextMenu(null); }}
+      onClick={() => {
+        setPopupNodeId(null);
+        setPopupPosition(null);
+        setContextMenu(null);
+        setPopupEdgeId(null);
+        setPopupEdgePosition(null);
+      }}
     >
       <div className="topology-toolbar" ref={toolbarRef}>
         <span className="topology-title">E2E topology</span>
@@ -781,6 +817,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         onNodeDoubleClick={handleNodeDoubleClick}
         onNodeContextMenu={handleNodeContextMenu}
         onEdgeContextMenu={handleEdgeContextMenu}
+        onEdgeClick={handleEdgeClick}
       />
       <ContextMenu
         target={contextMenu?.target ?? null}
@@ -821,6 +858,39 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
               onEdit={handleEdit}
               metricValues={nodeStates.get(popupNodeId)?.metricValues}
               freshnessSLOSec={animation.metricFreshnessSLOSec}
+            />
+          </div>
+        );
+      })()}
+      {popupEdgeId && popupEdgePosition && (() => {
+        const popupEdge = expandedEdges.find((e) => e.id === popupEdgeId);
+        if (!popupEdge) { return null; }
+        const sourceNode = nodes.find((n) => n.id === popupEdge.sourceId);
+        const targetNode = nodes.find((n) => n.id === popupEdge.targetId);
+        const isEditMode = window.location.search.includes('editPanel');
+        // Edit routes through the edge-edit-request panelEvents channel;
+        // EdgesEditor subscribes and scrolls/expands the matching card.
+        // Virtual edges (id contains '::') have no real slice entry, so
+        // the edit button is hidden for them.
+        const handleEdit = isEditMode && !popupEdge.id.includes('::')
+          ? () => {
+              emitEdgeEditRequest(popupEdge.id);
+              setPopupEdgeId(null);
+              setPopupEdgePosition(null);
+            }
+          : undefined;
+        return (
+          <div
+            style={{ position: 'absolute', left: popupEdgePosition.x, top: popupEdgePosition.y, zIndex: 100 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <EdgePopup
+              edge={popupEdge}
+              runtimeState={edgeStates.get(popupEdgeId)}
+              sourceName={sourceNode?.name || popupEdge.sourceId}
+              targetName={targetNode?.name || popupEdge.targetId || 'unknown'}
+              onClose={() => { setPopupEdgeId(null); setPopupEdgePosition(null); }}
+              onEdit={handleEdit}
             />
           </div>
         );

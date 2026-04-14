@@ -29,6 +29,9 @@ interface CanvasProps {
   // menu against its own bounds, consistent with the existing popup path.
   onNodeContextMenu?: (nodeId: string, clientX: number, clientY: number) => void;
   onEdgeContextMenu?: (edgeId: string, clientX: number, clientY: number) => void;
+  // Edge left-click (Phase 4). Same raw-coord convention as the context-menu
+  // handlers above. Routed through the hit-test overlay introduced in Phase 1.
+  onEdgeClick?: (edgeId: string, clientX: number, clientY: number) => void;
 }
 
 // ─── Memoized edge SVG renderer ───
@@ -182,7 +185,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
   nodes, edges, groups, nodePositions, nodeStates, edgeStates,
   canvasOptions, animationOptions, displayOptions,
   width, height, panelId, onNodeDrag, onNodeToggle, onNodeDoubleClick,
-  onNodeContextMenu, onEdgeContextMenu,
+  onNodeContextMenu, onEdgeContextMenu, onEdgeClick,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -541,6 +544,11 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
                 e.preventDefault();
                 e.stopPropagation();
                 onEdgeContextMenu(edge.id, e.clientX, e.clientY);
+              }}
+              onClick={(e) => {
+                if (!onEdgeClick) { return; }
+                e.stopPropagation();
+                onEdgeClick(edge.id, e.clientX, e.clientY);
               }}
             />
           );
