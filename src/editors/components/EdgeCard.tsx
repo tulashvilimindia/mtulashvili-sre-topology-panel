@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import { CollapsableSection, Input, Select, Checkbox, IconButton, RadioButtonGroup, TextArea } from '@grafana/ui';
 import { DataSourcePicker } from '@grafana/runtime';
-import { TopologyEdge, TopologyNode } from '../../types';
+import { TopologyEdge, TopologyNode, FlowSpeed } from '../../types';
 import { ThresholdList } from './ThresholdList';
 import { getNodeSelectOptions } from '../utils/editorUtils';
 import '../editors.css';
@@ -21,12 +21,13 @@ const THICKNESS_MODES = [
   { label: 'Threshold', value: 'threshold' as const },
 ];
 
-const FLOW_SPEEDS = [
-  { label: 'Auto', value: 'auto' as const, description: 'Faster animation with higher metric values' },
-  { label: 'Slow', value: 'slow' as const },
-  { label: 'Normal', value: 'normal' as const },
-  { label: 'Fast', value: 'fast' as const },
-  { label: 'None', value: 'none' as const },
+const FLOW_SPEEDS: Array<{ label: string; value: 'auto' | 'slow' | 'normal' | 'fast' | 'none' | ''; description?: string }> = [
+  { label: 'Inherit', value: '', description: 'Use panel animation.defaultFlowSpeed' },
+  { label: 'Auto', value: 'auto', description: 'Faster animation with higher metric values' },
+  { label: 'Slow', value: 'slow' },
+  { label: 'Normal', value: 'normal' },
+  { label: 'Fast', value: 'fast' },
+  { label: 'None', value: 'none' },
 ];
 
 const ANCHORS = [
@@ -210,7 +211,14 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
           </div>
           <div className="topo-editor-field">
             <label>Speed</label>
-            <Select options={FLOW_SPEEDS} value={edge.flowSpeed} onChange={(v) => handleField('flowSpeed', v.value!)} />
+            <Select
+              options={FLOW_SPEEDS}
+              value={edge.flowSpeed || ''}
+              onChange={(v) => {
+                const next = v.value;
+                handleField('flowSpeed', next ? (next as FlowSpeed) : undefined);
+              }}
+            />
           </div>
           <div className="topo-editor-row">
             <div className="topo-editor-field" style={{ flex: 1 }}>

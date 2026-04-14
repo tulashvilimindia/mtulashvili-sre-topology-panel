@@ -165,8 +165,8 @@ export interface TopologyEdge {
   thresholds: ThresholdStep[];
   /** Animate flow dashes */
   flowAnimation: boolean;
-  /** Flow speed mode */
-  flowSpeed: FlowSpeed;
+  /** Flow speed mode — undefined means inherit from panel animation.defaultFlowSpeed */
+  flowSpeed?: FlowSpeed;
   /** Bidirectional arrows */
   bidirectional: boolean;
   /** Source anchor point */
@@ -302,7 +302,7 @@ export const DEFAULT_EDGE: Partial<TopologyEdge> = {
     { value: 90, color: 'red' },
   ],
   flowAnimation: true,
-  flowSpeed: 'auto',
+  // flowSpeed omitted — undefined means "inherit from animation.defaultFlowSpeed"
   bidirectional: false,
   anchorSource: 'auto',
   anchorTarget: 'auto',
