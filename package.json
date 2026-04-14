@@ -12,7 +12,7 @@
     "sign": "npx @grafana/sign-plugin@latest",
     "server": "docker compose up --build"
   },
-  "author": "SID2 Platform Engineering",
+  "author": "Mindia Tulashvili",
   "license": "Apache-2.0",
   "devDependencies": {
     "@grafana/eslint-config": "7.0.0",

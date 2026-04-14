@@ -2,7 +2,7 @@
 
 Interactive end-to-end topology diagram panel for Grafana. Visualize infrastructure flows with live metrics from any datasource, drag-and-drop node positioning, animated traffic connections with neon glow, and multi-metric popups with sparklines and freshness SLO tracking. Full canvas interactions: hover-to-focus edge dim, click-for-detail node and edge popups, right-click context menus, and Shift+drag to create new edges directly on the canvas.
 
-Built by SID2 Platform Engineering.
+Built by Mindia Tulashvili.
 
 ![Grafana 12+](https://img.shields.io/badge/Grafana-12.0%2B-orange)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
@@ -700,4 +700,4 @@ Cloudflare Edge (CDN/WAF)
 
 [Apache License 2.0](LICENSE)
 
-Copyright 2026 SID2 Platform Engineering
+Copyright 2026 Mindia Tulashvili
