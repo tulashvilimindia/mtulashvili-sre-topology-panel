@@ -685,11 +685,11 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
 
         {/* Thresholds */}
         <CollapsableSection
-          label={`Thresholds (${edge.thresholds.length})`}
+          label={`Thresholds (${(edge.thresholds || []).length})`}
           isOpen={showThresholds}
           onToggle={() => setShowThresholds(!showThresholds)}
         >
-          <ThresholdList thresholds={edge.thresholds} onChange={(t) => handleField('thresholds', t)} />
+          <ThresholdList thresholds={edge.thresholds || []} onChange={(t) => handleField('thresholds', t)} />
         </CollapsableSection>
 
         {/* State map — categorical coloring (e.g. HA sync 0/1 → red/green) */}
