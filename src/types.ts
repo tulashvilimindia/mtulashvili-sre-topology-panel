@@ -90,6 +90,12 @@ export interface TopologyNode {
    * URL templates support ${token} placeholders resolved against alertLabelMatchers + node built-ins (name, id).
    */
   observabilityLinks?: ObservabilityLink[];
+  /**
+   * Runtime-only flag marking a node as synthesized from a DynamicTargetQuery resolver.
+   * Virtual nodes MUST NEVER be persisted back via onOptionsChange — they are derived
+   * from the current target-query poll and exist only for this render cycle.
+   */
+  _virtual?: boolean;
 }
 
 /** External drill-down link from a node (logs, traces, runbooks, etc.) */

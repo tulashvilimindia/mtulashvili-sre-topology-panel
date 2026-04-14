@@ -6,6 +6,7 @@ import { autoLayout } from '../utils/layout';
 import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
 import { queryDatasource, QueryResult, QueryError } from '../utils/datasourceQuery';
 import { fetchAlertRules, matchAlertsToNode } from '../utils/alertRules';
+import { resolveDynamicTargets } from '../utils/dynamicTargets';
 import { emitNodeClicked } from '../utils/panelEvents';
 import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
@@ -186,6 +187,57 @@ function useAlertRules(nodes: TopologyNode[]): Map<string, FiringAlert[]> {
   return alertsByNode;
 }
 
+// ─── Auto-fetch: poll PromQL discovery queries and resolve dynamic edge targets ───
+function useDynamicTargets(edges: TopologyEdge[]): Map<string, string[]> {
+  const [targetsByEdge, setTargetsByEdge] = useState<Map<string, string[]>>(new Map());
+
+  // Only edges opted-in via targetQuery trigger polling
+  const dynamicEdges = useMemo(
+    () => edges.filter((e) => e.targetQuery && e.targetQuery.datasourceUid && e.targetQuery.query && e.targetQuery.nodeIdLabel),
+    [edges]
+  );
+
+  // Avoid adding targetsByEdge to deps (would cause infinite loop)
+  const hasResultsRef = useRef(false);
+  hasResultsRef.current = targetsByEdge.size > 0;
+
+  useEffect(() => {
+    if (dynamicEdges.length === 0) {
+      if (hasResultsRef.current) {
+        setTargetsByEdge(new Map());
+      }
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const next = await resolveDynamicTargets(dynamicEdges, controller.signal);
+        if (!cancelled) {
+          setTargetsByEdge(next);
+        }
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.warn('[topology] useDynamicTargets run failed', err);
+        }
+      }
+    };
+
+    run();
+    const interval = setInterval(run, 60000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      controller.abort();
+    };
+  }, [dynamicEdges]);
+
+  return targetsByEdge;
+}
+
 export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data, width, height, replaceVariables }) => {
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -232,6 +284,43 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   // Auto-fetch Grafana alert rules and match to nodes (only polls if ≥1 node has alertLabelMatchers)
   const alertsByNode = useAlertRules(nodes);
 
+  // Auto-fetch dynamic target discovery for edges with targetQuery (only polls if ≥1 edge opts in)
+  const targetsByEdge = useDynamicTargets(edges);
+
+  // Expand edges with a targetQuery into N virtual edges — one per discovered target
+  // value that matches an existing node. Virtual edge id is `${parentId}::${targetValue}`
+  // so the edgeStates self-query lookup can fall back to the parent id for metric
+  // inheritance. Unmatched target values (no existing node with that id) are dropped
+  // with a console.warn; 3.1b will add nodeTemplate auto-creation for missing targets.
+  const expandedEdges = useMemo<TopologyEdge[]>(() => {
+    const hasDynamicEdges = edges.some((e) => e.targetQuery);
+    if (!hasDynamicEdges) {
+      return edges;
+    }
+    const existingNodeIds = new Set(nodes.map((n) => n.id));
+    const result: TopologyEdge[] = [];
+    edges.forEach((edge) => {
+      if (!edge.targetQuery) {
+        result.push(edge);
+        return;
+      }
+      const discovered = targetsByEdge.get(edge.id) || [];
+      discovered.forEach((targetValue) => {
+        if (!existingNodeIds.has(targetValue)) {
+          console.warn('[topology] dynamic target value has no matching node', { edgeId: edge.id, targetValue });
+          return;
+        }
+        result.push({
+          ...edge,
+          id: `${edge.id}::${targetValue}`,
+          targetId: targetValue,
+          targetQuery: undefined,
+        });
+      });
+    });
+    return result;
+  }, [edges, targetsByEdge, nodes]);
+
   // Ref to read current positions without triggering useEffect re-runs
   const nodePositionsRef = useRef(nodePositions);
   nodePositionsRef.current = nodePositions;
@@ -275,7 +364,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
 
     if (needsAutoLayout || positions.size < nodes.length) {
-      const autoPositions = autoLayout(nodesWithGroupId, edges, {
+      const autoPositions = autoLayout(nodesWithGroupId, expandedEdges, {
         direction: layout.direction,
         tierSpacing: layout.tierSpacing,
         nodeSpacing: layout.nodeSpacing,
@@ -290,7 +379,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     }
 
     setNodePositions(positions);
-  }, [nodes, nodesWithGroupId, edges, layout, width, height]);
+  }, [nodes, nodesWithGroupId, expandedEdges, layout, width, height]);
 
   // Compute runtime state from data frames + self-queried results
   const nodeStates = useMemo<Map<string, NodeRuntimeState>>(() => {
@@ -416,23 +505,30 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     return { total: selfQueryFailures.size, byError, ids };
   }, [selfQueryFailures]);
 
-  // Status propagation: find edges leading to critical nodes
+  // Status propagation: find edges leading to critical nodes (operates on expanded list
+  // so virtual edges from dynamic-target parents inherit degraded status propagation).
   const propagatedEdgeIds = useMemo(() => {
     const statuses = new Map<string, NodeStatus>();
     nodeStates.forEach((state, id) => { statuses.set(id, state.status); });
-    return propagateStatus(statuses, edges);
-  }, [nodeStates, edges]);
+    return propagateStatus(statuses, expandedEdges);
+  }, [nodeStates, expandedEdges]);
 
-  // Compute edge runtime state from data frames
+  // Compute edge runtime state from data frames (iterates expanded list so virtual
+  // edges from dynamic-target parents get their own runtime state).
   const edgeStates = useMemo<Map<string, EdgeRuntimeState>>(() => {
     const states = new Map<string, EdgeRuntimeState>();
 
-    edges.forEach((edge) => {
+    expandedEdges.forEach((edge) => {
       let value: number | null = null;
+
+      // For virtual edges (id contains "::"), the parent edge id is the prefix.
+      // Metric lookups fall back to the parent so all virtual edges inherit the
+      // parent's fetched metric value.
+      const parentIdForLookup = edge.id.includes('::') ? edge.id.split('::')[0] : edge.id;
 
       if (edge.metric) {
         const matchingFrame = data.series.find(
-          (frame) => frame.refId === edge.id || frame.name === edge.metric!.alias
+          (frame) => frame.refId === parentIdForLookup || frame.name === edge.metric!.alias
         );
         if (matchingFrame && matchingFrame.fields.length > 1) {
           const valueField = matchingFrame.fields.find((f) => f.type === 'number');
@@ -442,9 +538,9 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         }
       }
 
-      // Fallback: try self-queried edge metric data
-      if (value === null && selfQueryResults.has(edge.id)) {
-        value = selfQueryResults.get(edge.id)?.value ?? null;
+      // Fallback: try self-queried edge metric data (keyed on the parent id)
+      if (value === null && selfQueryResults.has(parentIdForLookup)) {
+        value = selfQueryResults.get(parentIdForLookup)?.value ?? null;
       }
 
       const status = calculateEdgeStatus(value, edge.thresholds, edge.stateMap);
@@ -478,7 +574,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
 
     return states;
-  }, [edges, data, animation.flowEnabled, animation.defaultFlowSpeed, selfQueryResults, propagatedEdgeIds]);
+  }, [expandedEdges, data, animation.flowEnabled, animation.defaultFlowSpeed, selfQueryResults, propagatedEdgeIds]);
 
   // Persist positions
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -538,7 +634,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   }, []);
 
   const handleResetLayout = useCallback(() => {
-    const autoPositions = autoLayout(nodesWithGroupId, edges, {
+    const autoPositions = autoLayout(nodesWithGroupId, expandedEdges, {
       direction: layout.direction,
       tierSpacing: layout.tierSpacing,
       nodeSpacing: layout.nodeSpacing,
@@ -547,7 +643,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
     setNodePositions(autoPositions);
     setExpandedNodes(new Set());
-  }, [nodesWithGroupId, edges, layout, width, height]);
+  }, [nodesWithGroupId, expandedEdges, layout, width, height]);
 
   const handleLoadExample = useCallback(() => {
     const exampleTopology = getExampleTopology();
@@ -632,7 +728,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       )}
       <TopologyCanvas
         nodes={nodes}
-        edges={edges}
+        edges={expandedEdges}
         groups={groups}
         nodePositions={nodePositions}
         nodeStates={nodeStates}

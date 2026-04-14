@@ -102,6 +102,40 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
     [edge, onChange]
   );
 
+  // ─── Dynamic target query handlers ───
+  const handleTargetQueryField = useCallback(
+    (field: 'datasourceUid' | 'query' | 'nodeIdLabel', value: string) => {
+      const existing = edge.targetQuery || { datasourceUid: '', query: '', nodeIdLabel: '' };
+      onChange({
+        ...edge,
+        targetQuery: { ...existing, [field]: value },
+      });
+    },
+    [edge, onChange]
+  );
+
+  const toggleDynamicTargets = useCallback(
+    (enabled: boolean) => {
+      if (enabled) {
+        // Turn on — seed an empty targetQuery and clear the static targetId
+        onChange({
+          ...edge,
+          targetQuery: edge.targetQuery || { datasourceUid: '', query: '', nodeIdLabel: '' },
+          targetId: undefined,
+        });
+      } else {
+        // Turn off — drop targetQuery; user can pick a static targetId again
+        onChange({
+          ...edge,
+          targetQuery: undefined,
+        });
+      }
+    },
+    [edge, onChange]
+  );
+
+  const isDynamic = !!edge.targetQuery;
+
   // ─── Datasource type discovery (mirrors MetricEditor pattern) ───
   const [dsType, setDsType] = useState<string>('');
   useEffect(() => {
@@ -217,15 +251,62 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
             placeholder="Select source node..."
           />
         </div>
-        <div className="topo-editor-field">
-          <label>Target</label>
-          <Select
-            options={nodeOptions}
-            value={edge.targetId || ''}
-            onChange={(v) => handleField('targetId', v.value!)}
-            placeholder="Select target node..."
+        {!isDynamic && (
+          <div className="topo-editor-field">
+            <label>Target</label>
+            <Select
+              options={nodeOptions}
+              value={edge.targetId || ''}
+              onChange={(v) => handleField('targetId', v.value!)}
+              placeholder="Select target node..."
+            />
+          </div>
+        )}
+        <div className="topo-editor-row">
+          <Checkbox
+            label="Use dynamic targets (discover from PromQL query)"
+            value={isDynamic}
+            onChange={(e) => toggleDynamicTargets(e.currentTarget.checked)}
           />
         </div>
+        {isDynamic && (
+          <div style={{ marginLeft: 4, paddingLeft: 8, borderLeft: '2px solid #2d3748' }}>
+            <div className="topo-editor-field">
+              <label>Discovery datasource</label>
+              <DataSourcePicker
+                current={edge.targetQuery?.datasourceUid || null}
+                onChange={(ds) => handleTargetQueryField('datasourceUid', ds.uid)}
+                noDefault
+              />
+            </div>
+            <div className="topo-editor-field">
+              <label>
+                PromQL query
+                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>returns one row per target</span>
+              </label>
+              <Input
+                value={edge.targetQuery?.query || ''}
+                onChange={(e) => handleTargetQueryField('query', e.currentTarget.value)}
+                placeholder={'up{job="myapp"}'}
+              />
+            </div>
+            <div className="topo-editor-field">
+              <label>
+                Node ID label
+                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>label name whose value is the target node id</span>
+              </label>
+              <Input
+                value={edge.targetQuery?.nodeIdLabel || ''}
+                onChange={(e) => handleTargetQueryField('nodeIdLabel', e.currentTarget.value)}
+                placeholder="instance"
+              />
+            </div>
+            <div style={{ fontSize: 9, color: '#616e88', padding: '4px 0 0' }}>
+              Each discovered value must match an existing node id (3.1a). Values with no
+              matching node are skipped and logged to the console.
+            </div>
+          </div>
+        )}
         <div className="topo-editor-field">
           <label>Type</label>
           <RadioButtonGroup options={EDGE_TYPES} value={edge.type} onChange={(v) => handleField('type', v)} size="sm" />
