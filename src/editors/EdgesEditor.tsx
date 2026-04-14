@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { StandardEditorProps } from '@grafana/data';
 import { Button } from '@grafana/ui';
 import { TopologyPanelOptions, TopologyEdge, DEFAULT_EDGE } from '../types';
@@ -9,8 +9,9 @@ import './editors.css';
 type Props = StandardEditorProps<TopologyEdge[], object, TopologyPanelOptions>;
 
 export const EdgesEditor: React.FC<Props> = ({ value, onChange, context }) => {
-  const edges = value || [];
-  const nodes = context.options?.nodes || [];
+  // Stable references via useMemo so useCallback deps don't fire on every parent render
+  const edges = useMemo(() => value || [], [value]);
+  const nodes = useMemo(() => context.options?.nodes || [], [context.options?.nodes]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpand = useCallback((id: string) => {

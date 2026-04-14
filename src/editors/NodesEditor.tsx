@@ -302,9 +302,10 @@ function importTopologyJSON(file: File, currentNodes: TopologyNode[], onChange: 
 
 // ─── Main NodesEditor ───
 export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
-  const nodes = value || [];
-  const edges = context.options?.edges || [];
-  const groups = context.options?.groups || [];
+  // Stable references via useMemo so useCallback deps don't fire on every parent render
+  const nodes = useMemo(() => value || [], [value]);
+  const edges = useMemo(() => context.options?.edges || [], [context.options?.edges]);
+  const groups = useMemo(() => context.options?.groups || [], [context.options?.groups]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [filterText, setFilterText] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);

@@ -254,31 +254,31 @@ describe('propagateStatus', () => {
   ];
 
   test('no critical nodes → empty set', () => {
-    const statuses = new Map([['n1', 'ok'], ['n2', 'ok'], ['n3', 'ok']] as [string, never][]);
+    const statuses = new Map([['n1', 'ok'], ['n2', 'ok'], ['n3', 'ok']] as Array<[string, never]>);
     expect(propagateStatus(statuses, edges).size).toBe(0);
   });
 
   test('one critical node marks all incoming edges', () => {
-    const statuses = new Map([['n1', 'ok'], ['n2', 'ok'], ['n3', 'critical']] as [string, never][]);
+    const statuses = new Map([['n1', 'ok'], ['n2', 'ok'], ['n3', 'critical']] as Array<[string, never]>);
     const result = propagateStatus(statuses, edges);
     expect(result.size).toBe(1);
     expect(result.has('e2')).toBe(true);
   });
 
   test('warning node also propagates (any non-nodata non-unknown)', () => {
-    const statuses = new Map([['n2', 'warning']] as [string, never][]);
+    const statuses = new Map([['n2', 'warning']] as Array<[string, never]>);
     const result = propagateStatus(statuses, edges);
     expect(result.has('e1')).toBe(true);
   });
 
   test('nodata status does NOT propagate', () => {
-    const statuses = new Map([['n2', 'nodata']] as [string, never][]);
+    const statuses = new Map([['n2', 'nodata']] as Array<[string, never]>);
     expect(propagateStatus(statuses, edges).size).toBe(0);
   });
 
   test('edge without targetId is skipped', () => {
     const edgesWithOrphan = [{ id: 'e-orphan', sourceId: 'n1' }];
-    const statuses = new Map([['n1', 'critical']] as [string, never][]);
+    const statuses = new Map([['n1', 'critical']] as Array<[string, never]>);
     expect(propagateStatus(statuses, edgesWithOrphan).size).toBe(0);
   });
 });

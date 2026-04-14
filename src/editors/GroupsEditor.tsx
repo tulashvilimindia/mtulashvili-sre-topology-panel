@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { StandardEditorProps } from '@grafana/data';
 import { Button } from '@grafana/ui';
 import { TopologyPanelOptions, NodeGroup } from '../types';
@@ -9,8 +9,9 @@ import './editors.css';
 type Props = StandardEditorProps<NodeGroup[], object, TopologyPanelOptions>;
 
 export const GroupsEditor: React.FC<Props> = ({ value, onChange, context }) => {
-  const groups = value || [];
-  const nodes = context.options?.nodes || [];
+  // Stable references via useMemo so useCallback deps don't fire on every parent render
+  const groups = useMemo(() => value || [], [value]);
+  const nodes = useMemo(() => context.options?.nodes || [], [context.options?.nodes]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpand = useCallback((id: string) => {

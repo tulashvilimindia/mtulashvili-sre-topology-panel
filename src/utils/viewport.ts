@@ -32,7 +32,7 @@ export function fitToView(
   nodeWidths: Map<string, number>,
   canvasWidth: number,
   canvasHeight: number,
-  padding: number = 40
+  padding = 40
 ): ViewportState {
   if (nodePositions.size === 0) {
     return DEFAULT_VIEWPORT;
