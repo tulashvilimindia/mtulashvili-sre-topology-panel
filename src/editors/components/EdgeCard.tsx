@@ -136,6 +136,65 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
 
   const isDynamic = !!edge.targetQuery;
 
+  // ─── Target-query datasource type discovery ───
+  const [targetDsType, setTargetDsType] = useState<string>('');
+  useEffect(() => {
+    const uid = edge.targetQuery?.datasourceUid;
+    if (!uid) { setTargetDsType(''); return; }
+    let cancelled = false;
+    getDataSourceSrv().get(uid)
+      .then((ds) => { if (!cancelled) { setTargetDsType(ds.type); } })
+      .catch(() => { if (!cancelled) { setTargetDsType(''); } });
+    return () => { cancelled = true; };
+  }, [edge.targetQuery?.datasourceUid]);
+
+  // ─── Patch a field on edge.targetQuery.queryConfig ───
+  const updateTargetQueryConfig = useCallback(
+    <K extends keyof DatasourceQueryConfig>(field: K, value: DatasourceQueryConfig[K]) => {
+      const existing = edge.targetQuery || { datasourceUid: '', query: '', nodeIdLabel: '' };
+      const nextConfig: DatasourceQueryConfig = { ...(existing.queryConfig || {}) };
+      if (value === undefined || value === '') {
+        delete nextConfig[field];
+      } else {
+        nextConfig[field] = value;
+      }
+      onChange({
+        ...edge,
+        targetQuery: {
+          ...existing,
+          queryConfig: Object.keys(nextConfig).length > 0 ? nextConfig : undefined,
+        },
+      });
+    },
+    [edge, onChange]
+  );
+
+  // ─── Target-query CloudWatch filter dimensions (separate from metric dimensions) ───
+  const [targetDimEntries, setTargetDimEntries] = useState<Array<{ key: string; value: string }>>(
+    () => Object.entries(edge.targetQuery?.queryConfig?.dimensions || {}).map(([key, value]) => ({ key, value }))
+  );
+
+  const syncTargetDimensions = useCallback((next: Array<{ key: string; value: string }>) => {
+    setTargetDimEntries(next);
+    const obj: Record<string, string> = {};
+    next.forEach(({ key, value }) => {
+      if (key) { obj[key] = value; }
+    });
+    updateTargetQueryConfig('dimensions', Object.keys(obj).length > 0 ? obj : undefined);
+  }, [updateTargetQueryConfig]);
+
+  const addTargetDim = useCallback(() => {
+    syncTargetDimensions([...targetDimEntries, { key: '', value: '' }]);
+  }, [targetDimEntries, syncTargetDimensions]);
+
+  const updateTargetDim = useCallback((idx: number, field: 'key' | 'value', val: string) => {
+    syncTargetDimensions(targetDimEntries.map((d, i) => (i === idx ? { ...d, [field]: val } : d)));
+  }, [targetDimEntries, syncTargetDimensions]);
+
+  const removeTargetDim = useCallback((idx: number) => {
+    syncTargetDimensions(targetDimEntries.filter((_, i) => i !== idx));
+  }, [targetDimEntries, syncTargetDimensions]);
+
   // ─── Datasource type discovery (mirrors MetricEditor pattern) ───
   const [dsType, setDsType] = useState<string>('');
   useEffect(() => {
@@ -279,31 +338,148 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
                 noDefault
               />
             </div>
-            <div className="topo-editor-field">
-              <label>
-                PromQL query
-                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>returns one row per target</span>
-              </label>
-              <Input
-                value={edge.targetQuery?.query || ''}
-                onChange={(e) => handleTargetQueryField('query', e.currentTarget.value)}
-                placeholder={'up{job="myapp"}'}
-              />
-            </div>
+
+            {/* Prometheus: PromQL discovery query */}
+            {(targetDsType === 'prometheus' || targetDsType === '') && (
+              <div className="topo-editor-field">
+                <label>
+                  PromQL query
+                  <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>returns one row per target</span>
+                </label>
+                <Input
+                  value={edge.targetQuery?.query || ''}
+                  onChange={(e) => handleTargetQueryField('query', e.currentTarget.value)}
+                  placeholder={'up{job="myapp"}'}
+                />
+              </div>
+            )}
+
+            {/* CloudWatch: discover by parsing frame names for the dimension */}
+            {targetDsType === 'cloudwatch' && (
+              <>
+                <div className="topo-editor-field">
+                  <label>Namespace</label>
+                  <Input
+                    value={edge.targetQuery?.queryConfig?.namespace || ''}
+                    onChange={(e) => updateTargetQueryConfig('namespace', e.currentTarget.value || undefined)}
+                    placeholder="AWS/ApplicationELB"
+                  />
+                </div>
+                <div className="topo-editor-field">
+                  <label>Metric name</label>
+                  <Input
+                    value={edge.targetQuery?.queryConfig?.metricName || ''}
+                    onChange={(e) => updateTargetQueryConfig('metricName', e.currentTarget.value || undefined)}
+                    placeholder="RequestCount"
+                  />
+                </div>
+                <div className="topo-editor-field">
+                  <label>
+                    Filter dimensions
+                    <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>restrict the discovery (leave the discovery dimension out)</span>
+                  </label>
+                  {targetDimEntries.length === 0 && (
+                    <div style={{ fontSize: 10, color: '#616e88', padding: '4px 0' }}>
+                      No filters — discover all values of the Node ID label
+                    </div>
+                  )}
+                  {targetDimEntries.map((entry, idx) => (
+                    <div key={idx} className="topo-editor-row" style={{ gap: 4, marginBottom: 2 }}>
+                      <Input
+                        value={entry.key}
+                        onChange={(e) => updateTargetDim(idx, 'key', e.currentTarget.value)}
+                        placeholder="LoadBalancerType"
+                        width={14}
+                      />
+                      <span style={{ color: '#616e88', fontSize: 11 }}>=</span>
+                      <Input
+                        value={entry.value}
+                        onChange={(e) => updateTargetDim(idx, 'value', e.currentTarget.value)}
+                        placeholder="application"
+                        width={16}
+                      />
+                      <IconButton
+                        name="trash-alt"
+                        size="sm"
+                        onClick={() => removeTargetDim(idx)}
+                        tooltip="Remove filter"
+                      />
+                    </div>
+                  ))}
+                  <Button size="sm" variant="secondary" icon="plus" onClick={addTargetDim} style={{ marginTop: 4 }}>
+                    Add filter
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* Infinity: discover via JSON URL + column selector */}
+            {targetDsType === 'yesoreyeram-infinity-datasource' && (
+              <>
+                <div className="topo-editor-field">
+                  <label>URL</label>
+                  <Input
+                    value={edge.targetQuery?.queryConfig?.url || ''}
+                    onChange={(e) => updateTargetQueryConfig('url', e.currentTarget.value || undefined)}
+                    placeholder="https://api.example.com/members"
+                  />
+                </div>
+                <div className="topo-editor-row">
+                  <div className="topo-editor-field" style={{ flex: 1 }}>
+                    <label>Method</label>
+                    <Select
+                      options={INFINITY_METHODS}
+                      value={edge.targetQuery?.queryConfig?.method || 'GET'}
+                      onChange={(v) => updateTargetQueryConfig('method', v.value || 'GET')}
+                    />
+                  </div>
+                  <div className="topo-editor-field" style={{ flex: 2 }}>
+                    <label>
+                      Root selector
+                      <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>JSON path to the array</span>
+                    </label>
+                    <Input
+                      value={edge.targetQuery?.queryConfig?.rootSelector || ''}
+                      onChange={(e) => updateTargetQueryConfig('rootSelector', e.currentTarget.value || undefined)}
+                      placeholder="data.members"
+                    />
+                  </div>
+                </div>
+                {edge.targetQuery?.queryConfig?.method === 'POST' && (
+                  <div className="topo-editor-field">
+                    <label>Body <span style={{ fontSize: 9, color: '#4c566a' }}>raw JSON</span></label>
+                    <TextArea
+                      value={edge.targetQuery?.queryConfig?.body || ''}
+                      onChange={(e) => updateTargetQueryConfig('body', e.currentTarget.value || undefined)}
+                      placeholder='{"query": "..."}'
+                      rows={3}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
             <div className="topo-editor-field">
               <label>
                 Node ID label
-                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>label name whose value is the target node id</span>
+                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>
+                  {targetDsType === 'cloudwatch'
+                    ? 'CloudWatch dimension to extract (e.g. LoadBalancer)'
+                    : targetDsType === 'yesoreyeram-infinity-datasource'
+                    ? 'JSON column selector (e.g. hostname)'
+                    : 'label name whose value is the target node id'}
+                </span>
               </label>
               <Input
                 value={edge.targetQuery?.nodeIdLabel || ''}
                 onChange={(e) => handleTargetQueryField('nodeIdLabel', e.currentTarget.value)}
-                placeholder="instance"
+                placeholder={targetDsType === 'cloudwatch' ? 'LoadBalancer' : 'instance'}
               />
             </div>
             <div style={{ fontSize: 9, color: '#616e88', padding: '4px 0 0' }}>
-              Each discovered value must match an existing node id (3.1a). Values with no
-              matching node are skipped and logged to the console.
+              Each discovered value must match an existing node id. Values with no matching
+              node are skipped and logged to the console. (3.1b does not yet auto-create
+              virtual nodes from a template.)
             </div>
           </div>
         )}

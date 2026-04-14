@@ -199,11 +199,13 @@ export interface TopologyEdge {
 export interface DynamicTargetQuery {
   /** Datasource uid */
   datasourceUid: string;
-  /** Query that returns a list of targets */
+  /** Query that returns a list of targets (PromQL for Prometheus; ignored for CloudWatch/Infinity which use queryConfig) */
   query: string;
   /** Label from query results that maps to a node ID */
   nodeIdLabel: string;
-  /** Template for auto-creating nodes from query results */
+  /** Extra config for non-Prometheus discovery (CloudWatch namespace/metricName/dimensions, Infinity URL/rootSelector) */
+  queryConfig?: DatasourceQueryConfig;
+  /** Template for auto-creating nodes from query results (not implemented in 3.1a/b — deferred) */
   nodeTemplate?: {
     type: NodeType;
     nameTemplate: string;
