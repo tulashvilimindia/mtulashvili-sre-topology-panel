@@ -1,0 +1,1518 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "sauron-topology",
+    "title": "Sauron's Eye — Angular Portal Topology",
+    "tags": [
+      "topology",
+      "sauron-eye",
+      "angular-portal",
+      "sre"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "sid2-grafana-topology",
+        "title": "Sauron's Eye — Angular Portal Full Traffic Trace",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 24,
+          "h": 24
+        },
+        "datasource": {
+          "uid": "testdata",
+          "type": "grafana-testdata-datasource"
+        },
+        "targets": [],
+        "options": {
+          "nodes": [
+            {
+              "id": "cdn-cf",
+              "name": "Cloudflare CDN",
+              "role": "Edge cache",
+              "type": "cloudflare",
+              "metrics": [
+                {
+                  "id": "m-cdn-req",
+                  "label": "Requests cached",
+                  "query": "sum(cloudflare_zone_requests_cached)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-cdn-bw",
+                  "label": "Bandwidth total",
+                  "query": "sum(cloudflare_zone_bandwidth_total)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value} B",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000000000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000000000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-cdn-pv",
+                  "label": "Page views",
+                  "query": "sum(cloudflare_zone_pageviews_total)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 60,
+                "y": 60
+              },
+              "compact": false
+            },
+            {
+              "id": "waf-cf",
+              "name": "Cloudflare WAF",
+              "role": "L7 firewall",
+              "type": "firewall",
+              "metrics": [
+                {
+                  "id": "m-waf-4xx",
+                  "label": "4xx requests",
+                  "query": "sum(cloudflare_zone_requests_status{status=~\"4..\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-waf-5xx",
+                  "label": "5xx errors",
+                  "query": "sum(cloudflare_zone_requests_status{status=~\"5..\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-waf-ssl",
+                  "label": "SSL requests",
+                  "query": "sum(cloudflare_zone_requests_ssl_encrypted)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 260,
+                "y": 60
+              },
+              "compact": false
+            },
+            {
+              "id": "pa-fw01",
+              "name": "PA FW01",
+              "role": "NG Firewall (active)",
+              "type": "firewall",
+              "metrics": [
+                {
+                  "id": "m-pa01-up",
+                  "label": "SNMP-PAN up",
+                  "query": "sum(up{job=\"snmp-pan\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 1,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pa01-total",
+                  "label": "SNMP-PAN targets",
+                  "query": "count(up{job=\"snmp-pan\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 4,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pa01-down",
+                  "label": "SNMP-PAN down",
+                  "query": "count(up{job=\"snmp-pan\"}==0) or vector(0)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 4,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 480,
+                "y": 60
+              },
+              "compact": false,
+              "alertLabelMatchers": {
+                "host": "prdnextgenfirewall01"
+              }
+            },
+            {
+              "id": "pa-fw02",
+              "name": "PA FW02",
+              "role": "NG Firewall (standby)",
+              "type": "firewall",
+              "metrics": [
+                {
+                  "id": "m-pa02-up",
+                  "label": "SNMP-PAN up",
+                  "query": "sum(up{job=\"snmp-pan\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 1,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pa02-total",
+                  "label": "SNMP-PAN targets",
+                  "query": "count(up{job=\"snmp-pan\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 4,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pa02-down",
+                  "label": "SNMP-PAN down",
+                  "query": "count(up{job=\"snmp-pan\"}==0) or vector(0)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 4,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 480,
+                "y": 220
+              },
+              "compact": false,
+              "alertLabelMatchers": {
+                "host": "prdnextgenfirewall02"
+              }
+            },
+            {
+              "id": "f5-ltm01",
+              "name": "F5 LTM01",
+              "role": "LTM (active)",
+              "type": "loadbalancer",
+              "metrics": [
+                {
+                  "id": "m-f501-cli",
+                  "label": "Client conns",
+                  "query": "f5_system_connectionsPerformance_clientConnections_current{instance=\"PRD-NG-LTM01\"}",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-f501-http",
+                  "label": "HTTP req/s",
+                  "query": "f5_system_connectionsPerformance_httpRequests_current{instance=\"PRD-NG-LTM01\"}",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-f501-srv",
+                  "label": "Server conns",
+                  "query": "f5_system_connectionsPerformance_serverConnections_current{instance=\"PRD-NG-LTM01\"}",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 700,
+                "y": 60
+              },
+              "compact": false
+            },
+            {
+              "id": "f5-ltm02",
+              "name": "F5 LTM02",
+              "role": "LTM (standby)",
+              "type": "loadbalancer",
+              "metrics": [
+                {
+                  "id": "m-f502-cli",
+                  "label": "Client conns",
+                  "query": "f5_system_connectionsPerformance_clientConnections_current{instance=\"PRD-NG-LTM02\"}",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-f502-http",
+                  "label": "HTTP req/s",
+                  "query": "f5_system_connectionsPerformance_httpRequests_current{instance=\"PRD-NG-LTM02\"}",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-f502-srv",
+                  "label": "Server conns",
+                  "query": "f5_system_connectionsPerformance_serverConnections_current{instance=\"PRD-NG-LTM02\"}",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 700,
+                "y": 220
+              },
+              "compact": false
+            },
+            {
+              "id": "f5-vs",
+              "name": "VS ANGULAR_443",
+              "role": "Virtual Server",
+              "type": "virtualserver",
+              "metrics": [
+                {
+                  "id": "m-vs-http",
+                  "label": "Total http req/s",
+                  "query": "sum(f5_system_connectionsPerformance_httpRequests_current)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-vs-cli",
+                  "label": "Total client conns",
+                  "query": "sum(f5_system_connectionsPerformance_clientConnections_current)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-vs-srv",
+                  "label": "Total server conns",
+                  "query": "sum(f5_system_connectionsPerformance_serverConnections_current)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 920,
+                "y": 140
+              },
+              "compact": false,
+              "alertLabelMatchers": {
+                "virtual_server": "ANGULAR_iNMANPR_PP_443"
+              }
+            },
+            {
+              "id": "pool-angular",
+              "name": "Angular Pool",
+              "role": "ANGULAR_iNMANPR_PP.pool_80",
+              "type": "pool",
+              "metrics": [
+                {
+                  "id": "m-pang-mem",
+                  "label": "Active members",
+                  "query": "max(f5_activeMemberCnt{pools=\"/Common/ANGULAR_iNMANPR_PP.pool_80\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 4,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 6,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pang-avg",
+                  "label": "Avg per LTM",
+                  "query": "avg(f5_activeMemberCnt{pools=\"/Common/ANGULAR_iNMANPR_PP.pool_80\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 4,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 6,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pang-min",
+                  "label": "Min per LTM",
+                  "query": "min(f5_activeMemberCnt{pools=\"/Common/ANGULAR_iNMANPR_PP.pool_80\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 4,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 6,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1140,
+                "y": 220
+              },
+              "compact": false
+            },
+            {
+              "id": "pp01",
+              "name": "PP01",
+              "role": "IIS server",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-pp01-pool",
+                  "label": "IIS pool state",
+                  "query": "max(windows_iis_current_application_pool_state{instance=~\".*iNMANPR-PP01.*\", state=\"Running\", job=\"angular-prd-servers\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 1,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp01-cpu",
+                  "label": "CPU %",
+                  "query": "100 - (avg by(instance)(rate(windows_cpu_time_total{instance=~\".*iNMANPR-PP01.*\", mode=\"idle\", job=\"angular-prd-servers\"}[5m])) * 100)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 60,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 85,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp01-rps",
+                  "label": "Requests/s",
+                  "query": "sum by(instance)(rate(windows_iis_requests_total{instance=~\".*iNMANPR-PP01.*\", job=\"angular-prd-servers\"}[5m]))",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1380,
+                "y": 20
+              },
+              "compact": false
+            },
+            {
+              "id": "pp02",
+              "name": "PP02",
+              "role": "IIS server",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-pp02-pool",
+                  "label": "IIS pool state",
+                  "query": "max(windows_iis_current_application_pool_state{instance=~\".*iNMANPR-PP02.*\", state=\"Running\", job=\"angular-prd-servers\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 1,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp02-cpu",
+                  "label": "CPU %",
+                  "query": "100 - (avg by(instance)(rate(windows_cpu_time_total{instance=~\".*iNMANPR-PP02.*\", mode=\"idle\", job=\"angular-prd-servers\"}[5m])) * 100)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 60,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 85,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp02-rps",
+                  "label": "Requests/s",
+                  "query": "sum by(instance)(rate(windows_iis_requests_total{instance=~\".*iNMANPR-PP02.*\", job=\"angular-prd-servers\"}[5m]))",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1380,
+                "y": 100
+              },
+              "compact": false
+            },
+            {
+              "id": "pp03",
+              "name": "PP03",
+              "role": "IIS server",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-pp03-pool",
+                  "label": "IIS pool state",
+                  "query": "max(windows_iis_current_application_pool_state{instance=~\".*iNMANPR-PP03.*\", state=\"Running\", job=\"angular-prd-servers\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 1,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp03-cpu",
+                  "label": "CPU %",
+                  "query": "100 - (avg by(instance)(rate(windows_cpu_time_total{instance=~\".*iNMANPR-PP03.*\", mode=\"idle\", job=\"angular-prd-servers\"}[5m])) * 100)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 60,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 85,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp03-rps",
+                  "label": "Requests/s",
+                  "query": "sum by(instance)(rate(windows_iis_requests_total{instance=~\".*iNMANPR-PP03.*\", job=\"angular-prd-servers\"}[5m]))",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1380,
+                "y": 180
+              },
+              "compact": false
+            },
+            {
+              "id": "pp04",
+              "name": "PP04",
+              "role": "IIS server",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-pp04-pool",
+                  "label": "IIS pool state",
+                  "query": "max(windows_iis_current_application_pool_state{instance=~\".*iNMANPR-PP04.*\", state=\"Running\", job=\"angular-prd-servers\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 1,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp04-cpu",
+                  "label": "CPU %",
+                  "query": "100 - (avg by(instance)(rate(windows_cpu_time_total{instance=~\".*iNMANPR-PP04.*\", mode=\"idle\", job=\"angular-prd-servers\"}[5m])) * 100)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 60,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 85,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp04-rps",
+                  "label": "Requests/s",
+                  "query": "sum by(instance)(rate(windows_iis_requests_total{instance=~\".*iNMANPR-PP04.*\", job=\"angular-prd-servers\"}[5m]))",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1380,
+                "y": 260
+              },
+              "compact": false
+            },
+            {
+              "id": "pp05",
+              "name": "PP05",
+              "role": "IIS server",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-pp05-pool",
+                  "label": "IIS pool state",
+                  "query": "max(windows_iis_current_application_pool_state{instance=~\".*iNMANPR-PP05.*\", state=\"Running\", job=\"angular-prd-servers\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 1,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp05-cpu",
+                  "label": "CPU %",
+                  "query": "100 - (avg by(instance)(rate(windows_cpu_time_total{instance=~\".*iNMANPR-PP05.*\", mode=\"idle\", job=\"angular-prd-servers\"}[5m])) * 100)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 60,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 85,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp05-rps",
+                  "label": "Requests/s",
+                  "query": "sum by(instance)(rate(windows_iis_requests_total{instance=~\".*iNMANPR-PP05.*\", job=\"angular-prd-servers\"}[5m]))",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1380,
+                "y": 340
+              },
+              "compact": false
+            },
+            {
+              "id": "pp06",
+              "name": "PP06",
+              "role": "IIS server",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-pp06-pool",
+                  "label": "IIS pool state",
+                  "query": "max(windows_iis_current_application_pool_state{instance=~\".*iNMANPR-PP06.*\", state=\"Running\", job=\"angular-prd-servers\"})",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 1,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp06-cpu",
+                  "label": "CPU %",
+                  "query": "100 - (avg by(instance)(rate(windows_cpu_time_total{instance=~\".*iNMANPR-PP06.*\", mode=\"idle\", job=\"angular-prd-servers\"}[5m])) * 100)",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 60,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 85,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-pp06-rps",
+                  "label": "Requests/s",
+                  "query": "sum by(instance)(rate(windows_iis_requests_total{instance=~\".*iNMANPR-PP06.*\", job=\"angular-prd-servers\"}[5m]))",
+                  "datasourceUid": "prod-prom-proxy",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "prod",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1380,
+                "y": 420
+              },
+              "compact": false
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-cdn-waf",
+              "sourceId": "cdn-cf",
+              "targetId": "waf-cf",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 6,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-waf-pa01",
+              "sourceId": "waf-cf",
+              "targetId": "pa-fw01",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 6,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-waf-pa02",
+              "sourceId": "waf-cf",
+              "targetId": "pa-fw02",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-pa01-pa02-ha",
+              "sourceId": "pa-fw01",
+              "targetId": "pa-fw02",
+              "type": "ha_sync",
+              "thicknessMin": 2,
+              "thicknessMax": 2,
+              "bidirectional": true,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true
+            },
+            {
+              "id": "e-pa01-f501",
+              "sourceId": "pa-fw01",
+              "targetId": "f5-ltm01",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 6,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-pa01-f502",
+              "sourceId": "pa-fw01",
+              "targetId": "f5-ltm02",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-pa02-f501",
+              "sourceId": "pa-fw02",
+              "targetId": "f5-ltm01",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-pa02-f502",
+              "sourceId": "pa-fw02",
+              "targetId": "f5-ltm02",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-f501-f502-ha",
+              "sourceId": "f5-ltm01",
+              "targetId": "f5-ltm02",
+              "type": "ha_sync",
+              "thicknessMin": 2,
+              "thicknessMax": 2,
+              "bidirectional": true,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true
+            },
+            {
+              "id": "e-f501-vs",
+              "sourceId": "f5-ltm01",
+              "targetId": "f5-vs",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 6,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-f502-vs",
+              "sourceId": "f5-ltm02",
+              "targetId": "f5-vs",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-vs-poolang",
+              "sourceId": "f5-vs",
+              "targetId": "pool-angular",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-poolang-pp01",
+              "sourceId": "pool-angular",
+              "targetId": "pp01",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 4,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-poolang-pp02",
+              "sourceId": "pool-angular",
+              "targetId": "pp02",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 4,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-poolang-pp03",
+              "sourceId": "pool-angular",
+              "targetId": "pp03",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 4,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-poolang-pp04",
+              "sourceId": "pool-angular",
+              "targetId": "pp04",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 4,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-poolang-pp05",
+              "sourceId": "pool-angular",
+              "targetId": "pp05",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 4,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-poolang-pp06",
+              "sourceId": "pool-angular",
+              "targetId": "pp06",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 4,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            }
+          ],
+          "groups": [
+            {
+              "id": "g-pa",
+              "label": "PA HA Pair",
+              "type": "ha_pair",
+              "nodeIds": [
+                "pa-fw01",
+                "pa-fw02"
+              ],
+              "style": "dashed"
+            },
+            {
+              "id": "g-f5",
+              "label": "F5 LTM HA",
+              "type": "ha_pair",
+              "nodeIds": [
+                "f5-ltm01",
+                "f5-ltm02"
+              ],
+              "style": "dashed"
+            },
+            {
+              "id": "g-pp",
+              "label": "Angular Portal IIS Fleet",
+              "type": "cluster",
+              "nodeIds": [
+                "pp01",
+                "pp02",
+                "pp03",
+                "pp04",
+                "pp05",
+                "pp06"
+              ],
+              "style": "dotted"
+            }
+          ],
+          "canvas": {
+            "showGrid": true,
+            "gridSize": 20,
+            "snapToGrid": true,
+            "backgroundColor": "transparent"
+          },
+          "animation": {
+            "flowEnabled": true,
+            "defaultFlowSpeed": "auto",
+            "pulseOnCritical": true,
+            "metricFreshnessSLOSec": 120,
+            "alertPollIntervalMs": 30000
+          },
+          "layout": {
+            "autoLayout": true,
+            "direction": "left-right",
+            "tierSpacing": 220,
+            "nodeSpacing": 60,
+            "snapToGrid": false
+          },
+          "display": {
+            "showMetricsOnCards": true,
+            "showEdgeLabels": true,
+            "showNodeIcons": true
+          }
+        }
+      }
+    ]
+  },
+  "folderUid": "",
+  "overwrite": true,
+  "message": "Create Sauron's Eye topology (15 nodes / 19 edges / 3 groups)"
+}

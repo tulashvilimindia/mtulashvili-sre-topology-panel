@@ -35,6 +35,14 @@ coverage/
 # Playwright MCP
 .playwright-mcp/
 
+# Session screenshots (PNGs kept local, not tracked)
+demo-screenshots/*.png
+demo-screenshots/*.jpeg
+# Loose root-level session artifacts from earlier Playwright runs
+/phase2-*.png
+/3-1a-view-mode.png
+/editor-snapshot-1.yml
+
 # OS
 .DS_Store
 Thumbs.db

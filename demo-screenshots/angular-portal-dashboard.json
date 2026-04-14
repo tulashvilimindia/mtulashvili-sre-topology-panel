@@ -1,0 +1,982 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "angular-portal-topology",
+    "title": "Angular Portal — E2E Topology",
+    "tags": [
+      "topology",
+      "angular-portal",
+      "sre"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "sid2-grafana-topology",
+        "title": "Angular Portal — Request Flow",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 24,
+          "h": 20
+        },
+        "datasource": {
+          "uid": "testdata",
+          "type": "grafana-testdata-datasource"
+        },
+        "targets": [],
+        "options": {
+          "nodes": [
+            {
+              "id": "cdn",
+              "name": "Cloudflare CDN",
+              "role": "Edge cache",
+              "type": "cloudflare",
+              "metrics": [
+                {
+                  "id": "m-cdn-rps",
+                  "label": "Bytes/s in",
+                  "query": "sum(rate(node_net_received_bytes_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} B/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 1000000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "traffic",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-cdn-pkts",
+                  "label": "Packets/s in",
+                  "query": "sum(rate(node_net_received_packets_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} pkt/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-cdn-out",
+                  "label": "Bytes/s out",
+                  "query": "sum(rate(node_net_transmitted_bytes_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} B/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 80,
+                "y": 80
+              },
+              "compact": false
+            },
+            {
+              "id": "waf",
+              "name": "Cloudflare WAF",
+              "role": "L7 firewall",
+              "type": "firewall",
+              "metrics": [
+                {
+                  "id": "m-waf-blocked",
+                  "label": "Down targets",
+                  "query": "count(up == 0) or vector(0)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "security",
+                  "showSparkline": false
+                },
+                {
+                  "id": "m-waf-up",
+                  "label": "Up targets",
+                  "query": "count(up == 1)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} tgt",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-waf-total",
+                  "label": "Total targets",
+                  "query": "count(up)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 280,
+                "y": 80
+              },
+              "compact": false
+            },
+            {
+              "id": "alb",
+              "name": "AWS ALB",
+              "role": "Load balancer",
+              "type": "loadbalancer",
+              "metrics": [
+                {
+                  "id": "m-alb-healthy",
+                  "label": "Healthy targets",
+                  "query": "count(up == 1)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} tgt",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 3,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "health",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-alb-down",
+                  "label": "Down targets",
+                  "query": "count(up == 0) or vector(0)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-alb-pkts",
+                  "label": "Tx packets/s",
+                  "query": "sum(rate(node_net_transmitted_packets_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} pkt/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 480,
+                "y": 80
+              },
+              "compact": false,
+              "alertLabelMatchers": {
+                "service": "angular-portal-alb"
+              }
+            },
+            {
+              "id": "nginx",
+              "name": "Nginx Ingress",
+              "role": "k8s ingress",
+              "type": "kubernetes",
+              "metrics": [
+                {
+                  "id": "m-nginx-5xx",
+                  "label": "Log rate/s",
+                  "query": "sum(rate(container_log_messages_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 50,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "errors",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-nginx-tcp",
+                  "label": "TCP conns",
+                  "query": "sum(container_net_tcp_active_connections)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-nginx-log5",
+                  "label": "Log rate 5m",
+                  "query": "sum(rate(container_log_messages_total[5m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 680,
+                "y": 80
+              },
+              "compact": false,
+              "alertLabelMatchers": {
+                "service": "angular-portal-ingress"
+              }
+            },
+            {
+              "id": "portal",
+              "name": "Angular Portal",
+              "role": "SPA frontend",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-portal-p95",
+                  "label": "CPU seconds",
+                  "query": "avg(container_resources_cpu_usage_seconds_total)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 3000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 10000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "latency",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-portal-cpu1",
+                  "label": "CPU rate/s",
+                  "query": "sum(rate(container_resources_cpu_usage_seconds_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-portal-mem",
+                  "label": "Mem RSS MB",
+                  "query": "avg(container_resources_memory_rss_bytes) / 1024 / 1024",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} MB",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 880,
+                "y": 80
+              },
+              "compact": false,
+              "observabilityLinks": [
+                {
+                  "label": "Logs",
+                  "url": "/explore?left=%7B%22datasource%22:%22loki%22%7D&app=angular-portal",
+                  "icon": "file-alt"
+                }
+              ]
+            },
+            {
+              "id": "api",
+              "name": "Portal API",
+              "role": "Node.js BFF",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-api-rps",
+                  "label": "Log msgs/s",
+                  "query": "sum(rate(container_log_messages_total[5m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 10,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "traffic",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-api-tcp",
+                  "label": "TCP conns",
+                  "query": "sum(container_net_tcp_active_connections)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-api-cpu1",
+                  "label": "CPU rate/s",
+                  "query": "sum(rate(container_resources_cpu_usage_seconds_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 880,
+                "y": 260
+              },
+              "compact": false,
+              "alertLabelMatchers": {
+                "service": "angular-portal-api"
+              }
+            },
+            {
+              "id": "auth",
+              "name": "Auth Service",
+              "role": "OAuth2 IdP",
+              "type": "server",
+              "metrics": [
+                {
+                  "id": "m-auth-err",
+                  "label": "Container restarts",
+                  "query": "sum(container_restarts_total)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "errors",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-auth-mem",
+                  "label": "Mem RSS MB",
+                  "query": "avg(container_resources_memory_rss_bytes) / 1024 / 1024",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} MB",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-auth-rest",
+                  "label": "Restarts 30m",
+                  "query": "sum(rate(container_restarts_total[30m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 680,
+                "y": 260
+              },
+              "compact": false
+            },
+            {
+              "id": "db",
+              "name": "Postgres (users)",
+              "role": "primary db",
+              "type": "database",
+              "metrics": [
+                {
+                  "id": "m-db-conn",
+                  "label": "RSS MB",
+                  "query": "sum(container_resources_memory_rss_bytes) / 1024 / 1024",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} MB",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 4000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "capacity",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-db-writes",
+                  "label": "Disk writes/s",
+                  "query": "sum(rate(container_resources_disk_writes_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-db-reads",
+                  "label": "Disk reads/s",
+                  "query": "sum(rate(container_resources_disk_reads_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}/s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1080,
+                "y": 260
+              },
+              "compact": false
+            },
+            {
+              "id": "cache",
+              "name": "Redis Session",
+              "role": "session store",
+              "type": "cache",
+              "metrics": [
+                {
+                  "id": "m-cache-hit",
+                  "label": "CPU throttle s",
+                  "query": "sum(container_resources_cpu_throttled_seconds_total)",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} s",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "capacity",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-cache-mem",
+                  "label": "Mem RSS MB",
+                  "query": "avg(container_resources_memory_rss_bytes) / 1024 / 1024",
+                  "datasourceUid": "local-prom",
+                  "format": "${value} MB",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                },
+                {
+                  "id": "m-cache-cpu1",
+                  "label": "CPU rate/s",
+                  "query": "sum(rate(container_resources_cpu_usage_seconds_total[1m]))",
+                  "datasourceUid": "local-prom",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "details",
+                  "showSparkline": true
+                }
+              ],
+              "position": {
+                "x": 1080,
+                "y": 80
+              },
+              "compact": false
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "sourceId": "cdn",
+              "targetId": "waf",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 6,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e2",
+              "sourceId": "waf",
+              "targetId": "alb",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 6,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e3",
+              "sourceId": "alb",
+              "targetId": "nginx",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 6,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e4",
+              "sourceId": "nginx",
+              "targetId": "portal",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 6,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e5",
+              "sourceId": "portal",
+              "targetId": "api",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e6",
+              "sourceId": "api",
+              "targetId": "auth",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 4,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "latencyLabel": "p95: 18ms",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e7",
+              "sourceId": "api",
+              "targetId": "db",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "latencyLabel": "p95: 8ms",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e8",
+              "sourceId": "api",
+              "targetId": "cache",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e9",
+              "sourceId": "portal",
+              "targetId": "cache",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 4,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            }
+          ],
+          "groups": [],
+          "canvas": {
+            "showGrid": true,
+            "gridSize": 20,
+            "snapToGrid": true,
+            "backgroundColor": "transparent"
+          },
+          "animation": {
+            "flowEnabled": true,
+            "defaultFlowSpeed": "auto",
+            "pulseOnCritical": true,
+            "metricFreshnessSLOSec": 60,
+            "alertPollIntervalMs": 30000
+          },
+          "layout": {
+            "autoLayout": true,
+            "direction": "left-right",
+            "tierSpacing": 200,
+            "nodeSpacing": 60,
+            "snapToGrid": false
+          },
+          "display": {
+            "showMetricsOnCards": true,
+            "showEdgeLabels": true,
+            "showNodeIcons": true
+          }
+        }
+      }
+    ]
+  },
+  "folderUid": "",
+  "overwrite": true,
+  "message": "Wire real local Prometheus metrics to every node"
+}

@@ -1,0 +1,2709 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "pms-topology",
+    "title": "PMS — Service Topology (New Relic)",
+    "tags": [
+      "topology",
+      "pms",
+      "newrelic",
+      "sre"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "sid2-grafana-topology",
+        "title": "PMS — Service Topology (15 services, NR-only)",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 24,
+          "h": 36
+        },
+        "datasource": {
+          "uid": "testdata",
+          "type": "grafana-testdata-datasource"
+        },
+        "targets": [],
+        "options": {
+          "nodes": [
+            {
+              "id": "ext-user",
+              "name": "Entry traffic",
+              "role": "Users + ingress",
+              "type": "probe",
+              "position": {
+                "x": 40,
+                "y": 260
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-eu-rpm",
+                  "label": "Ingress RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName IN ('pms-cashier-api','pms-cashier-api-boss29','pms-cashier-api-m88g','pms-backoffice') SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-eu-err",
+                  "label": "Entry err%",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName IN ('pms-cashier-api','pms-cashier-api-boss29','pms-cashier-api-m88g','pms-backoffice') SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-eu-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName IN ('pms-cashier-api','pms-cashier-api-boss29','pms-cashier-api-m88g','pms-backoffice') SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "cashier-api",
+              "name": "cashier-api",
+              "role": "Main cashier API",
+              "type": "server",
+              "position": {
+                "x": 220,
+                "y": 60
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-cashier-api-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-cashier-api' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-cashier-api-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-cashier-api' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-cashier-api-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-cashier-api' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "cashier-api-boss29",
+              "name": "cashier-api-boss29",
+              "role": "Brand cashier",
+              "type": "server",
+              "position": {
+                "x": 220,
+                "y": 180
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-cashier-api-boss29-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-cashier-api-boss29' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-cashier-api-boss29-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-cashier-api-boss29' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-cashier-api-boss29-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-cashier-api-boss29' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "cashier-api-m88g",
+              "name": "cashier-api-m88g",
+              "role": "Brand cashier",
+              "type": "server",
+              "position": {
+                "x": 220,
+                "y": 300
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-cashier-api-m88g-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-cashier-api-m88g' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-cashier-api-m88g-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-cashier-api-m88g' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-cashier-api-m88g-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-cashier-api-m88g' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "backoffice",
+              "name": "backoffice",
+              "role": "Admin UI",
+              "type": "server",
+              "position": {
+                "x": 220,
+                "y": 420
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-backoffice-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-backoffice' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-backoffice-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-backoffice' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-backoffice-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-backoffice' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "manpsp",
+              "name": "brand-m88-manpsp",
+              "role": "Brand mgmt",
+              "type": "server",
+              "position": {
+                "x": 220,
+                "y": 540
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-manpsp-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-brand-m88-manpsp' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-manpsp-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-brand-m88-manpsp' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-manpsp-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-brand-m88-manpsp' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "cashier-page",
+              "name": "cashier-page-service",
+              "role": "Orchestration hub",
+              "type": "server",
+              "position": {
+                "x": 440,
+                "y": 260
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-cashier-page-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-cashier-page-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-cashier-page-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-cashier-page-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-cashier-page-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-cashier-page-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ],
+              "alertLabelMatchers": {
+                "app": "pms-cashier-page-service"
+              }
+            },
+            {
+              "id": "deposit",
+              "name": "deposit-service",
+              "role": "Deposit flow",
+              "type": "server",
+              "position": {
+                "x": 640,
+                "y": 180
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-deposit-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-deposit-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-deposit-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-deposit-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-deposit-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-deposit-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "withdrawal",
+              "name": "withdrawal-service",
+              "role": "Withdrawal flow",
+              "type": "server",
+              "position": {
+                "x": 640,
+                "y": 320
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-withdrawal-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-withdrawal-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-withdrawal-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-withdrawal-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-withdrawal-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-withdrawal-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "brand-m88",
+              "name": "brand-m88-service",
+              "role": "Brand adapter",
+              "type": "server",
+              "position": {
+                "x": 840,
+                "y": 60
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-brand-m88-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-brand-m88-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-brand-m88-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-brand-m88-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-brand-m88-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-brand-m88-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "brand-client",
+              "name": "brand-client-service",
+              "role": "Brand client",
+              "type": "server",
+              "position": {
+                "x": 840,
+                "y": 180
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-brand-client-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-brand-client-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-brand-client-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-brand-client-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-brand-client-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-brand-client-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "brand-m88-event",
+              "name": "brand-m88-event",
+              "role": "Event handler",
+              "type": "server",
+              "position": {
+                "x": 840,
+                "y": 300
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-brand-m88-event-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-brand-m88-event' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-brand-m88-event-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-brand-m88-event' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-brand-m88-event-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-brand-m88-event' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "payment-provider",
+              "name": "paymentprovider-service",
+              "role": "PSP router",
+              "type": "server",
+              "position": {
+                "x": 840,
+                "y": 460
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-payment-provider-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-paymentprovider-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-payment-provider-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-paymentprovider-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-payment-provider-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-paymentprovider-service' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "brand-m88-job",
+              "name": "brand-m88-job",
+              "role": "Bg job",
+              "type": "server",
+              "position": {
+                "x": 440,
+                "y": 540
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-brand-m88-job-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-brand-m88-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-brand-m88-job-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-brand-m88-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-brand-m88-job-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-brand-m88-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "pg-balance-job",
+              "name": "pg-balance-job",
+              "role": "Balance job",
+              "type": "server",
+              "position": {
+                "x": 640,
+                "y": 540
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-pg-balance-job-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-pg-balance-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-pg-balance-job-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-pg-balance-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-pg-balance-job-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-pg-balance-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "transaction-job",
+              "name": "transaction-job",
+              "role": "Tx job",
+              "type": "server",
+              "position": {
+                "x": 840,
+                "y": 600
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-transaction-job-rpm",
+                  "label": "RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction WHERE appName='pms-transaction-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-transaction-job-err",
+                  "label": "Error %",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction WHERE appName='pms-transaction-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-transaction-job-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Transaction WHERE appName='pms-transaction-job' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "sql",
+              "name": "Azure SQL",
+              "role": "pms-prod-asmi (mansionpay_db)",
+              "type": "database",
+              "position": {
+                "x": 1050,
+                "y": 80
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-sql-calls",
+                  "label": "DB calls",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT count(*) AS value FROM Span WHERE category='datastore' AND peer.hostname LIKE '%pms-prod-asmi%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-sql-avg",
+                  "label": "Avg",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT average(duration) * 1000 AS value FROM Span WHERE category='datastore' AND peer.hostname LIKE '%pms-prod-asmi%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-sql-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Span WHERE category='datastore' AND peer.hostname LIKE '%pms-prod-asmi%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "redis",
+              "name": "Azure Redis",
+              "role": "pms-prod-redis cache",
+              "type": "cache",
+              "position": {
+                "x": 1050,
+                "y": 200
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-redis-calls",
+                  "label": "Cache calls",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT count(*) AS value FROM Span WHERE category='datastore' AND peer.hostname LIKE '%pms-prod-redis%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-redis-avg",
+                  "label": "Avg",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT average(duration) * 1000 AS value FROM Span WHERE category='datastore' AND peer.hostname LIKE '%pms-prod-redis%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-redis-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Span WHERE category='datastore' AND peer.hostname LIKE '%pms-prod-redis%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "legacy-icmanpr",
+              "name": "iCMANPR-APB",
+              "role": "Legacy on-prem",
+              "type": "server",
+              "position": {
+                "x": 1050,
+                "y": 360
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-leg-calls",
+                  "label": "Requests",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT count(*) AS value FROM Span WHERE category='http' AND name LIKE 'External/icmanpr%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-leg-avg",
+                  "label": "Avg",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT average(duration) * 1000 AS value FROM Span WHERE category='http' AND name LIKE 'External/icmanpr%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-leg-p95",
+                  "label": "p95",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentile(duration, 95) * 1000 AS value FROM Span WHERE category='http' AND name LIKE 'External/icmanpr%' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "ext-psps",
+              "name": "External PSPs",
+              "role": "10 payment providers",
+              "type": "probe",
+              "position": {
+                "x": 1050,
+                "y": 480
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-psp-calls",
+                  "label": "PSP calls",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 1000,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 100000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT count(*) AS value FROM Span WHERE appName='pms-paymentprovider-service' AND category='http' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-psp-err",
+                  "label": "PSP err%",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE http.statusCode >= 400) AS value FROM Span WHERE appName='pms-paymentprovider-service' AND category='http' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-psp-avg",
+                  "label": "PSP avg",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value} ms",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 2000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT average(duration) * 1000 AS value FROM Span WHERE appName='pms-paymentprovider-service' AND category='http' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "aks-cluster",
+              "name": "pms-prd-wrkld-cls",
+              "role": "AKS workload cluster",
+              "type": "kubernetes",
+              "position": {
+                "x": 40,
+                "y": 540
+              },
+              "compact": false,
+              "metrics": [
+                {
+                  "id": "m-aks-pods",
+                  "label": "Live pods",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "red"
+                    },
+                    {
+                      "value": 10,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 30,
+                      "color": "green"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT uniqueCount(podName) AS value FROM Span WHERE clusterName='pms-prd-wrkld-cls' SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-aks-rpm",
+                  "label": "Fleet RPM",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}/min",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 500,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 5000,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT rate(count(*), 1 minute) AS value FROM Transaction SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                },
+                {
+                  "id": "m-aks-err",
+                  "label": "Fleet err%",
+                  "query": "",
+                  "datasourceUid": "nr-pms",
+                  "format": "${value}%",
+                  "thresholds": [
+                    {
+                      "value": 0,
+                      "color": "green"
+                    },
+                    {
+                      "value": 5,
+                      "color": "yellow"
+                    },
+                    {
+                      "value": 20,
+                      "color": "red"
+                    }
+                  ],
+                  "isSummary": true,
+                  "section": "nr",
+                  "showSparkline": true,
+                  "queryConfig": {
+                    "url": "https://api.newrelic.com/graphql",
+                    "method": "POST",
+                    "body": "{\"query\":\"{ actor { account(id: 4418182) { nrql(query: \\\"SELECT percentage(count(*), WHERE error IS TRUE) AS value FROM Transaction SINCE 5 minutes ago\\\") { results } } } }\"}",
+                    "rootSelector": "data.actor.account.nrql.results"
+                  }
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-user-capi",
+              "sourceId": "ext-user",
+              "targetId": "cashier-api",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-user-boss29",
+              "sourceId": "ext-user",
+              "targetId": "cashier-api-boss29",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-user-m88g",
+              "sourceId": "ext-user",
+              "targetId": "cashier-api-m88g",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-user-bo",
+              "sourceId": "ext-user",
+              "targetId": "backoffice",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-capi-cpage",
+              "sourceId": "cashier-api",
+              "targetId": "cashier-page",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-boss29-cpage",
+              "sourceId": "cashier-api-boss29",
+              "targetId": "cashier-page",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-m88g-cpage",
+              "sourceId": "cashier-api-m88g",
+              "targetId": "cashier-page",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-bo-w",
+              "sourceId": "backoffice",
+              "targetId": "withdrawal",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-manpsp-cpage",
+              "sourceId": "manpsp",
+              "targetId": "cashier-page",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-manpsp-dep",
+              "sourceId": "manpsp",
+              "targetId": "deposit",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-manpsp-wdr",
+              "sourceId": "manpsp",
+              "targetId": "withdrawal",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-cpage-brand",
+              "sourceId": "cashier-page",
+              "targetId": "brand-m88",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-cpage-dep",
+              "sourceId": "cashier-page",
+              "targetId": "deposit",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-cpage-wdr",
+              "sourceId": "cashier-page",
+              "targetId": "withdrawal",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-cpage-pay",
+              "sourceId": "cashier-page",
+              "targetId": "payment-provider",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-dep-brand",
+              "sourceId": "deposit",
+              "targetId": "brand-m88",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-dep-pay",
+              "sourceId": "deposit",
+              "targetId": "payment-provider",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-wdr-brand",
+              "sourceId": "withdrawal",
+              "targetId": "brand-m88",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-wdr-pay",
+              "sourceId": "withdrawal",
+              "targetId": "payment-provider",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-pgbal-pay",
+              "sourceId": "pg-balance-job",
+              "targetId": "payment-provider",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-txjob-dep",
+              "sourceId": "transaction-job",
+              "targetId": "deposit",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-brand-leg",
+              "sourceId": "brand-m88",
+              "targetId": "legacy-icmanpr",
+              "type": "traffic",
+              "thicknessMin": 2,
+              "thicknessMax": 3,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-pay-ext",
+              "sourceId": "payment-provider",
+              "targetId": "ext-psps",
+              "type": "traffic",
+              "thicknessMin": 3,
+              "thicknessMax": 5,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-cpage-sql",
+              "sourceId": "cashier-page",
+              "targetId": "sql",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-wdr-sql",
+              "sourceId": "withdrawal",
+              "targetId": "sql",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-dep-sql",
+              "sourceId": "deposit",
+              "targetId": "sql",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-bo-sql",
+              "sourceId": "backoffice",
+              "targetId": "sql",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-bjob-sql",
+              "sourceId": "brand-m88-job",
+              "targetId": "sql",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-bev-sql",
+              "sourceId": "brand-m88-event",
+              "targetId": "sql",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-pgbal-sql",
+              "sourceId": "pg-balance-job",
+              "targetId": "sql",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            },
+            {
+              "id": "e-pgbal-rd",
+              "sourceId": "pg-balance-job",
+              "targetId": "redis",
+              "type": "traffic",
+              "thicknessMin": 1,
+              "thicknessMax": 2,
+              "bidirectional": false,
+              "anchorSource": "auto",
+              "anchorTarget": "auto",
+              "thresholds": [],
+              "flowAnimation": true,
+              "flowSpeed": "auto"
+            }
+          ],
+          "groups": [
+            {
+              "id": "g-entry",
+              "label": "Cashier entry APIs",
+              "type": "ha_pair",
+              "nodeIds": [
+                "cashier-api",
+                "cashier-api-boss29",
+                "cashier-api-m88g"
+              ],
+              "style": "dashed"
+            },
+            {
+              "id": "g-jobs",
+              "label": "Background jobs",
+              "type": "cluster",
+              "nodeIds": [
+                "brand-m88-job",
+                "pg-balance-job",
+                "transaction-job",
+                "brand-m88-event"
+              ],
+              "style": "dotted"
+            },
+            {
+              "id": "g-brand",
+              "label": "Brand layer",
+              "type": "cluster",
+              "nodeIds": [
+                "brand-m88",
+                "brand-client",
+                "brand-m88-event"
+              ],
+              "style": "dotted"
+            }
+          ],
+          "canvas": {
+            "showGrid": true,
+            "gridSize": 20,
+            "snapToGrid": true,
+            "backgroundColor": "transparent"
+          },
+          "animation": {
+            "flowEnabled": true,
+            "defaultFlowSpeed": "auto",
+            "pulseOnCritical": true,
+            "metricFreshnessSLOSec": 120,
+            "alertPollIntervalMs": 30000
+          },
+          "layout": {
+            "autoLayout": false,
+            "direction": "left-right",
+            "tierSpacing": 220,
+            "nodeSpacing": 60,
+            "snapToGrid": false
+          },
+          "display": {
+            "showMetricsOnCards": true,
+            "showEdgeLabels": true,
+            "showNodeIcons": true
+          }
+        }
+      }
+    ]
+  },
+  "folderUid": "",
+  "overwrite": true,
+  "message": "PMS service topology with NR-only datasource"
+}
