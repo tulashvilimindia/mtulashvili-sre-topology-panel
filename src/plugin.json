@@ -19,5 +19,10 @@
   "dependencies": {
     "grafanaDependency": ">=10.0.0",
     "plugins": []
-  }
+  },
+  "signatureType": "private",
+  "rootUrls": [
+    "http://localhost:13100/",
+    "https://grafana.example.com/"
+  ]
 }
