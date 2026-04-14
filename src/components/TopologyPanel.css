@@ -359,3 +359,111 @@
   font-weight: 500;
   color: #d8dee9;
 }
+
+/* ─── Mobile responsive layout (max-width: 768px) ─────────────────────── */
+/*
+ * Media queries key off the viewport, not the panel container. On a phone
+ * the whole Grafana viewport is narrow, so these rules kick in. On a wide
+ * desktop with a narrow panel column they don't — for that case the panel
+ * already looks fine at any width because node cards are fixed-width.
+ *
+ * Goals: collapse toolbar to wrap instead of overflow, shrink node cards,
+ * render the popup as a bottom-sheet, and hand touch gestures to the
+ * browser for native pan/pinch-zoom instead of custom pointer drag.
+ */
+@media (max-width: 768px) {
+  /* Canvas: let the browser handle pan and pinch-zoom natively so users
+     don't fight the custom drag handlers. Complex drag (move a node) is
+     sacrificed in favor of reliable touch interaction. */
+  .topology-panel {
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+
+  /* Toolbar wraps instead of overflowing when buttons don't fit. */
+  .topology-toolbar {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px;
+    min-height: auto;
+  }
+  .topology-title {
+    font-size: 11px;
+  }
+  .topology-toolbar-spacer {
+    display: none;
+  }
+  .topology-health-bar {
+    gap: 2px;
+  }
+  .topology-health-dot {
+    width: 8px;
+    height: 8px;
+  }
+  .topology-btn {
+    font-size: 10px;
+    padding: 2px 6px;
+    touch-action: manipulation; /* kill the 300ms tap delay */
+  }
+
+  /* Node cards shrink: smaller fonts, tighter padding. */
+  .topology-node {
+    min-width: 0;
+  }
+  .topo-node-header {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  .topo-node-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+  }
+  .topo-node-name {
+    font-size: 11px;
+  }
+  .topo-node-role {
+    font-size: 9px;
+  }
+  .topo-node-metrics {
+    padding: 4px 6px;
+    font-size: 9px;
+  }
+  .topo-node-hint {
+    display: none; /* hover hint is meaningless on touch */
+  }
+
+  /*
+   * Popup becomes a bottom-sheet on mobile: pinned to the bottom of the
+   * panel, full-width, with a rounded top edge. Overrides the wrapper's
+   * inline positioning set by TopologyPanel (which targets click-point
+   * positioning on desktop).
+   */
+  .topology-panel > div:has(> .topology-popup) {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    z-index: 100;
+  }
+  .topology-popup {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 60vh;
+    border-radius: 8px 8px 0 0;
+    overflow-y: auto;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+  }
+  .topology-popup-header {
+    padding: 8px 10px;
+    position: sticky;
+    top: 0;
+    background: #1a1e24;
+    z-index: 1;
+  }
+  .topology-popup-close {
+    font-size: 20px;
+    padding: 0 8px;
+    touch-action: manipulation;
+  }
+}
