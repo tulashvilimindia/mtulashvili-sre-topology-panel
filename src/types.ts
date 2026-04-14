@@ -274,7 +274,6 @@ export interface TopologyPanelOptions {
   display: {
     showEdgeLabels: boolean;
     showNodeStatus: boolean;
-    compactMode: boolean;
     maxSummaryMetrics: number;
   };
 }
@@ -332,7 +331,6 @@ export const DEFAULT_PANEL_OPTIONS: TopologyPanelOptions = {
   display: {
     showEdgeLabels: true,
     showNodeStatus: true,
-    compactMode: false,
     maxSummaryMetrics: 4,
   },
 };
