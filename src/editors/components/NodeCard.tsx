@@ -298,7 +298,15 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
         <div className="topo-editor-field">
           <DataSourcePicker
             current={dsUid || null}
-            onChange={(ds) => { setDsUid(ds.uid); setSelectedJob(''); setSelectedInstance(''); }}
+            onChange={(ds) => {
+              setDsUid(ds.uid);
+              setSelectedJob('');
+              setSelectedInstance('');
+              // Drop the metric name selection too — otherwise names from
+              // the old datasource silently carry into the new node when
+              // the user clicks "Add metrics" on the new DS.
+              setSelectedMetricNames(new Set());
+            }}
             noDefault
           />
         </div>

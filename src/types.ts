@@ -407,6 +407,9 @@ export const NODE_TYPE_CONFIG: Record<NodeType, { icon: string; color: string; d
 /** Accent color for non-status visuals (sparklines, edge labels, info text) */
 export const ACCENT_COLOR = '#5e81ac';
 
+/** Secondary/muted text color — Nord palette nord3 */
+export const MUTED_TEXT_COLOR = '#616e88';
+
 export const STATUS_COLORS: Record<NodeStatus | EdgeStatus, string> = {
   ok: '#a3be8c',
   healthy: '#a3be8c',

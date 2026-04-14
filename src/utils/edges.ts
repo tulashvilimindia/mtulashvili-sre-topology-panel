@@ -152,6 +152,14 @@ export function calculateThickness(
   }
 
   if (mode === 'proportional') {
+    // Proportional mode needs thresholds to normalize against. Without
+    // them, thresholdMax would default to 1 and any value > 1 would
+    // silently clamp to max thickness — misleading for metrics where the
+    // user hasn't configured thresholds yet. Fall back to fixed-mode
+    // behavior in that case.
+    if (thresholds.length === 0) {
+      return min;
+    }
     // Normalize between min/max thickness based on threshold range
     const thresholdMax = Math.max(...thresholds.map((t) => t.value), 1);
     const ratio = Math.min(value / thresholdMax, 1);

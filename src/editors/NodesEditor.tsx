@@ -79,10 +79,17 @@ const BulkImport: React.FC<{ existingNodes: TopologyNode[]; onImport: (nodes: To
     return () => { cancelled = true; };
   }, [dsUid, selectedJob]);
 
+  // The metric-discovery fetch only uses the FIRST selected host as a
+  // sample. Previously the effect listed `selectedHosts` (a Set) as a dep,
+  // so toggling any host — even the 2nd, 3rd, 4th — would re-run the
+  // discovery fetch unnecessarily. Deriving sampleHost via useMemo with
+  // the same dep, then depending on sampleHost in the effect, means the
+  // fetch only re-runs when the actual sample changes.
+  const sampleHost = useMemo(() => [...selectedHosts][0] ?? '', [selectedHosts]);
+
   // Fetch available metrics when hosts are selected (use first selected host as sample)
   useEffect(() => {
-    if (!dsUid || selectedHosts.size === 0) { setMetrics([]); return; }
-    const sampleHost = [...selectedHosts][0];
+    if (!dsUid || !sampleHost) { setMetrics([]); return; }
     let cancelled = false;
     setLoading('metrics');
     (async () => {
@@ -109,7 +116,7 @@ const BulkImport: React.FC<{ existingNodes: TopologyNode[]; onImport: (nodes: To
       finally { if (!cancelled) { setLoading(''); } }
     })();
     return () => { cancelled = true; };
-  }, [dsUid, selectedJob, selectedHosts]);
+  }, [dsUid, selectedJob, sampleHost]);
 
   const toggleHost = useCallback((instance: string) => {
     setSelectedHosts((prev) => {

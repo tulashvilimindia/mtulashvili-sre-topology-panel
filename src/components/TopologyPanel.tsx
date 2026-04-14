@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { PanelProps } from '@grafana/data';
-import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, FiringAlert, NODE_TYPE_CONFIG, STATUS_COLORS } from '../types';
+import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, FiringAlert, NODE_TYPE_CONFIG, STATUS_COLORS, MUTED_TEXT_COLOR } from '../types';
 import { TopologyCanvas } from './TopologyCanvas';
 import { autoLayout } from '../utils/layout';
 import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
@@ -570,7 +570,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     >
       <div className="topology-toolbar" ref={toolbarRef}>
         <span className="topology-title">E2E topology</span>
-        {isFetchingMetrics && <span style={{ fontSize: 9, color: '#616e88', marginLeft: 6 }}>Loading...</span>}
+        {isFetchingMetrics && <span style={{ fontSize: 9, color: MUTED_TEXT_COLOR, marginLeft: 6 }}>Loading...</span>}
         {healthSummary.length > 0 && (
           <div className="topology-health-bar">
             {healthSummary.map((h) => (
@@ -589,9 +589,9 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
               fontSize: 10,
               padding: '2px 6px',
               borderRadius: 3,
-              background: '#ebcb8b22',
-              color: '#ebcb8b',
-              border: '1px solid #ebcb8b44',
+              background: `${STATUS_COLORS.warning}22`,
+              color: STATUS_COLORS.warning,
+              border: `1px solid ${STATUS_COLORS.warning}44`,
               marginLeft: 6,
               whiteSpace: 'nowrap',
               cursor: 'help',

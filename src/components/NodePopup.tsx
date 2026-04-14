@@ -162,7 +162,7 @@ export const NodePopup: React.FC<PopupProps> = ({
         >
           {node.observabilityLinks.map((link, i) => (
             <a
-              key={`${link.label}-${i}`}
+              key={link.url || `${link.label}-${i}`}
               href={interpolateUrl(link.url, node)}
               target="_blank"
               rel="noopener noreferrer"

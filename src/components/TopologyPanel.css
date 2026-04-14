@@ -295,9 +295,11 @@
 }
 
 /* ============ NODE POPUP ============ */
+/* Positioning is handled by the wrapper <div> in TopologyPanel.tsx via
+   inline style (dynamic click-point placement). The class intentionally
+   leaves `position` and `z-index` out — the wrapper's z-index: 100 wins
+   over anything declared here anyway. */
 .topology-popup {
-  position: absolute;
-  z-index: 50;
   background: #1a1e24;
   border: 1px solid #2d3748;
   border-radius: 8px;
@@ -358,6 +360,28 @@
 .topology-popup-metric-value {
   font-weight: 500;
   color: #d8dee9;
+}
+
+/* ─── Reduced motion (accessibility) ──────────────────────────────────── */
+/*
+ * Users with vestibular disorders set the OS-level prefers-reduced-motion
+ * preference. Honor it by disabling the continuous flow animation on edges,
+ * the critical node pulse, and any node transitions. Static status colors
+ * and node shapes still convey all the information — motion is purely
+ * decorative in this plugin.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .topology-node {
+    transition: none;
+  }
+  .topo-node-dot.critical {
+    animation: none;
+  }
+  /* Flow overlay paths set animation via inline style, so we target them
+     with an attribute selector and use !important to override. */
+  [style*="topoFlow"] {
+    animation: none !important;
+  }
 }
 
 /* ─── Mobile responsive layout (max-width: 768px) ─────────────────────── */

@@ -183,8 +183,12 @@ describe('calculateThickness', () => {
     expect(calculateThickness(95, 'threshold', 1.5, 4, thresholds)).toBeCloseTo(4, 1);
   });
 
-  test('proportional mode with no thresholds uses 1 as divisor (no divide by zero)', () => {
-    expect(calculateThickness(10, 'proportional', 1.5, 4, [])).toBe(4);
+  test('proportional mode with no thresholds falls back to min (was silent max-clamp)', () => {
+    // Previously returned 4 (max) because thresholdMax defaulted to 1 and
+    // any value > 1 clamped to max — misleading for unconfigured metrics.
+    // Now falls back to fixed-mode behavior and returns min.
+    expect(calculateThickness(10, 'proportional', 1.5, 4, [])).toBe(1.5);
+    expect(calculateThickness(1000, 'proportional', 1.5, 4, [])).toBe(1.5);
   });
 });
 
