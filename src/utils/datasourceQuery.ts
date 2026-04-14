@@ -51,43 +51,67 @@ export function detectDatasourceType(dsUid: string): string {
  * @param replaceVars - Optional template variable interpolation function
  * @param historicalTime - Optional Unix timestamp for time travel queries
  */
+/** Hard ceiling for any single query when no external signal is provided. */
+const QUERY_TIMEOUT_MS = 10_000;
+
 export async function queryDatasource(
   dsUid: string,
   query: string,
   dsType?: string,
   queryConfig?: DatasourceQueryConfig,
   replaceVars?: (value: string) => string,
-  historicalTime?: number
+  historicalTime?: number,
+  signal?: AbortSignal
 ): Promise<QueryResult> {
   const type = dsType || detectDatasourceType(dsUid);
   const interpolatedQuery = replaceVars ? replaceVars(query) : query;
 
-  let inner: Promise<QueryResult>;
-  switch (type) {
-    case 'prometheus':
-      inner = queryPrometheus(dsUid, interpolatedQuery, historicalTime);
-      break;
-    case 'cloudwatch':
-      inner = queryCloudWatch(dsUid, queryConfig);
-      break;
-    case 'yesoreyeram-infinity-datasource':
-      inner = queryInfinity(dsUid, queryConfig);
-      break;
-    default:
-      inner = queryPrometheus(dsUid, interpolatedQuery, historicalTime);
+  // When no external signal is provided, give every query a 10s hard
+  // ceiling so a hung datasource cannot stall Promise.all in useSelfQueries
+  // until the browser's default ~2min TCP timeout.
+  let effectiveSignal = signal;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  if (!effectiveSignal) {
+    const internal = new AbortController();
+    timeoutId = setTimeout(() => internal.abort(), QUERY_TIMEOUT_MS);
+    effectiveSignal = internal.signal;
   }
 
-  // Stamp fetchedAt at the wrapper level so every datasource type gets it
-  // for free. Awaited here — inner is guaranteed to resolve (never throws).
-  const result = await inner;
-  return { ...result, fetchedAt: Date.now() };
+  try {
+    let inner: Promise<QueryResult>;
+    switch (type) {
+      case 'prometheus':
+        inner = queryPrometheus(dsUid, interpolatedQuery, historicalTime, effectiveSignal);
+        break;
+      case 'cloudwatch':
+        inner = queryCloudWatch(dsUid, queryConfig, effectiveSignal);
+        break;
+      case 'yesoreyeram-infinity-datasource':
+        inner = queryInfinity(dsUid, queryConfig, effectiveSignal);
+        break;
+      default:
+        inner = queryPrometheus(dsUid, interpolatedQuery, historicalTime, effectiveSignal);
+    }
+
+    // Stamp fetchedAt at the wrapper level so every datasource type gets it
+    // for free. Awaited here — inner is guaranteed to resolve (never throws).
+    const result = await inner;
+    return { ...result, fetchedAt: Date.now() };
+  } finally {
+    if (timeoutId) { clearTimeout(timeoutId); }
+  }
 }
 
 /**
  * Query Prometheus via datasource proxy API.
  * Uses instant query endpoint, returns the latest value.
  */
-async function queryPrometheus(dsUid: string, query: string, historicalTime?: number): Promise<QueryResult> {
+async function queryPrometheus(
+  dsUid: string,
+  query: string,
+  historicalTime?: number,
+  signal?: AbortSignal
+): Promise<QueryResult> {
   try {
     const params: Record<string, string> = { query };
     if (historicalTime) {
@@ -95,7 +119,8 @@ async function queryPrometheus(dsUid: string, query: string, historicalTime?: nu
     }
     const resp = await fetch(
       `/api/datasources/proxy/uid/${dsUid}/api/v1/query?` +
-      new URLSearchParams(params)
+      new URLSearchParams(params),
+      signal ? { signal } : undefined
     );
     if (!resp.ok) {
       console.warn('[topology] prom query http error', { dsUid, status: resp.status, query });
@@ -135,7 +160,8 @@ async function queryPrometheus(dsUid: string, query: string, historicalTime?: nu
  */
 async function queryCloudWatch(
   dsUid: string,
-  config?: DatasourceQueryConfig
+  config?: DatasourceQueryConfig,
+  signal?: AbortSignal
 ): Promise<QueryResult> {
   if (!config?.namespace || !config?.metricName) {
     // Missing required config — treat as empty, not error (user hasn't finished configuring)
@@ -167,6 +193,7 @@ async function queryCloudWatch(
         from: 'now-5m',
         to: 'now',
       }),
+      signal,
     });
     if (!resp.ok) {
       console.warn('[topology] cloudwatch http error', { dsUid, status: resp.status, metric: config.metricName });
@@ -207,7 +234,8 @@ async function queryCloudWatch(
  */
 async function queryInfinity(
   dsUid: string,
-  config?: DatasourceQueryConfig
+  config?: DatasourceQueryConfig,
+  signal?: AbortSignal
 ): Promise<QueryResult> {
   if (!config?.url) {
     // Missing URL — treat as empty, not error (user hasn't finished configuring)
@@ -241,6 +269,7 @@ async function queryInfinity(
         from: 'now-5m',
         to: 'now',
       }),
+      signal,
     });
     if (!resp.ok) {
       console.warn('[topology] infinity http error', { dsUid, status: resp.status, url: config.url });

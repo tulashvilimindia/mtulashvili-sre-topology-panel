@@ -91,7 +91,14 @@ export function useSelfQueries(
       clearTimeout(fetchTimerRef.current);
     }
 
+    // AbortController + cancelled guard: on unmount or dep change, cancel
+    // in-flight fetches AND prevent state updates after they resolve.
+    // Mirrors the pattern used by useAlertRules / useDynamicTargets.
+    const controller = new AbortController();
+    let cancelled = false;
+
     fetchTimerRef.current = setTimeout(async () => {
+      if (cancelled) { return; }
       setIsLoading(true);
       const newResults = new Map<string, QueryResult>();
       const newFailures = new Map<string, QueryError>();
@@ -99,7 +106,9 @@ export function useSelfQueries(
       // Query all uncovered metrics using the multi-DS abstraction
       // (queryDatasource auto-detects the datasource type from the UID)
       const promises = uncoveredMetrics.map(async (m) => {
-        const result = await queryDatasource(m.dsUid, m.query, undefined, m.queryConfig, replaceVars, historicalTime);
+        const result = await queryDatasource(
+          m.dsUid, m.query, undefined, m.queryConfig, replaceVars, historicalTime, controller.signal
+        );
         newResults.set(m.metricId, result);
         if (result.error) {
           newFailures.set(m.metricId, result.error);
@@ -107,12 +116,15 @@ export function useSelfQueries(
       });
 
       await Promise.all(promises);
+      if (cancelled) { return; }
       setResults(newResults);
       setFailures(newFailures);
       setIsLoading(false);
     }, 500);
 
     return () => {
+      cancelled = true;
+      controller.abort();
       if (fetchTimerRef.current) {
         clearTimeout(fetchTimerRef.current);
       }

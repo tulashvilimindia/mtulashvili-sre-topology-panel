@@ -52,9 +52,18 @@ export function assignTiers(nodes: TopologyNode[], edges: TopologyEdge[]): Map<s
 
   // BFS from roots (no incoming)
   const queue: string[] = [];
+  // Track which node ids have already been placed on the queue. Without
+  // this guard, diamond fan-in topologies (A→B, A→C, B→D, C→D) enqueue
+  // the same child twice: the first parent decrements remaining to 0,
+  // the second decrements it to -1, and both times `remaining <= 0`
+  // matches. The child and its transitive descendants then get processed
+  // redundantly — O(N²) worst case on dense graphs, even though the final
+  // tier assignment is idempotent. The queued set keeps BFS at O(V+E).
+  const queued = new Set<string>();
   nodes.forEach((n) => {
     if ((incomingCount.get(n.id) || 0) === 0) {
       queue.push(n.id);
+      queued.add(n.id);
       tiers.set(n.id, 0);
     }
   });
@@ -72,7 +81,8 @@ export function assignTiers(nodes: TopologyNode[], edges: TopologyEdge[]): Map<s
       }
       const remaining = (incomingCount.get(childId) || 1) - 1;
       incomingCount.set(childId, remaining);
-      if (remaining <= 0) {
+      if (remaining <= 0 && !queued.has(childId)) {
+        queued.add(childId);
         queue.push(childId);
       }
     });
