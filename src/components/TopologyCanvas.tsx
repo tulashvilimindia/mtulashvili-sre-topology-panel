@@ -322,6 +322,19 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
                   {label}
                 </text>
               )}
+              {/* Secondary latency label (shown below main label, or at midpoint if no main label) */}
+              {displayOptions.showEdgeLabels && edge.latencyLabel && (
+                <text
+                  x={mid.x}
+                  y={label ? mid.y + 8 : mid.y - 4}
+                  textAnchor="middle"
+                  fontSize={8}
+                  fill="#616e88"
+                  fontFamily="var(--font-sans)"
+                >
+                  {edge.latencyLabel}
+                </text>
+              )}
             </g>
           );
         })}

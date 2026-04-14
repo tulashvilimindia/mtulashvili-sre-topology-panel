@@ -238,6 +238,14 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
             placeholder="${value} rps"
           />
         </div>
+        <div className="topo-editor-field">
+          <label>Latency label <span style={{ fontSize: 9, color: '#4c566a' }}>secondary text shown under the main label</span></label>
+          <Input
+            value={edge.latencyLabel || ''}
+            onChange={(e) => handleField('latencyLabel', e.currentTarget.value || undefined)}
+            placeholder="p95: 12ms"
+          />
+        </div>
         <div className="topo-editor-row">
           <Checkbox
             label="Bidirectional"
