@@ -346,7 +346,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
       <div style={{ transform: `translate(${viewport.translateX}px, ${viewport.translateY}px) scale(${viewport.scale})`, transformOrigin: '0 0', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
       {/* SVG Layer for edges */}
       <svg
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}
       >
         <defs>
           <marker id="topo-arrow-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
@@ -461,7 +461,12 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               height: maxY - minY,
               border: group.style === 'dashed' ? '1px dashed #2d374866' : group.style === 'solid' ? '1px solid #2d374844' : 'none',
               borderRadius: 10,
-              zIndex: 1,
+              // zIndex 0 puts group rectangles BEHIND the SVG edge layer
+              // (zIndex 1). Otherwise edges whose bezier path exits the
+              // group's bounding box get hidden behind the group's own
+              // transparent div — an easy way to lose traffic flow lines
+              // on any service that lives inside a cluster/ha_pair group.
+              zIndex: 0,
               pointerEvents: 'none',
             }}
           >
