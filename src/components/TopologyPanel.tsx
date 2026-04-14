@@ -242,7 +242,9 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [popupNodeId, setPopupNodeId] = useState<string | null>(null);
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
   const [timeOffset, setTimeOffset] = useState<number>(0); // 0 = now, negative = minutes ago
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const nodes = useMemo(() => options.nodes || [], [options.nodes]);
   const edges = useMemo(() => options.edges || [], [options.edges]);
@@ -622,15 +624,45 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     [canvas.snapToGrid, canvas.gridSize, persistPositions]
   );
 
-  const handleNodeToggle = useCallback((nodeId: string) => {
+  const handleNodeToggle = useCallback((nodeId: string, rect?: DOMRect) => {
     const isEditMode = window.location.search.includes('editPanel');
     if (isEditMode) {
       // Canvas-sidebar sync via module-level event emitter — no options roundtrip,
       // no dashboard-dirty side effects, works across the panel/editor React subtree boundary.
       emitNodeClicked(nodeId);
     } else {
-      // View mode: toggle popup (click again to close)
-      setPopupNodeId((prev) => (prev === nodeId ? null : nodeId));
+      // View mode: toggle popup (click again to close). Compute panel-relative
+      // popup position from the clicked node's DOMRect, clamped to panel bounds.
+      setPopupNodeId((prev) => {
+        const next = prev === nodeId ? null : nodeId;
+        if (next && rect && panelRef.current) {
+          const panelRect = panelRef.current.getBoundingClientRect();
+          const POPUP_W = 240;
+          const POPUP_H = 300;
+          // Default: position to the right of the node with an 8px gap
+          let x = rect.right - panelRect.left + 8;
+          let y = rect.top - panelRect.top;
+          // If popup would overflow the right edge, place it to the LEFT of the node
+          if (x + POPUP_W > panelRect.width) {
+            x = rect.left - panelRect.left - POPUP_W - 8;
+          }
+          // If it still doesn't fit (node near left edge), clamp to left with small margin
+          if (x < 8) {
+            x = 8;
+          }
+          // Clamp bottom so popup fits vertically within the panel
+          if (y + POPUP_H > panelRect.height) {
+            y = Math.max(8, panelRect.height - POPUP_H - 8);
+          }
+          if (y < 8) {
+            y = 8;
+          }
+          setPopupPosition({ x, y });
+        } else if (!next) {
+          setPopupPosition(null);
+        }
+        return next;
+      });
     }
     setExpandedNodes((prev) => {
       const next = new Set(prev);
@@ -664,7 +696,12 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   }, [nodes]);
 
   return (
-    <div className="topology-panel" style={{ width, height, backgroundColor: canvas.backgroundColor }} onClick={() => setPopupNodeId(null)}>
+    <div
+      ref={panelRef}
+      className="topology-panel"
+      style={{ width, height, backgroundColor: canvas.backgroundColor }}
+      onClick={() => { setPopupNodeId(null); setPopupPosition(null); }}
+    >
       <div className="topology-toolbar">
         <span className="topology-title">E2E topology</span>
         {isFetchingMetrics && <span style={{ fontSize: 9, color: '#616e88', marginLeft: 6 }}>Loading...</span>}
@@ -751,12 +788,17 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         const popupNode = nodes.find((n) => n.id === popupNodeId);
         if (!popupNode) { return null; }
         const popupAlerts = nodeStates.get(popupNodeId)?.firingAlerts;
+        // Use dynamic popupPosition when available; fall back to fixed top-right for
+        // backward-compat (e.g. popups triggered without a rect, or very small panels).
+        const wrapperStyle: React.CSSProperties = popupPosition
+          ? { position: 'absolute', left: popupPosition.x, top: popupPosition.y, zIndex: 100 }
+          : { position: 'absolute', top: 44, right: 8, zIndex: 100 };
         return (
-          <div style={{ position: 'absolute', top: 44, right: 8, zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
+          <div style={wrapperStyle} onClick={(e) => e.stopPropagation()}>
             <NodePopup
               node={popupNode}
               firingAlerts={popupAlerts}
-              onClose={() => setPopupNodeId(null)}
+              onClose={() => { setPopupNodeId(null); setPopupPosition(null); }}
             />
           </div>
         );

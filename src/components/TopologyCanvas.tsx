@@ -20,7 +20,7 @@ interface CanvasProps {
   width: number;
   height: number;
   onNodeDrag: (nodeId: string, x: number, y: number) => void;
-  onNodeToggle: (nodeId: string) => void;
+  onNodeToggle: (nodeId: string, rect?: DOMRect) => void;
 }
 
 export const TopologyCanvas: React.FC<CanvasProps> = ({
@@ -150,9 +150,9 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     };
   }, [dragging, width, height]);
 
-  const handleNodeClick = useCallback((nodeId: string) => {
+  const handleNodeClick = useCallback((nodeId: string, rect?: DOMRect) => {
     if (!hasMovedRef.current) {
-      onNodeToggle(nodeId);
+      onNodeToggle(nodeId, rect);
     }
   }, [onNodeToggle]);
 
@@ -413,8 +413,18 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
             }}
             onPointerDown={(e) => handlePointerDown(e, node.id)}
             tabIndex={0}
-            onClick={(e) => { e.stopPropagation(); handleNodeClick(node.id); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNodeClick(node.id); } }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              handleNodeClick(node.id, rect);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                handleNodeClick(node.id, rect);
+              }
+            }}
           >
             {/* Header */}
             <div className="topo-node-header">
