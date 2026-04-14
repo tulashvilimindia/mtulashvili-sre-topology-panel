@@ -615,7 +615,6 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
           <div style={{ position: 'absolute', top: 44, right: 8, zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
             <NodePopup
               node={popupNode}
-              position={{ x: 0, y: 0 }}
               firingAlerts={popupAlerts}
               onClose={() => setPopupNodeId(null)}
             />

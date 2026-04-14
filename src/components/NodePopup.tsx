@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icon, IconName } from '@grafana/ui';
-import { TopologyNode, NodeMetricConfig, FiringAlert, STATUS_COLORS, ACCENT_COLOR } from '../types';
+import { TopologyNode, FiringAlert, STATUS_COLORS, ACCENT_COLOR } from '../types';
 
 /**
  * Replace ${token} placeholders in a URL template with values from the node.
@@ -18,7 +18,6 @@ function interpolateUrl(urlTemplate: string, node: TopologyNode): string {
 
 interface PopupProps {
   node: TopologyNode;
-  position: { x: number; y: number };
   firingAlerts?: FiringAlert[];
   onClose: () => void;
 }
@@ -63,7 +62,7 @@ async function fetchTimeseries(dsUid: string, query: string, signal?: AbortSigna
   }
 }
 
-export const NodePopup: React.FC<PopupProps> = ({ node, position, firingAlerts, onClose }) => {
+export const NodePopup: React.FC<PopupProps> = ({ node, firingAlerts, onClose }) => {
   const [seriesData, setSeriesData] = useState<MetricTimeseries[]>([]);
   const [loading, setLoading] = useState(true);
 
