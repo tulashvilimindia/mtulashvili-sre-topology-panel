@@ -140,7 +140,7 @@ docker run -d \
   -p 3000:3000 \
   -v $(pwd)/dist:/var/lib/grafana/plugins/sid2-grafana-topology \
   -e GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=sid2-grafana-topology \
-  grafana/grafana-enterprise:10.4.0
+  grafana/grafana-enterprise:12.0.0
 ```
 
 ### Install via Docker Compose
@@ -148,7 +148,7 @@ docker run -d \
 ```yaml
 services:
   grafana:
-    image: grafana/grafana-enterprise:10.4.0
+    image: grafana/grafana-enterprise:12.0.0
     ports:
       - "3000:3000"
     volumes:
@@ -486,8 +486,8 @@ Every dependency listed with its exact resolved version, what it does in this pr
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| **Docker** | (host) | Runs local Grafana 10.4.0 via `docker-compose.yaml` for plugin development and testing |
-| **Grafana Enterprise** | 10.4.0 | Target panel host. Docker image `grafana/grafana-enterprise:10.4.0` with anonymous auth, unsigned plugin allowlist |
+| **Docker** | (host) | Runs local Grafana 12.0.0 via `docker-compose.yaml` for plugin development and testing |
+| **Grafana Enterprise** | 12.0.0 | Target panel host. Docker image `grafana/grafana-enterprise:12.0.0` with anonymous auth (Admin role), unsigned plugin allowlist, debug logging. Dev port 13100 per `docker-compose.yaml`. |
 | **supervisord** | Alpine pkg | Process manager inside Docker container. Runs Grafana's `/run.sh` with stdout logging |
 | **Node.js** | >= 18 (24.14.0 used) | JavaScript runtime for build tools. Requires `TS_NODE_COMPILER_OPTIONS` workaround on v24+ |
 | **npm** | 11.9.0 | Package manager |
