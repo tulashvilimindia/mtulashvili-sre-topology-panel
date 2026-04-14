@@ -191,9 +191,51 @@ The plugin ships with a built-in example topology. When the panel is empty:
 
 ## Configuration
 
+### Panel editor
+
+Open any topology panel in edit mode. The custom editor sidebar on the right renders three collapsible sections: **Nodes**, **Relationships** (edges), and **Groups**. Everything you see in the JSON schema further down is edited here via forms, dropdowns, and colour pickers — you rarely need to touch the JSON directly.
+
+#### Nodes editor
+
+- **Add** — click the `+` button to create a new node card. It defaults to `type: server` at position (100, 100) and auto-lays-out on next render
+- **Bulk Import** — when a Prometheus datasource is selected, the editor can fetch the list of instances via `/api/v1/series`, let you pick hosts and which metrics to include, and create one node per host in a single click
+- **Search filter** — appears automatically when the list has more than 3 nodes; filters by name, role, or type
+- **Import topology JSON** — upload a full exported payload; merges nodes slice, routes any edges/groups/canvas/animation/layout/display sub-objects through a cross-subtree event bus so the panel owns the actual `onOptionsChange` call
+- **Export topology JSON** — downloads the entire options object (v2 format) as a file
+- **Per-node card** — name, role, type dropdown, compact toggle, width, position, alert label matchers (key=value list), observability links with `${token}` URL interpolation, metrics list
+- **Metric sub-editor** — datasource picker (any Grafana datasource works), query field, format template, section, isSummary toggle, showSparkline toggle, threshold colour editor, plus **collapsible CloudWatch section** (namespace / metricName / dimensions key-value list / stat / period) and **collapsible Infinity section** (url / method / rootSelector / optional JSON body) that appear automatically based on the picked datasource's type
+- **Delete confirmation** — asks before deleting, tells you how many edges will be orphaned, auto-removes those orphans via the `panelEvents` bus
+
+#### Relationships (edges) editor
+
+- **Add / delete / duplicate** — same card-based pattern as nodes
+- **Search filter** — by source/target name, source/target id, or edge type
+- **Source/target pickers** — dropdowns populated from the nodes list
+- **Type dropdown** — `traffic`, `ha_sync`, `failover`, `monitor`, `response`, `custom`
+- **Thickness** — mode (`fixed`/`proportional`/`threshold`), min/max pixel values, and per-edge thresholds
+- **Flow animation** — toggle + speed dropdown (`auto`/`slow`/`normal`/`fast`/`none`)
+- **State map editor** — key-value pairs for mapping non-numeric metric values (e.g. `"synced" → green`, `"out_of_sync" → red`) for things like HA sync status
+- **Dynamic targets** — enables `targetQuery` editor with the same datasource/query/nodeIdLabel fields for runtime edge expansion
+- **Metric sub-editor** — same datasource picker / CloudWatch / Infinity sections as the node metric editor
+
+#### Groups editor
+
+- **Add / delete** — create HA pairs, clusters, or custom groupings
+- **Search filter** — by label, type, or any member node name
+- **Member picker** — multi-select dropdown from the nodes list
+- **Style dropdown** — `dashed`, `solid`, or `none`
+
+#### Panel options (top-level)
+
+All the toggles in the **Panel Options** table at the top of this README are rendered as standard Grafana panel-option controls in the right sidebar (not in the custom editor): background colour picker, flow-animation toggles, poll interval number inputs, layout direction dropdown, etc.
+
 ### Topology Data Model
 
-The topology is configured via the panel's JSON options. Each topology consists of three arrays:
+> **You do not need to write JSON by hand.** The plugin ships a full visual editor in the Grafana panel-editor sidebar (see the [Panel editor](#panel-editor) section below) with drag-and-drop cards for nodes, edges, and groups, a datasource picker per metric, a threshold colour editor, CloudWatch/Infinity query wizards, bulk import of nodes from Prometheus metric discovery, search filters, import/export of the full dashboard payload, and live data previews.
+>
+> The schema below is the reference for what the editor writes into `panel.options` — useful if you're **inspecting a saved dashboard**, **exporting for version control**, **migrating from another tool**, or **generating dashboards programmatically** via the Grafana HTTP API. Most users can skip to the [Panel editor](#panel-editor) section.
+
+Each topology consists of three arrays: **`nodes`**, **`edges`**, and **`groups`**, plus per-panel sub-objects for `canvas`, `animation`, `layout`, and `display` options.
 
 #### Nodes
 
