@@ -5,7 +5,10 @@ import {
   onNodeEditRequest,
   emitOrphanEdgeCleanup,
   onOrphanEdgeCleanup,
+  emitTopologyImport,
+  onTopologyImport,
 } from '../panelEvents';
+import { TopologyPanelOptions } from '../../types';
 
 describe('panelEvents pub/sub', () => {
   test('subscriber receives emitted node id', () => {
@@ -137,5 +140,56 @@ describe('panelEvents orphan-edge-cleanup pub/sub', () => {
     expect(received).toEqual(['survivor']);
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
+  });
+});
+
+describe('panelEvents topology-import pub/sub', () => {
+  test('subscriber receives the emitted partial payload', () => {
+    const received: Array<Partial<TopologyPanelOptions>> = [];
+    const unsub = onTopologyImport((payload) => received.push(payload));
+    const payload: Partial<TopologyPanelOptions> = {
+      nodes: [],
+      edges: [],
+      canvas: { backgroundColor: '#000', showGrid: false, snapToGrid: false, gridSize: 20 },
+    };
+    emitTopologyImport(payload);
+    unsub();
+    expect(received).toHaveLength(1);
+    expect(received[0]).toEqual(payload);
+  });
+
+  test('unsubscribed import handler stops receiving events', () => {
+    const received: Array<Partial<TopologyPanelOptions>> = [];
+    const unsub = onTopologyImport((payload) => received.push(payload));
+    emitTopologyImport({ nodes: [] });
+    unsub();
+    emitTopologyImport({ edges: [] });
+    expect(received).toHaveLength(1);
+  });
+
+  test('import handler that throws does not break other subscribers', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const received: Array<Partial<TopologyPanelOptions>> = [];
+    const unsubThrower = onTopologyImport(() => { throw new Error('boom'); });
+    const unsubGood = onTopologyImport((payload) => received.push(payload));
+    emitTopologyImport({ nodes: [] });
+    unsubThrower();
+    unsubGood();
+    expect(received).toHaveLength(1);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  test('import channel is independent from click/edit/cleanup channels', () => {
+    const clicks: string[] = [];
+    const imports: Array<Partial<TopologyPanelOptions>> = [];
+    const unsubClick = onNodeClicked((id) => clicks.push(id));
+    const unsubImport = onTopologyImport((p) => imports.push(p));
+    emitNodeClicked('a');
+    emitTopologyImport({ nodes: [] });
+    unsubClick();
+    unsubImport();
+    expect(clicks).toEqual(['a']);
+    expect(imports).toHaveLength(1);
   });
 });

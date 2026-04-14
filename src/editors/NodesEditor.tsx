@@ -5,7 +5,7 @@ import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
 import { TopologyPanelOptions, TopologyNode, NodeMetricConfig } from '../types';
 import { NodeCard } from './components/NodeCard';
 import { generateId, sanitizeLabel } from './utils/editorUtils';
-import { onNodeClicked, onNodeEditRequest, emitOrphanEdgeCleanup } from '../utils/panelEvents';
+import { onNodeClicked, onNodeEditRequest, emitOrphanEdgeCleanup, emitTopologyImport } from '../utils/panelEvents';
 import './editors.css';
 
 type Props = StandardEditorProps<TopologyNode[], object, TopologyPanelOptions>;
@@ -274,8 +274,21 @@ const BulkImport: React.FC<{ existingNodes: TopologyNode[]; onImport: (nodes: To
 };
 
 // ─── Import/Export helpers (pure, no React) ───
+// Exported payload shape — bumped to v2 when panel sub-options were added.
+// Old v1 files (nodes-only) are still importable for backward-compat.
+const EXPORT_VERSION = 2;
+
 function exportTopologyJSON(options: TopologyPanelOptions): void {
-  const payload = { nodes: options.nodes || [], edges: options.edges || [], groups: options.groups || [] };
+  const payload = {
+    version: EXPORT_VERSION,
+    nodes: options.nodes || [],
+    edges: options.edges || [],
+    groups: options.groups || [],
+    canvas: options.canvas,
+    animation: options.animation,
+    layout: options.layout,
+    display: options.display,
+  };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -290,11 +303,35 @@ function importTopologyJSON(file: File, currentNodes: TopologyNode[], onChange: 
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target?.result as string);
+      // Build a partial options payload covering every slice the file
+      // provides. Any omitted slice is left as-is in TopologyPanel's merge.
+      const partial: Partial<TopologyPanelOptions> = {};
       if (Array.isArray(data.nodes)) {
-        onChange([...currentNodes, ...data.nodes]);
+        // Append to existing nodes for the nodes slice (matches v1 behavior)
+        partial.nodes = [...currentNodes, ...data.nodes];
       }
-    } catch {
-      // Silently fail on invalid JSON
+      if (Array.isArray(data.edges)) { partial.edges = data.edges; }
+      if (Array.isArray(data.groups)) { partial.groups = data.groups; }
+      if (data.canvas && typeof data.canvas === 'object') { partial.canvas = data.canvas; }
+      if (data.animation && typeof data.animation === 'object') { partial.animation = data.animation; }
+      if (data.layout && typeof data.layout === 'object') { partial.layout = data.layout; }
+      if (data.display && typeof data.display === 'object') { partial.display = data.display; }
+
+      // If only nodes were supplied (v1 format or legacy), update via the
+      // slice's own onChange — no need to cross the event bus.
+      const nonNodeKeys = Object.keys(partial).filter((k) => k !== 'nodes');
+      if (nonNodeKeys.length === 0 && partial.nodes) {
+        onChange(partial.nodes);
+        return;
+      }
+
+      // v2 or mixed payload — route through the module-level event bus
+      // so TopologyPanel can merge across slices the editor doesn't own.
+      if (Object.keys(partial).length > 0) {
+        emitTopologyImport(partial);
+      }
+    } catch (err) {
+      console.warn('[topology] import failed — invalid JSON', err);
     }
   };
   reader.readAsText(file);

@@ -14,11 +14,15 @@
  * required.
  */
 
+import { TopologyPanelOptions } from '../types';
+
 type NodeClickHandler = (nodeId: string) => void;
+type TopologyImportHandler = (payload: Partial<TopologyPanelOptions>) => void;
 
 const nodeClickSubscribers = new Set<NodeClickHandler>();
 const nodeEditRequestSubscribers = new Set<NodeClickHandler>();
 const orphanEdgeCleanupSubscribers = new Set<NodeClickHandler>();
+const topologyImportSubscribers = new Set<TopologyImportHandler>();
 
 /**
  * Publish a node-clicked event to all subscribers.
@@ -98,5 +102,33 @@ export function onOrphanEdgeCleanup(handler: NodeClickHandler): () => void {
   orphanEdgeCleanupSubscribers.add(handler);
   return () => {
     orphanEdgeCleanupSubscribers.delete(handler);
+  };
+}
+
+/**
+ * Publish a topology-import payload. NodesEditor fires this after parsing
+ * a JSON export so the TopologyPanel (which owns the full options object)
+ * can merge the payload into dashboard state via onOptionsChange. This is
+ * the only way for the sidebar editor to write across slices it doesn't
+ * own (edges, groups, canvas, animation, layout, display).
+ */
+export function emitTopologyImport(payload: Partial<TopologyPanelOptions>): void {
+  topologyImportSubscribers.forEach((handler) => {
+    try {
+      handler(payload);
+    } catch (err) {
+      console.warn('[topology] panelEvents import handler threw', err);
+    }
+  });
+}
+
+/**
+ * Subscribe to topology-import events.
+ * Returns an unsubscribe function — call it in your useEffect cleanup.
+ */
+export function onTopologyImport(handler: TopologyImportHandler): () => void {
+  topologyImportSubscribers.add(handler);
+  return () => {
+    topologyImportSubscribers.delete(handler);
   };
 }

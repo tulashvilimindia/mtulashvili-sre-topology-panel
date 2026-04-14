@@ -7,7 +7,7 @@ import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpe
 import { queryDatasource, QueryResult, QueryError } from '../utils/datasourceQuery';
 import { fetchAlertRules, matchAlertsToNode } from '../utils/alertRules';
 import { resolveDynamicTargets } from '../utils/dynamicTargets';
-import { emitNodeClicked, emitNodeEditRequest, onOrphanEdgeCleanup } from '../utils/panelEvents';
+import { emitNodeClicked, emitNodeEditRequest, onOrphanEdgeCleanup, onTopologyImport } from '../utils/panelEvents';
 import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
 import './TopologyPanel.css';
@@ -693,6 +693,19 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         if (filtered.length < currentEdges.length) {
           onOptionsChange({ ...current, edges: filtered });
         }
+      }, 0);
+    });
+  }, [onOptionsChange]);
+
+  // Subscribe to topology-import events fired by NodesEditor. The payload
+  // is a partial options object covering any mix of slices the JSON file
+  // provided; merge it over the current options so omitted slices are
+  // preserved. setTimeout(0) yields a tick so any nodes slice update
+  // NodesEditor applied via its own onChange settles first.
+  useEffect(() => {
+    return onTopologyImport((partial) => {
+      setTimeout(() => {
+        onOptionsChange({ ...optionsRef.current, ...partial });
       }, 0);
     });
   }, [onOptionsChange]);
