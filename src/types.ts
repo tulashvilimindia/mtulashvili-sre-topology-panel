@@ -173,7 +173,15 @@ export interface TopologyEdge {
   anchorSource: AnchorPoint;
   /** Target anchor point */
   anchorTarget: AnchorPoint;
-  /** State mapping for non-numeric metrics (e.g. HA sync) */
+  /**
+   * State mapping for categorical metrics (e.g. HA sync). Maps the stringified
+   * metric value to a color. Valid color values: 'green' | 'yellow' | 'red'.
+   * When set, overrides threshold-based coloring whenever the metric value
+   * matches one of the keys.
+   *
+   * Example for a Prometheus metric that returns 1 (synced) or 0 (out of sync):
+   *   { "1": "green", "0": "red" }
+   */
   stateMap?: Record<string, string>;
   /** Annotation/notes for this edge */
   description?: string;

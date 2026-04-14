@@ -447,7 +447,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         value = selfQueryResults.get(edge.id)?.value ?? null;
       }
 
-      const status = calculateEdgeStatus(value, edge.thresholds);
+      const status = calculateEdgeStatus(value, edge.thresholds, edge.stateMap);
       // Apply status propagation: edges leading to critical nodes show degraded color
       const effectiveStatus = propagatedEdgeIds.has(edge.id) && status === 'healthy' ? 'degraded' : status;
       const color = getEdgeColor(effectiveStatus);

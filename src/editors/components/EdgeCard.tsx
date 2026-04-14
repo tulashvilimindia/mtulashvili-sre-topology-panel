@@ -23,6 +23,12 @@ const INFINITY_METHODS = [
   { label: 'POST', value: 'POST' },
 ];
 
+const STATE_MAP_COLORS: Array<{ label: string; value: 'green' | 'yellow' | 'red' }> = [
+  { label: 'Green', value: 'green' },
+  { label: 'Yellow', value: 'yellow' },
+  { label: 'Red', value: 'red' },
+];
+
 const EDGE_TYPES = [
   { label: 'Traffic', value: 'traffic' as const },
   { label: 'HA sync', value: 'ha_sync' as const },
@@ -69,6 +75,7 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
   const [showMetric, setShowMetric] = useState(false);
   const [showVisual, setShowVisual] = useState(false);
   const [showThresholds, setShowThresholds] = useState(false);
+  const [showStateMap, setShowStateMap] = useState(false);
 
   const nodeOptions = useMemo(() => getNodeSelectOptions(nodes), [nodes]);
 
@@ -155,6 +162,37 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
   const removeDim = useCallback((idx: number) => {
     syncDimensions(dimEntries.filter((_, i) => i !== idx));
   }, [dimEntries, syncDimensions]);
+
+  // ─── State map (categorical metric → color) ───
+  const [stateMapEntries, setStateMapEntries] = useState<Array<{ key: string; color: 'green' | 'yellow' | 'red' }>>(
+    () => Object.entries(edge.stateMap || {})
+      .map(([key, color]) => ({ key, color: (color === 'yellow' || color === 'red' ? color : 'green') as 'green' | 'yellow' | 'red' }))
+  );
+
+  const syncStateMap = useCallback((next: Array<{ key: string; color: 'green' | 'yellow' | 'red' }>) => {
+    setStateMapEntries(next);
+    const obj: Record<string, string> = {};
+    next.forEach(({ key, color }) => {
+      if (key) { obj[key] = color; }
+    });
+    onChange({ ...edge, stateMap: Object.keys(obj).length > 0 ? obj : undefined });
+  }, [edge, onChange]);
+
+  const addStateMap = useCallback(() => {
+    syncStateMap([...stateMapEntries, { key: '', color: 'green' }]);
+  }, [stateMapEntries, syncStateMap]);
+
+  const updateStateMapKey = useCallback((idx: number, key: string) => {
+    syncStateMap(stateMapEntries.map((e, i) => (i === idx ? { ...e, key } : e)));
+  }, [stateMapEntries, syncStateMap]);
+
+  const updateStateMapColor = useCallback((idx: number, color: 'green' | 'yellow' | 'red') => {
+    syncStateMap(stateMapEntries.map((e, i) => (i === idx ? { ...e, color } : e)));
+  }, [stateMapEntries, syncStateMap]);
+
+  const removeStateMap = useCallback((idx: number) => {
+    syncStateMap(stateMapEntries.filter((_, i) => i !== idx));
+  }, [stateMapEntries, syncStateMap]);
 
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
@@ -387,6 +425,56 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
           onToggle={() => setShowThresholds(!showThresholds)}
         >
           <ThresholdList thresholds={edge.thresholds} onChange={(t) => handleField('thresholds', t)} />
+        </CollapsableSection>
+
+        {/* State map — categorical coloring (e.g. HA sync 0/1 → red/green) */}
+        <CollapsableSection
+          label={`State map (${stateMapEntries.length})`}
+          isOpen={showStateMap}
+          onToggle={() => setShowStateMap(!showStateMap)}
+        >
+          <div style={{ fontSize: 10, color: '#616e88', padding: '4px 0' }}>
+            Override threshold coloring for categorical metrics. Keys are compared as strings
+            against the metric value (e.g. a Prometheus query returning 1 matches key &quot;1&quot;).
+            When set, stateMap takes precedence over thresholds for matching values.
+          </div>
+          {stateMapEntries.length === 0 && (
+            <div style={{ fontSize: 10, color: '#616e88', padding: '4px 0' }}>
+              No state map entries — thresholds drive edge color
+            </div>
+          )}
+          {stateMapEntries.map((entry, idx) => (
+            <div key={idx} className="topo-editor-row" style={{ gap: 4, marginBottom: 2 }}>
+              <Input
+                value={entry.key}
+                onChange={(e) => updateStateMapKey(idx, e.currentTarget.value)}
+                placeholder="1"
+                width={12}
+              />
+              <span style={{ color: '#616e88', fontSize: 11 }}>=</span>
+              <Select
+                options={STATE_MAP_COLORS}
+                value={entry.color}
+                onChange={(v) => updateStateMapColor(idx, (v.value as 'green' | 'yellow' | 'red') || 'green')}
+                width={14}
+              />
+              <IconButton
+                name="trash-alt"
+                size="sm"
+                onClick={() => removeStateMap(idx)}
+                tooltip="Remove mapping"
+              />
+            </div>
+          ))}
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="plus"
+            onClick={addStateMap}
+            style={{ marginTop: 4 }}
+          >
+            Add mapping
+          </Button>
         </CollapsableSection>
 
         {/* Visual config */}

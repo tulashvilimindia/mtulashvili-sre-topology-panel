@@ -86,12 +86,32 @@ export function getBezierPath(from: Point, to: Point): string {
 }
 
 /**
- * Calculate edge status from metric value and thresholds
+ * Calculate edge status from metric value, thresholds, and optional stateMap.
+ *
+ * When a stateMap is provided, it is consulted FIRST: the value is converted
+ * to a string and looked up against the map's keys. If a valid color is
+ * returned ('green' | 'yellow' | 'red'), the corresponding EdgeStatus is used
+ * and thresholds are ignored. When the stateMap is absent, empty, or the value
+ * has no matching key, the function falls back to numeric threshold logic.
  */
-export function calculateEdgeStatus(value: number | null, thresholds: ThresholdStep[]): EdgeStatus {
+export function calculateEdgeStatus(
+  value: number | null,
+  thresholds: ThresholdStep[],
+  stateMap?: Record<string, string>
+): EdgeStatus {
   if (value === null || value === undefined) {
     return 'nodata';
   }
+
+  // State map takes precedence for categorical metrics (e.g. HA sync 0/1)
+  if (stateMap && Object.keys(stateMap).length > 0) {
+    const mapped = stateMap[String(value)];
+    if (mapped === 'red') { return 'degraded'; }
+    if (mapped === 'yellow') { return 'saturated'; }
+    if (mapped === 'green') { return 'healthy'; }
+    // Unknown value → fall through to thresholds
+  }
+
   // Sort thresholds descending
   const sorted = [...thresholds].sort((a, b) => b.value - a.value);
   for (const t of sorted) {
