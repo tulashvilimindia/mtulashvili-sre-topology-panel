@@ -22,7 +22,6 @@
   },
   "signatureType": "private",
   "rootUrls": [
-    "http://localhost:13100/",
-    "https://grafana.example.com/"
+    "http://localhost:13100/"
   ]
 }
