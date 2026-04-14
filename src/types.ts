@@ -132,10 +132,12 @@ export type AnchorPoint = 'top' | 'bottom' | 'left' | 'right' | 'auto';
 export interface EdgeMetricConfig {
   /** Datasource uid */
   datasourceUid: string;
-  /** Query expression */
+  /** Query expression (PromQL for Prometheus; ignored for CloudWatch/Infinity which use queryConfig) */
   query: string;
   /** Alias for this metric */
   alias: string;
+  /** Extra config for non-Prometheus datasources (CloudWatch dimensions, Infinity URL/rootSelector) */
+  queryConfig?: DatasourceQueryConfig;
 }
 
 export interface TopologyEdge {

@@ -33,15 +33,24 @@ function useSelfQueries(
   const [isLoading, setIsLoading] = useState(false);
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Collect node + edge metrics that need self-querying
+  // Collect node + edge metrics that need self-querying.
+  // A metric is "fetchable" if it has a datasourceUid AND at least one query
+  // primitive: PromQL in `query`, OR CloudWatch namespace+metricName, OR Infinity url.
   const uncoveredMetrics = useMemo(() => {
     const covered = new Set(panelSeries.map((f) => f.refId).filter(Boolean));
     const uncovered: UncoveredMetric[] = [];
 
+    const hasQueryPrimitive = (query: string, cfg?: DatasourceQueryConfig): boolean => {
+      if (query) { return true; }
+      if (cfg?.namespace && cfg?.metricName) { return true; }
+      if (cfg?.url) { return true; }
+      return false;
+    };
+
     // Node metrics
     nodes.forEach((node) => {
       node.metrics.forEach((m) => {
-        if (m.datasourceUid && m.query && !covered.has(m.id)) {
+        if (m.datasourceUid && hasQueryPrimitive(m.query, m.queryConfig) && !covered.has(m.id)) {
           uncovered.push({
             metricId: m.id,
             dsUid: m.datasourceUid,
@@ -54,11 +63,14 @@ function useSelfQueries(
 
     // Edge metrics
     edges.forEach((edge) => {
-      if (edge.metric?.datasourceUid && edge.metric?.query && !covered.has(edge.id)) {
+      if (edge.metric?.datasourceUid
+          && hasQueryPrimitive(edge.metric.query, edge.metric.queryConfig)
+          && !covered.has(edge.id)) {
         uncovered.push({
           metricId: edge.id,
           dsUid: edge.metric.datasourceUid,
           query: edge.metric.query,
+          queryConfig: edge.metric.queryConfig,
         });
       }
     });

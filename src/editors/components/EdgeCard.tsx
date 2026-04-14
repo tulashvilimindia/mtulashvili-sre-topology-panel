@@ -1,10 +1,27 @@
-import React, { useCallback, useState, useMemo } from 'react';
-import { CollapsableSection, Input, Select, Checkbox, IconButton, RadioButtonGroup, TextArea } from '@grafana/ui';
-import { DataSourcePicker } from '@grafana/runtime';
-import { TopologyEdge, TopologyNode, FlowSpeed } from '../../types';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
+import { CollapsableSection, Input, Select, Checkbox, IconButton, RadioButtonGroup, TextArea, Button } from '@grafana/ui';
+import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
+import { TopologyEdge, TopologyNode, FlowSpeed, DatasourceQueryConfig, EdgeMetricConfig } from '../../types';
 import { ThresholdList } from './ThresholdList';
 import { getNodeSelectOptions } from '../utils/editorUtils';
 import '../editors.css';
+
+const CLOUDWATCH_STATS = [
+  { label: 'Average', value: 'Average' },
+  { label: 'Sum', value: 'Sum' },
+  { label: 'Maximum', value: 'Maximum' },
+  { label: 'Minimum', value: 'Minimum' },
+  { label: 'SampleCount', value: 'SampleCount' },
+  { label: 'p50', value: 'p50' },
+  { label: 'p90', value: 'p90' },
+  { label: 'p95', value: 'p95' },
+  { label: 'p99', value: 'p99' },
+];
+
+const INFINITY_METHODS = [
+  { label: 'GET', value: 'GET' },
+  { label: 'POST', value: 'POST' },
+];
 
 const EDGE_TYPES = [
   { label: 'Traffic', value: 'traffic' as const },
@@ -78,6 +95,67 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
     [edge, onChange]
   );
 
+  // ─── Datasource type discovery (mirrors MetricEditor pattern) ───
+  const [dsType, setDsType] = useState<string>('');
+  useEffect(() => {
+    if (!edge.metric?.datasourceUid) { setDsType(''); return; }
+    let cancelled = false;
+    getDataSourceSrv().get(edge.metric.datasourceUid)
+      .then((ds) => { if (!cancelled) { setDsType(ds.type); } })
+      .catch(() => { if (!cancelled) { setDsType(''); } });
+    return () => { cancelled = true; };
+  }, [edge.metric?.datasourceUid]);
+
+  // ─── Patch a single queryConfig field on edge.metric.queryConfig ───
+  const updateMetricQueryConfig = useCallback(
+    <K extends keyof DatasourceQueryConfig>(field: K, value: DatasourceQueryConfig[K]) => {
+      const currentMetric: EdgeMetricConfig = edge.metric || { datasourceUid: '', query: '', alias: '' };
+      const nextConfig: DatasourceQueryConfig = { ...(currentMetric.queryConfig || {}) };
+      if (value === undefined || value === '') {
+        delete nextConfig[field];
+      } else {
+        nextConfig[field] = value;
+      }
+      onChange({
+        ...edge,
+        metric: {
+          ...currentMetric,
+          queryConfig: Object.keys(nextConfig).length > 0 ? nextConfig : undefined,
+        },
+      });
+    },
+    [edge, onChange]
+  );
+
+  // ─── CloudWatch dimensions: local state for key/value list editor focus stability ───
+  const [dimEntries, setDimEntries] = useState<Array<{ key: string; value: string }>>(
+    () => Object.entries(edge.metric?.queryConfig?.dimensions || {}).map(([key, value]) => ({ key, value }))
+  );
+
+  const syncDimensions = useCallback(
+    (next: Array<{ key: string; value: string }>) => {
+      setDimEntries(next);
+      const obj: Record<string, string> = {};
+      next.forEach(({ key, value }) => {
+        if (key) { obj[key] = value; }
+      });
+      updateMetricQueryConfig('dimensions', Object.keys(obj).length > 0 ? obj : undefined);
+    },
+    [updateMetricQueryConfig]
+  );
+
+  const addDim = useCallback(() => {
+    syncDimensions([...dimEntries, { key: '', value: '' }]);
+  }, [dimEntries, syncDimensions]);
+
+  const updateDim = useCallback((idx: number, field: 'key' | 'value', val: string) => {
+    syncDimensions(dimEntries.map((d, i) => (i === idx ? { ...d, [field]: val } : d)));
+  }, [dimEntries, syncDimensions]);
+
+  const removeDim = useCallback((idx: number) => {
+    syncDimensions(dimEntries.filter((_, i) => i !== idx));
+  }, [dimEntries, syncDimensions]);
+
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
       <span>{sourceName} → {targetName}</span>
@@ -149,14 +227,20 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
               noDefault
             />
           </div>
-          <div className="topo-editor-field">
-            <label>Query</label>
-            <Input
-              value={edge.metric?.query || ''}
-              onChange={(e) => handleMetricField('query', e.currentTarget.value)}
-              placeholder="sum(rate(...))"
-            />
-          </div>
+
+          {/* Prometheus: free-text PromQL */}
+          {edge.metric?.datasourceUid && (dsType === 'prometheus' || dsType === '') && (
+            <div className="topo-editor-field">
+              <label>Query <span style={{ fontSize: 9, color: '#4c566a' }}>PromQL</span></label>
+              <Input
+                value={edge.metric?.query || ''}
+                onChange={(e) => handleMetricField('query', e.currentTarget.value)}
+                placeholder="sum(rate(...))"
+              />
+            </div>
+          )}
+
+          {/* Alias — always shown (used as a fallback matcher to panel data frames) */}
           <div className="topo-editor-field">
             <label>Alias</label>
             <Input
@@ -165,6 +249,135 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
               placeholder="traffic"
             />
           </div>
+
+          {/* CloudWatch */}
+          {edge.metric?.datasourceUid && dsType === 'cloudwatch' && (
+            <>
+              <div className="topo-editor-section-title">CloudWatch query</div>
+              <div className="topo-editor-field">
+                <label>Namespace</label>
+                <Input
+                  value={edge.metric?.queryConfig?.namespace || ''}
+                  onChange={(e) => updateMetricQueryConfig('namespace', e.currentTarget.value || undefined)}
+                  placeholder="AWS/ApplicationELB"
+                />
+              </div>
+              <div className="topo-editor-field">
+                <label>Metric name</label>
+                <Input
+                  value={edge.metric?.queryConfig?.metricName || ''}
+                  onChange={(e) => updateMetricQueryConfig('metricName', e.currentTarget.value || undefined)}
+                  placeholder="RequestCount"
+                />
+              </div>
+              <div className="topo-editor-field">
+                <label>
+                  Dimensions
+                  <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>key=value pairs</span>
+                </label>
+                {dimEntries.length === 0 && (
+                  <div style={{ fontSize: 10, color: '#616e88', padding: '4px 0' }}>
+                    No dimensions — add at least one if the CloudWatch metric requires them
+                  </div>
+                )}
+                {dimEntries.map((entry, idx) => (
+                  <div key={idx} className="topo-editor-row" style={{ gap: 4, marginBottom: 2 }}>
+                    <Input
+                      value={entry.key}
+                      onChange={(e) => updateDim(idx, 'key', e.currentTarget.value)}
+                      placeholder="LoadBalancer"
+                      width={14}
+                    />
+                    <span style={{ color: '#616e88', fontSize: 11 }}>=</span>
+                    <Input
+                      value={entry.value}
+                      onChange={(e) => updateDim(idx, 'value', e.currentTarget.value)}
+                      placeholder="app/my-alb/abc123"
+                      width={18}
+                    />
+                    <IconButton
+                      name="trash-alt"
+                      size="sm"
+                      onClick={() => removeDim(idx)}
+                      tooltip="Remove dimension"
+                    />
+                  </div>
+                ))}
+                <Button size="sm" variant="secondary" icon="plus" onClick={addDim} style={{ marginTop: 4 }}>
+                  Add dimension
+                </Button>
+              </div>
+              <div className="topo-editor-row">
+                <div className="topo-editor-field" style={{ flex: 1 }}>
+                  <label>Stat</label>
+                  <Select
+                    options={CLOUDWATCH_STATS}
+                    value={edge.metric?.queryConfig?.stat || 'Average'}
+                    onChange={(v) => updateMetricQueryConfig('stat', v.value || 'Average')}
+                  />
+                </div>
+                <div className="topo-editor-field" style={{ flex: 1 }}>
+                  <label>Period (s)</label>
+                  <Input
+                    type="number"
+                    value={edge.metric?.queryConfig?.period || 300}
+                    onChange={(e) => {
+                      const n = parseInt(e.currentTarget.value, 10);
+                      updateMetricQueryConfig('period', Number.isFinite(n) && n > 0 ? n : undefined);
+                    }}
+                    placeholder="300"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Infinity */}
+          {edge.metric?.datasourceUid && dsType === 'yesoreyeram-infinity-datasource' && (
+            <>
+              <div className="topo-editor-section-title">Infinity query</div>
+              <div className="topo-editor-field">
+                <label>URL</label>
+                <Input
+                  value={edge.metric?.queryConfig?.url || ''}
+                  onChange={(e) => updateMetricQueryConfig('url', e.currentTarget.value || undefined)}
+                  placeholder="https://api.example.com/data"
+                />
+              </div>
+              <div className="topo-editor-row">
+                <div className="topo-editor-field" style={{ flex: 1 }}>
+                  <label>Method</label>
+                  <Select
+                    options={INFINITY_METHODS}
+                    value={edge.metric?.queryConfig?.method || 'GET'}
+                    onChange={(v) => updateMetricQueryConfig('method', v.value || 'GET')}
+                  />
+                </div>
+                <div className="topo-editor-field" style={{ flex: 2 }}>
+                  <label>
+                    Root selector
+                    <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>JSON path</span>
+                  </label>
+                  <Input
+                    value={edge.metric?.queryConfig?.rootSelector || ''}
+                    onChange={(e) => updateMetricQueryConfig('rootSelector', e.currentTarget.value || undefined)}
+                    placeholder="data.result"
+                  />
+                </div>
+              </div>
+              {edge.metric?.queryConfig?.method === 'POST' && (
+                <div className="topo-editor-field">
+                  <label>Body <span style={{ fontSize: 9, color: '#4c566a' }}>raw JSON</span></label>
+                  <TextArea
+                    value={edge.metric?.queryConfig?.body || ''}
+                    onChange={(e) => updateMetricQueryConfig('body', e.currentTarget.value || undefined)}
+                    placeholder='{"query": "..."}'
+                    rows={3}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </CollapsableSection>
 
         {/* Thresholds */}
