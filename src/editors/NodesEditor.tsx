@@ -5,7 +5,7 @@ import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
 import { TopologyPanelOptions, TopologyNode, NodeMetricConfig } from '../types';
 import { NodeCard } from './components/NodeCard';
 import { generateId, sanitizeLabel } from './utils/editorUtils';
-import { onNodeClicked } from '../utils/panelEvents';
+import { onNodeClicked, onNodeEditRequest } from '../utils/panelEvents';
 import './editors.css';
 
 type Props = StandardEditorProps<TopologyNode[], object, TopologyPanelOptions>;
@@ -325,6 +325,28 @@ export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
     });
   }, []);
 
+  // Canvas node-card refs for scroll-into-view on double-click edit requests
+  const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
+  useEffect(() => {
+    return onNodeEditRequest((nodeId) => {
+      // Ensure the card is expanded so the user sees its content after scrolling
+      setExpandedIds((prev) => {
+        if (prev.has(nodeId)) { return prev; }
+        const next = new Set(prev);
+        next.add(nodeId);
+        return next;
+      });
+      // Defer the scroll one tick so any newly-rendered expanded content is laid out
+      setTimeout(() => {
+        const el = cardRefs.current.get(nodeId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
+    });
+  }, []);
+
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -483,16 +505,26 @@ export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
         <div className="topo-editor-empty">No nodes match &quot;{filterText}&quot;</div>
       )}
       {filteredNodes.map((node) => (
-        <NodeCard
+        <div
           key={node.id}
-          node={node}
-          groups={groups}
-          isOpen={expandedIds.has(node.id)}
-          onToggle={() => toggleExpand(node.id)}
-          onChange={handleChange}
-          onDelete={() => handleDeleteRequest(node.id)}
-          onDuplicate={() => handleDuplicate(node)}
-        />
+          ref={(el) => {
+            if (el) {
+              cardRefs.current.set(node.id, el);
+            } else {
+              cardRefs.current.delete(node.id);
+            }
+          }}
+        >
+          <NodeCard
+            node={node}
+            groups={groups}
+            isOpen={expandedIds.has(node.id)}
+            onToggle={() => toggleExpand(node.id)}
+            onChange={handleChange}
+            onDelete={() => handleDeleteRequest(node.id)}
+            onDuplicate={() => handleDuplicate(node)}
+          />
+        </div>
       ))}
     </div>
   );

@@ -7,7 +7,7 @@ import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpe
 import { queryDatasource, QueryResult, QueryError } from '../utils/datasourceQuery';
 import { fetchAlertRules, matchAlertsToNode } from '../utils/alertRules';
 import { resolveDynamicTargets } from '../utils/dynamicTargets';
-import { emitNodeClicked } from '../utils/panelEvents';
+import { emitNodeClicked, emitNodeEditRequest } from '../utils/panelEvents';
 import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
 import './TopologyPanel.css';
@@ -671,6 +671,12 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
   }, []);
 
+  // Double-click emits the edit-request event. Only NodesEditor subscribes, so
+  // this is a no-op in view mode and opens+scrolls the card in edit mode.
+  const handleNodeDoubleClick = useCallback((nodeId: string) => {
+    emitNodeEditRequest(nodeId);
+  }, []);
+
   const handleResetLayout = useCallback(() => {
     const autoPositions = autoLayout(nodesWithGroupId, expandedEdges, {
       direction: layout.direction,
@@ -783,6 +789,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         height={height - 36 - (timeOffset !== 0 ? 28 : 0)}
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
+        onNodeDoubleClick={handleNodeDoubleClick}
       />
       {popupNodeId && (() => {
         const popupNode = nodes.find((n) => n.id === popupNodeId);

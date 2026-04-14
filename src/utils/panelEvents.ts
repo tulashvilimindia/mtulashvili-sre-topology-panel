@@ -17,6 +17,7 @@
 type NodeClickHandler = (nodeId: string) => void;
 
 const nodeClickSubscribers = new Set<NodeClickHandler>();
+const nodeEditRequestSubscribers = new Set<NodeClickHandler>();
 
 /**
  * Publish a node-clicked event to all subscribers.
@@ -40,5 +41,33 @@ export function onNodeClicked(handler: NodeClickHandler): () => void {
   nodeClickSubscribers.add(handler);
   return () => {
     nodeClickSubscribers.delete(handler);
+  };
+}
+
+/**
+ * Publish a node-edit-request event to all subscribers.
+ * Called by TopologyPanel when a node is double-clicked. Semantically stronger
+ * than a single click: "take me to this node in the editor" rather than "note
+ * that I noticed this node." The NodesEditor subscriber scrolls the matching
+ * card into view and expands it.
+ */
+export function emitNodeEditRequest(nodeId: string): void {
+  nodeEditRequestSubscribers.forEach((handler) => {
+    try {
+      handler(nodeId);
+    } catch (err) {
+      console.warn('[topology] panelEvents edit-request handler threw', err);
+    }
+  });
+}
+
+/**
+ * Subscribe to node-edit-request events.
+ * Returns an unsubscribe function — call it in your useEffect cleanup.
+ */
+export function onNodeEditRequest(handler: NodeClickHandler): () => void {
+  nodeEditRequestSubscribers.add(handler);
+  return () => {
+    nodeEditRequestSubscribers.delete(handler);
   };
 }

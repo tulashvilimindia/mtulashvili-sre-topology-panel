@@ -21,12 +21,13 @@ interface CanvasProps {
   height: number;
   onNodeDrag: (nodeId: string, x: number, y: number) => void;
   onNodeToggle: (nodeId: string, rect?: DOMRect) => void;
+  onNodeDoubleClick?: (nodeId: string) => void;
 }
 
 export const TopologyCanvas: React.FC<CanvasProps> = ({
   nodes, edges, groups, nodePositions, nodeStates, edgeStates,
   canvasOptions, animationOptions, displayOptions,
-  width, height, onNodeDrag, onNodeToggle,
+  width, height, onNodeDrag, onNodeToggle, onNodeDoubleClick,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -417,6 +418,10 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               e.stopPropagation();
               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
               handleNodeClick(node.id, rect);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onNodeDoubleClick?.(node.id);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
