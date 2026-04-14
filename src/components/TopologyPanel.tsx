@@ -536,7 +536,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   }, [nodes]);
 
   return (
-    <div className="topology-panel" style={{ width, height }} onClick={() => setPopupNodeId(null)}>
+    <div className="topology-panel" style={{ width, height, backgroundColor: canvas.backgroundColor }} onClick={() => setPopupNodeId(null)}>
       <div className="topology-toolbar">
         <span className="topology-title">E2E topology</span>
         {isFetchingMetrics && <span style={{ fontSize: 9, color: '#616e88', marginLeft: 6 }}>Loading...</span>}
