@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import { StandardEditorProps } from '@grafana/data';
-import { Button } from '@grafana/ui';
+import { Button, Input } from '@grafana/ui';
 import { TopologyPanelOptions, TopologyEdge, DEFAULT_EDGE } from '../types';
 import { EdgeCard } from './components/EdgeCard';
 import { generateId } from './utils/editorUtils';
@@ -13,6 +13,28 @@ export const EdgesEditor: React.FC<Props> = ({ value, onChange, context }) => {
   const edges = useMemo(() => value || [], [value]);
   const nodes = useMemo(() => context.options?.nodes || [], [context.options?.nodes]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [filterText, setFilterText] = useState('');
+
+  // Filter edges by source/target node name, type, or id. Node-name lookup
+  // uses a Map so the filter stays O(E) instead of O(E*N).
+  const filteredEdges = useMemo(() => {
+    if (!filterText) { return edges; }
+    const lower = filterText.toLowerCase();
+    const nameById = new Map(nodes.map((n) => [n.id, n.name.toLowerCase()]));
+    return edges.filter((e) => {
+      const sourceId = e.sourceId || '';
+      const targetId = e.targetId || '';
+      const sourceName = nameById.get(sourceId) || '';
+      const targetName = nameById.get(targetId) || '';
+      return (
+        sourceName.includes(lower) ||
+        targetName.includes(lower) ||
+        sourceId.toLowerCase().includes(lower) ||
+        targetId.toLowerCase().includes(lower) ||
+        e.type.toLowerCase().includes(lower)
+      );
+    });
+  }, [edges, nodes, filterText]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds((prev) => {
@@ -69,10 +91,23 @@ export const EdgesEditor: React.FC<Props> = ({ value, onChange, context }) => {
           Add
         </Button>
       </div>
+      {edges.length > 3 && (
+        <div className="topo-editor-field">
+          <Input
+            value={filterText}
+            onChange={(e) => setFilterText(e.currentTarget.value)}
+            placeholder="Filter edges by source, target, or type..."
+            prefix={<span style={{ fontSize: 10, color: '#616e88' }}>Search</span>}
+          />
+        </div>
+      )}
       {edges.length === 0 && (
         <div className="topo-editor-empty">No relationships defined. Add edges to connect nodes.</div>
       )}
-      {edges.map((edge) => (
+      {filterText && filteredEdges.length === 0 && (
+        <div className="topo-editor-empty">No edges match &quot;{filterText}&quot;</div>
+      )}
+      {filteredEdges.map((edge) => (
         <EdgeCard
           key={edge.id}
           edge={edge}
