@@ -16,6 +16,8 @@ export type QueryError = 'network' | 'http' | 'parse';
 export interface QueryResult {
   value: number | null;
   error?: QueryError;
+  /** Unix ms timestamp when the fetch resolved. Used for freshness indicators. */
+  fetchedAt?: number;
 }
 
 /** One sample of a time series — used by the NodePopup sparkline */
@@ -60,16 +62,25 @@ export async function queryDatasource(
   const type = dsType || detectDatasourceType(dsUid);
   const interpolatedQuery = replaceVars ? replaceVars(query) : query;
 
+  let inner: Promise<QueryResult>;
   switch (type) {
     case 'prometheus':
-      return queryPrometheus(dsUid, interpolatedQuery, historicalTime);
+      inner = queryPrometheus(dsUid, interpolatedQuery, historicalTime);
+      break;
     case 'cloudwatch':
-      return queryCloudWatch(dsUid, queryConfig);
+      inner = queryCloudWatch(dsUid, queryConfig);
+      break;
     case 'yesoreyeram-infinity-datasource':
-      return queryInfinity(dsUid, queryConfig);
+      inner = queryInfinity(dsUid, queryConfig);
+      break;
     default:
-      return queryPrometheus(dsUid, interpolatedQuery, historicalTime);
+      inner = queryPrometheus(dsUid, interpolatedQuery, historicalTime);
   }
+
+  // Stamp fetchedAt at the wrapper level so every datasource type gets it
+  // for free. Awaited here — inner is guaranteed to resolve (never throws).
+  const result = await inner;
+  return { ...result, fetchedAt: Date.now() };
 }
 
 /**

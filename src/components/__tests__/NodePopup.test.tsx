@@ -167,4 +167,85 @@ describe('NodePopup', () => {
     button.click();
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
+
+  test('freshness row is absent when metricValues.fetchedAt is undefined', async () => {
+    const node = makeNode({
+      metrics: [{
+        id: 'm1', label: 'CPU', query: 'cpu', datasourceUid: 'ds-1',
+        format: 'number', thresholds: [], isSummary: true, section: 'stats', showSparkline: false,
+      }],
+    });
+    const { queryDatasourceRange } = jest.requireMock('../../utils/datasourceQuery') as {
+      queryDatasourceRange: jest.Mock;
+    };
+    queryDatasourceRange.mockResolvedValueOnce([
+      { timestamp: 1, value: 10 }, { timestamp: 2, value: 20 },
+    ]);
+    render(<NodePopup node={node} onClose={jest.fn()} metricValues={{}} />);
+    await waitFor(() => expect(screen.getByText('CPU')).toBeInTheDocument());
+    expect(screen.queryByText(/Updated/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Stale')).not.toBeInTheDocument();
+  });
+
+  test('fresh metric shows "Updated" without Stale pill', async () => {
+    const node = makeNode({
+      metrics: [{
+        id: 'm1', label: 'CPU', query: 'cpu', datasourceUid: 'ds-1',
+        format: 'number', thresholds: [], isSummary: true, section: 'stats', showSparkline: false,
+      }],
+    });
+    const { queryDatasourceRange } = jest.requireMock('../../utils/datasourceQuery') as {
+      queryDatasourceRange: jest.Mock;
+    };
+    queryDatasourceRange.mockResolvedValueOnce([
+      { timestamp: 1, value: 10 }, { timestamp: 2, value: 20 },
+    ]);
+    const fresh = {
+      m1: { raw: 20, formatted: '20', status: 'ok' as const, fetchedAt: Date.now() - 2000 },
+    };
+    render(
+      <NodePopup
+        node={node}
+        onClose={jest.fn()}
+        metricValues={fresh}
+        freshnessSLOSec={60}
+      />
+    );
+    await waitFor(() => expect(screen.getByText('CPU')).toBeInTheDocument());
+    expect(screen.getByText(/Updated/)).toBeInTheDocument();
+    expect(screen.queryByText('Stale')).not.toBeInTheDocument();
+  });
+
+  test('stale metric (over SLO) shows Stale pill', async () => {
+    const node = makeNode({
+      metrics: [{
+        id: 'm1', label: 'CPU', query: 'cpu', datasourceUid: 'ds-1',
+        format: 'number', thresholds: [], isSummary: true, section: 'stats', showSparkline: false,
+      }],
+    });
+    const { queryDatasourceRange } = jest.requireMock('../../utils/datasourceQuery') as {
+      queryDatasourceRange: jest.Mock;
+    };
+    queryDatasourceRange.mockResolvedValueOnce([
+      { timestamp: 1, value: 10 }, { timestamp: 2, value: 20 },
+    ]);
+    const stale = {
+      m1: {
+        raw: 20,
+        formatted: '20',
+        status: 'ok' as const,
+        fetchedAt: Date.now() - 120_000, // 2 minutes ago, SLO is 60s
+      },
+    };
+    render(
+      <NodePopup
+        node={node}
+        onClose={jest.fn()}
+        metricValues={stale}
+        freshnessSLOSec={60}
+      />
+    );
+    await waitFor(() => expect(screen.getByText('CPU')).toBeInTheDocument());
+    expect(screen.getByText('Stale')).toBeInTheDocument();
+  });
 });

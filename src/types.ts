@@ -260,6 +260,13 @@ export interface MetricValue {
   formatted: string;
   status: NodeStatus;
   sparklineData?: number[];
+  /**
+   * Unix ms timestamp when the raw value was last fetched. Populated only
+   * for self-queried metrics (datasource values fetched via queryDatasource).
+   * Panel-query-sourced metrics leave this undefined because Grafana's own
+   * refresh UX is the source of truth for those.
+   */
+  fetchedAt?: number;
 }
 
 // ============================================================
@@ -285,6 +292,12 @@ export interface TopologyPanelOptions {
     flowEnabled: boolean;
     defaultFlowSpeed: FlowSpeed;
     pulseOnCritical: boolean;
+    /**
+     * Freshness SLO for self-queried metrics in seconds. When a metric's
+     * fetchedAt exceeds this threshold, the node popup marks the row as
+     * stale. Default 60s (1 minute).
+     */
+    metricFreshnessSLOSec?: number;
   };
   /** Layout settings */
   layout: {
@@ -344,6 +357,7 @@ export const DEFAULT_PANEL_OPTIONS: TopologyPanelOptions = {
     flowEnabled: true,
     defaultFlowSpeed: 'auto',
     pulseOnCritical: true,
+    metricFreshnessSLOSec: 60,
   },
   layout: {
     autoLayout: true,

@@ -1,7 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { Icon, IconName } from '@grafana/ui';
-import { TopologyNode, FiringAlert, STATUS_COLORS, ACCENT_COLOR } from '../types';
+import { TopologyNode, FiringAlert, MetricValue, STATUS_COLORS, ACCENT_COLOR } from '../types';
 import { queryDatasourceRange, TimeseriesPoint } from '../utils/datasourceQuery';
+
+/**
+ * Human-readable "updated Ns ago" from a fetchedAt ms timestamp.
+ * Returns null when the timestamp is missing or in the future (clock skew).
+ */
+function formatFreshness(fetchedAt: number | undefined, now: number): string | null {
+  if (!fetchedAt) { return null; }
+  const deltaSec = Math.max(0, Math.floor((now - fetchedAt) / 1000));
+  if (deltaSec < 5) { return 'just now'; }
+  if (deltaSec < 60) { return `${deltaSec}s ago`; }
+  if (deltaSec < 3600) { return `${Math.floor(deltaSec / 60)}m ago`; }
+  return `${Math.floor(deltaSec / 3600)}h ago`;
+}
 
 /**
  * Replace ${token} placeholders in a URL template with values from the node.
@@ -25,6 +38,10 @@ interface PopupProps {
   // handler. TopologyPanel only wires it in edit mode so the button is
   // hidden in view mode where the editor is not reachable.
   onEdit?: () => void;
+  /** Per-metric runtime state from TopologyPanel — source of fetchedAt. */
+  metricValues?: Record<string, MetricValue>;
+  /** SLO for freshness display in seconds. Default 60. */
+  freshnessSLOSec?: number;
 }
 
 interface MetricTimeseries {
@@ -34,9 +51,19 @@ interface MetricTimeseries {
   current: number | null;
 }
 
-export const NodePopup: React.FC<PopupProps> = ({ node, firingAlerts, onClose, onEdit }) => {
+export const NodePopup: React.FC<PopupProps> = ({
+  node,
+  firingAlerts,
+  onClose,
+  onEdit,
+  metricValues,
+  freshnessSLOSec = 60,
+}) => {
   const [seriesData, setSeriesData] = useState<MetricTimeseries[]>([]);
   const [loading, setLoading] = useState(true);
+  // Freeze "now" at render time so all freshness rows in a single popup
+  // show a consistent reference point. Popup reopens → new snapshot.
+  const now = Date.now();
 
   // Stable dependency: metric IDs string instead of array reference (CR-25)
   const metricIds = node.metrics.map((m) => m.id).join(',');
@@ -238,19 +265,61 @@ export const NodePopup: React.FC<PopupProps> = ({ node, firingAlerts, onClose, o
         </div>
       )}
       {loading && <div className="topology-popup-loading">Loading trends...</div>}
-      {!loading && seriesData.map((series) => (
-        <div key={series.metricId} className="topology-popup-metric">
-          <div className="topology-popup-metric-header">
-            <span>{series.label}</span>
-            <span className="topology-popup-metric-value">
-              {series.current !== null ? series.current.toFixed(1) : 'N/A'}
-            </span>
+      {!loading && seriesData.map((series) => {
+        const mv = metricValues?.[series.metricId];
+        const freshness = formatFreshness(mv?.fetchedAt, now);
+        const isStale = mv?.fetchedAt
+          ? now - mv.fetchedAt > freshnessSLOSec * 1000
+          : false;
+        return (
+          <div key={series.metricId} className="topology-popup-metric">
+            <div className="topology-popup-metric-header">
+              <span>{series.label}</span>
+              <span className="topology-popup-metric-value">
+                {series.current !== null ? series.current.toFixed(1) : 'N/A'}
+              </span>
+            </div>
+            {freshness && (
+              <div
+                style={{
+                  fontSize: 9,
+                  color: isStale ? STATUS_COLORS.warning : '#616e88',
+                  marginTop: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+                title={
+                  isStale
+                    ? `Stale — exceeds ${freshnessSLOSec}s SLO`
+                    : 'Self-query freshness'
+                }
+              >
+                <span>Updated {freshness}</span>
+                {isStale && (
+                  <span
+                    style={{
+                      fontSize: 8,
+                      padding: '0 3px',
+                      borderRadius: 2,
+                      background: STATUS_COLORS.warning + '22',
+                      color: STATUS_COLORS.warning,
+                      border: `1px solid ${STATUS_COLORS.warning}44`,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    Stale
+                  </span>
+                )}
+              </div>
+            )}
+            {series.points.length > 0 && (
+              <MiniSparkline points={series.points} height={30} />
+            )}
           </div>
-          {series.points.length > 0 && (
-            <MiniSparkline points={series.points} height={30} />
-          )}
-        </div>
-      ))}
+        );
+      })}
       {!loading && seriesData.length === 0 && (
         <div className="topology-popup-loading">No metrics configured</div>
       )}

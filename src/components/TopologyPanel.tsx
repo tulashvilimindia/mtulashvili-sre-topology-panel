@@ -418,9 +418,14 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
           }
         }
 
-        // Fallback: try self-queried data
+        // Fallback: try self-queried data. Track whether the value came from
+        // a self-query so we can attach the freshness timestamp only where
+        // it's meaningful (panel-query metrics use Grafana's own refresh UX).
+        let selfQueryFetchedAt: number | undefined;
         if (raw === null && selfQueryResults.has(metricConfig.id)) {
-          raw = selfQueryResults.get(metricConfig.id)?.value ?? null;
+          const selfResult = selfQueryResults.get(metricConfig.id);
+          raw = selfResult?.value ?? null;
+          selfQueryFetchedAt = selfResult?.fetchedAt;
         }
 
         if (raw !== null) {
@@ -443,6 +448,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
             formatted: formatMetricValue(raw, metricConfig.format),
             status,
             sparklineData: sparklineValues,
+            fetchedAt: selfQueryFetchedAt,
           };
         }
 
@@ -915,6 +921,8 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
               firingAlerts={popupAlerts}
               onClose={() => { setPopupNodeId(null); setPopupPosition(null); }}
               onEdit={handleEdit}
+              metricValues={nodeStates.get(popupNodeId)?.metricValues}
+              freshnessSLOSec={animation.metricFreshnessSLOSec}
             />
           </div>
         );

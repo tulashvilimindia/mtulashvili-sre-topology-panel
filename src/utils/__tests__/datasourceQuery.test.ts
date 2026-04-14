@@ -69,19 +69,40 @@ describe('queryDatasource — Prometheus path', () => {
       },
     });
     const result = await queryDatasource('uid-1', 'up');
-    expect(result).toEqual({ value: 42.5 });
+    expect(result).toMatchObject({ value: 42.5 });
   });
+
+  test('stamps fetchedAt on successful result', async () => {
+    mockFetchOk({
+      data: { result: [{ metric: {}, value: [1234567890, '1'] }] },
+    });
+    const before = Date.now();
+    const result = await queryDatasource('uid-1', 'up');
+    const after = Date.now();
+    expect(result.fetchedAt).toBeDefined();
+    expect(result.fetchedAt!).toBeGreaterThanOrEqual(before);
+    expect(result.fetchedAt!).toBeLessThanOrEqual(after);
+  });
+
+  test('stamps fetchedAt on error result as well', async () => {
+    mockFetchError(500);
+    const result = await queryDatasource('uid-1', 'up');
+    expect(result.error).toBe('http');
+    expect(result.fetchedAt).toBeDefined();
+    expect(typeof result.fetchedAt).toBe('number');
+  });
+
 
   test('empty result returns null value with no error', async () => {
     mockFetchOk({ data: { result: [] } });
     const result = await queryDatasource('uid-1', 'up');
-    expect(result).toEqual({ value: null });
+    expect(result).toMatchObject({ value: null });
   });
 
   test('http error returns error http', async () => {
     mockFetchError(502);
     const result = await queryDatasource('uid-1', 'up');
-    expect(result).toEqual({ value: null, error: 'http' });
+    expect(result).toMatchObject({ value: null, error: 'http' });
     expect(warnSpy).toHaveBeenCalled();
   });
 
@@ -90,13 +111,13 @@ describe('queryDatasource — Prometheus path', () => {
       data: { result: [{ metric: {}, value: [1234567890, 'not-a-number'] }] },
     });
     const result = await queryDatasource('uid-1', 'up');
-    expect(result).toEqual({ value: null, error: 'parse' });
+    expect(result).toMatchObject({ value: null, error: 'parse' });
   });
 
   test('network error returns error network', async () => {
     (global.fetch as jest.Mock) = jest.fn().mockRejectedValue(new Error('offline'));
     const result = await queryDatasource('uid-1', 'up');
-    expect(result).toEqual({ value: null, error: 'network' });
+    expect(result).toMatchObject({ value: null, error: 'network' });
     expect(warnSpy).toHaveBeenCalled();
   });
 
@@ -105,7 +126,7 @@ describe('queryDatasource — Prometheus path', () => {
     ae.name = 'AbortError';
     (global.fetch as jest.Mock) = jest.fn().mockRejectedValue(ae);
     const result = await queryDatasource('uid-1', 'up');
-    expect(result).toEqual({ value: null });
+    expect(result).toMatchObject({ value: null });
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
@@ -127,7 +148,7 @@ describe('queryDatasource — CloudWatch path', () => {
 
   test('returns null with no error when required config is missing', async () => {
     const result = await queryDatasource('uid-1', '', undefined, {});
-    expect(result).toEqual({ value: null });
+    expect(result).toMatchObject({ value: null });
   });
 
   test('parses last value from a valid CloudWatch response', async () => {
@@ -145,7 +166,7 @@ describe('queryDatasource — CloudWatch path', () => {
       metricName: 'RequestCount',
       dimensions: { LoadBalancer: 'app/abc' },
     });
-    expect(result).toEqual({ value: 3 });
+    expect(result).toMatchObject({ value: 3 });
   });
 
   test('empty frames returns null without error', async () => {
@@ -154,7 +175,7 @@ describe('queryDatasource — CloudWatch path', () => {
       namespace: 'AWS/ApplicationELB',
       metricName: 'RequestCount',
     });
-    expect(result).toEqual({ value: null });
+    expect(result).toMatchObject({ value: null });
   });
 
   test('http error returns error http', async () => {
@@ -163,7 +184,7 @@ describe('queryDatasource — CloudWatch path', () => {
       namespace: 'AWS/ApplicationELB',
       metricName: 'RequestCount',
     });
-    expect(result).toEqual({ value: null, error: 'http' });
+    expect(result).toMatchObject({ value: null, error: 'http' });
   });
 
   test('parse error when last value is non-numeric', async () => {
@@ -174,7 +195,7 @@ describe('queryDatasource — CloudWatch path', () => {
       namespace: 'AWS/ApplicationELB',
       metricName: 'RequestCount',
     });
-    expect(result).toEqual({ value: null, error: 'parse' });
+    expect(result).toMatchObject({ value: null, error: 'parse' });
   });
 
   test('network error returns error network', async () => {
@@ -183,7 +204,7 @@ describe('queryDatasource — CloudWatch path', () => {
       namespace: 'AWS/ApplicationELB',
       metricName: 'RequestCount',
     });
-    expect(result).toEqual({ value: null, error: 'network' });
+    expect(result).toMatchObject({ value: null, error: 'network' });
   });
 
   test('values array too short returns null without error', async () => {
@@ -194,7 +215,7 @@ describe('queryDatasource — CloudWatch path', () => {
       namespace: 'AWS/ApplicationELB',
       metricName: 'RequestCount',
     });
-    expect(result).toEqual({ value: null });
+    expect(result).toMatchObject({ value: null });
   });
 });
 
@@ -204,7 +225,7 @@ describe('queryDatasource — Infinity path', () => {
 
   test('returns null with no error when url is missing', async () => {
     const result = await queryDatasource('uid-1', '', undefined, {});
-    expect(result).toEqual({ value: null });
+    expect(result).toMatchObject({ value: null });
   });
 
   test('parses first value from frame data', async () => {
@@ -216,7 +237,7 @@ describe('queryDatasource — Infinity path', () => {
       },
     });
     const result = await queryDatasource('uid-1', '', undefined, { url: 'https://x.y' });
-    expect(result).toEqual({ value: 42.7 });
+    expect(result).toMatchObject({ value: 42.7 });
   });
 
   test('falls back to meta.custom.data.value when frame values are empty', async () => {
@@ -228,14 +249,14 @@ describe('queryDatasource — Infinity path', () => {
       },
     });
     const result = await queryDatasource('uid-1', '', undefined, { url: 'https://x.y' });
-    expect(result).toEqual({ value: 99 });
+    expect(result).toMatchObject({ value: 99 });
   });
 
   test('http error returns error http', async () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockFetchError(500);
     const result = await queryDatasource('uid-1', '', undefined, { url: 'https://x.y' });
-    expect(result).toEqual({ value: null, error: 'http' });
+    expect(result).toMatchObject({ value: null, error: 'http' });
   });
 
   test('parse error on non-numeric first value', async () => {
@@ -244,20 +265,20 @@ describe('queryDatasource — Infinity path', () => {
       results: { A: { frames: [{ data: { values: [['not-a-number']] } }] } },
     });
     const result = await queryDatasource('uid-1', '', undefined, { url: 'https://x.y' });
-    expect(result).toEqual({ value: null, error: 'parse' });
+    expect(result).toMatchObject({ value: null, error: 'parse' });
   });
 
   test('network error returns error network', async () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     (global.fetch as jest.Mock) = jest.fn().mockRejectedValue(new Error('offline'));
     const result = await queryDatasource('uid-1', '', undefined, { url: 'https://x.y' });
-    expect(result).toEqual({ value: null, error: 'network' });
+    expect(result).toMatchObject({ value: null, error: 'network' });
   });
 
   test('empty frames returns null without error', async () => {
     mockFetchOk({ results: { A: { frames: [] } } });
     const result = await queryDatasource('uid-1', '', undefined, { url: 'https://x.y' });
-    expect(result).toEqual({ value: null });
+    expect(result).toMatchObject({ value: null });
   });
 });
 
