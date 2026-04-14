@@ -1,12 +1,24 @@
 import { TopologyPanelOptions, ThresholdStep } from '../types';
 
 /**
- * exampleTopology.ts — Example topology used by the "Load example" button in TopologyPanel.
+ * exampleTopology.ts — Example topology used by the "Load example" button
+ * in TopologyPanel.
  *
  * Pure data module: no React, no state. Returns a Partial<TopologyPanelOptions>
- * containing 13 nodes (CDN + HA firewalls + HA LBs + virtual server + pool + 6 servers),
- * 13 edges, and 3 groups. All metrics have empty datasource/query — the example is a
- * visual demo; users must wire real datasources to see live data.
+ * containing 13 nodes, 13 edges, and 3 groups representing a land-based
+ * casino's SAS (Slot Accounting System) floor network.
+ *
+ * The shape is: Wide-Area Progressive controller at the top, an HA pair of
+ * Floor Network Gateways, an HA pair of SAS Pollers, a Meter Aggregator,
+ * a Slot Bank pool, and 6 individual Electronic Gaming Machines (REEL-01
+ * through REEL-06). All metrics ship with empty datasource/query strings
+ * — the example is a visual demo; users wire real datasources to see live
+ * data.
+ *
+ * The vocabulary (SAS, TITO, handle pulls, theo hold %, bill validator,
+ * WAP controller) is specific to physical slot-machine operations (IGT/
+ * Bally protocol land) and intentionally does not overlap with any online
+ * player-management, payment, or brand-operations terminology.
  */
 
 // Helper to type threshold colors as literal union
@@ -18,105 +30,105 @@ export function getExampleTopology(): Partial<TopologyPanelOptions> {
   return {
     nodes: [
       {
-        id: 'n-cdn', name: 'CDN Edge', role: 'CDN / WAF', type: 'cloudflare',
-        position: { x: 245, y: 20 }, compact: false, width: 180,
+        id: 'n-wap', name: 'WAP Controller', role: 'wide-area progressive', type: 'accelerator',
+        position: { x: 245, y: 20 }, compact: false, width: 200,
         metrics: [
-          { id: 'cf-rps', label: 'rps', datasourceUid: '', query: '', format: '${value}', section: 'Traffic', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 15000, color: 'yellow' }, { value: 25000, color: 'red' }], showSparkline: true },
-          { id: 'cf-cache', label: 'cache', datasourceUid: '', query: '', format: '${value}%', section: 'Traffic', isSummary: true, thresholds: [{ value: 0, color: 'red' }, { value: 50, color: 'yellow' }, { value: 80, color: 'green' }], showSparkline: false },
-          { id: 'cf-waf', label: 'waf', datasourceUid: '', query: '', format: '${value}', section: 'Security', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 100, color: 'yellow' }, { value: 500, color: 'red' }], showSparkline: false },
-          { id: 'cf-p95', label: 'p95', datasourceUid: '', query: '', format: '${value}ms', section: 'Performance', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 100, color: 'yellow' }, { value: 500, color: 'red' }], showSparkline: true },
+          { id: 'wap-jackpot', label: 'jackpot', datasourceUid: '', query: '', format: '$${value}', section: 'Progressive', isSummary: true, thresholds: [t(0, 'green'), t(250000, 'yellow'), t(500000, 'red')], showSparkline: true },
+          { id: 'wap-contrib', label: 'contrib/min', datasourceUid: '', query: '', format: '$${value}', section: 'Progressive', isSummary: true, thresholds: [t(0, 'green')], showSparkline: false },
+          { id: 'wap-seed', label: 'seed level', datasourceUid: '', query: '', format: '$${value}', section: 'Progressive', isSummary: false, thresholds: [t(0, 'green')], showSparkline: false },
+          { id: 'wap-rtt', label: 'mesh rtt', datasourceUid: '', query: '', format: '${value}ms', section: 'Network', isSummary: false, thresholds: [t(0, 'green'), t(100, 'yellow'), t(250, 'red')], showSparkline: true },
         ],
       },
       {
-        id: 'n-fw1', name: 'Firewall 01', role: 'active', type: 'firewall',
-        position: { x: 70, y: 175 }, compact: false, width: 200, groupId: 'grp-fw',
+        id: 'n-fg1', name: 'Floor Gateway α', role: 'active', type: 'firewall',
+        position: { x: 70, y: 175 }, compact: false, width: 200, groupId: 'grp-fg',
         metrics: [
-          { id: 'pa1-sess', label: 'sessions', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
-          { id: 'pa1-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
-          { id: 'pa1-tput', label: 'tput', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
-          { id: 'pa1-threats', label: 'threats', datasourceUid: '', query: '', format: '${value}', section: 'Security', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 1, color: 'yellow' }, { value: 10, color: 'red' }], showSparkline: false },
+          { id: 'fg1-pps', label: 'sas pps', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [t(0, 'green')], showSparkline: true },
+          { id: 'fg1-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [t(0, 'green'), t(60, 'yellow'), t(80, 'red')], showSparkline: false },
+          { id: 'fg1-drops', label: 'vlan drops', datasourceUid: '', query: '', format: '${value}', section: 'Network', isSummary: false, thresholds: [t(0, 'green'), t(1, 'yellow'), t(10, 'red')], showSparkline: false },
+          { id: 'fg1-acl', label: 'acl hits', datasourceUid: '', query: '', format: '${value}', section: 'Network', isSummary: false, thresholds: [t(0, 'green')], showSparkline: true },
         ],
       },
       {
-        id: 'n-fw2', name: 'Firewall 02', role: 'passive', type: 'firewall',
-        position: { x: 400, y: 175 }, compact: false, width: 200, groupId: 'grp-fw',
+        id: 'n-fg2', name: 'Floor Gateway β', role: 'passive', type: 'firewall',
+        position: { x: 400, y: 175 }, compact: false, width: 200, groupId: 'grp-fg',
         metrics: [
-          { id: 'pa2-sess', label: 'sessions', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
-          { id: 'pa2-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
-          { id: 'pa2-sync', label: 'sync', datasourceUid: '', query: '', format: '${value}', section: 'HA', isSummary: false, thresholds: [], showSparkline: false },
+          { id: 'fg2-pps', label: 'sas pps', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [t(0, 'green')], showSparkline: false },
+          { id: 'fg2-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [t(0, 'green'), t(60, 'yellow'), t(80, 'red')], showSparkline: false },
+          { id: 'fg2-sync', label: 'ha sync', datasourceUid: '', query: '', format: '${value}', section: 'HA', isSummary: false, thresholds: [], showSparkline: false },
         ],
       },
       {
-        id: 'n-lb1', name: 'Load Balancer 01', role: 'active', type: 'loadbalancer',
-        position: { x: 70, y: 335 }, compact: false, width: 200, groupId: 'grp-lb',
+        id: 'n-sp1', name: 'SAS Poller North', role: 'active', type: 'loadbalancer',
+        position: { x: 70, y: 335 }, compact: false, width: 200, groupId: 'grp-sp',
         metrics: [
-          { id: 'lb1-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: true },
-          { id: 'lb1-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
-          { id: 'lb1-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
-          { id: 'lb1-ssl', label: 'ssl tps', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }, { value: 800, color: 'yellow' }, { value: 1200, color: 'red' }], showSparkline: false },
+          { id: 'sp1-rtt', label: 'poll rtt', datasourceUid: '', query: '', format: '${value}ms', section: 'SAS', isSummary: true, thresholds: [t(0, 'green'), t(80, 'yellow'), t(150, 'red')], showSparkline: true },
+          { id: 'sp1-reads', label: 'meter reads', datasourceUid: '', query: '', format: '${value}/s', section: 'SAS', isSummary: true, thresholds: [t(0, 'green')], showSparkline: false },
+          { id: 'sp1-online', label: 'emgs online', datasourceUid: '', query: '', format: '${value}', section: 'SAS', isSummary: false, thresholds: [], showSparkline: false },
+          { id: 'sp1-poll-err', label: 'poll errors', datasourceUid: '', query: '', format: '${value}', section: 'SAS', isSummary: false, thresholds: [t(0, 'green'), t(1, 'yellow'), t(5, 'red')], showSparkline: false },
         ],
       },
       {
-        id: 'n-lb2', name: 'Load Balancer 02', role: 'standby', type: 'loadbalancer',
-        position: { x: 400, y: 335 }, compact: false, width: 200, groupId: 'grp-lb',
+        id: 'n-sp2', name: 'SAS Poller South', role: 'standby', type: 'loadbalancer',
+        position: { x: 400, y: 335 }, compact: false, width: 200, groupId: 'grp-sp',
         metrics: [
-          { id: 'lb2-cpu', label: 'cpu', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
-          { id: 'lb2-mem', label: 'mem', datasourceUid: '', query: '', format: '${value}%', section: 'System', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 60, color: 'yellow' }, { value: 80, color: 'red' }], showSparkline: false },
-          { id: 'lb2-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
-          { id: 'lb2-sync', label: 'sync', datasourceUid: '', query: '', format: '${value}', section: 'HA', isSummary: false, thresholds: [], showSparkline: false },
+          { id: 'sp2-rtt', label: 'poll rtt', datasourceUid: '', query: '', format: '${value}ms', section: 'SAS', isSummary: true, thresholds: [t(0, 'green'), t(80, 'yellow'), t(150, 'red')], showSparkline: false },
+          { id: 'sp2-reads', label: 'meter reads', datasourceUid: '', query: '', format: '${value}/s', section: 'SAS', isSummary: true, thresholds: [t(0, 'green')], showSparkline: false },
+          { id: 'sp2-online', label: 'emgs online', datasourceUid: '', query: '', format: '${value}', section: 'SAS', isSummary: false, thresholds: [], showSparkline: false },
+          { id: 'sp2-sync', label: 'ha sync', datasourceUid: '', query: '', format: '${value}', section: 'HA', isSummary: false, thresholds: [], showSparkline: false },
         ],
       },
       {
-        id: 'n-vs', name: 'VS Web 443', role: 'virtual server', type: 'virtualserver',
-        position: { x: 175, y: 470 }, compact: false, width: 150,
+        id: 'n-ma', name: 'Meter Aggregator', role: 'coin-in collector', type: 'virtualserver',
+        position: { x: 175, y: 470 }, compact: false, width: 180,
         metrics: [
-          { id: 'vs-conns', label: 'conns', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
-          { id: 'vs-status', label: 'status', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: true, thresholds: [], showSparkline: false },
-          { id: 'vs-in', label: 'in', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
-          { id: 'vs-out', label: 'out', datasourceUid: '', query: '', format: '${value}', section: 'Connections', isSummary: false, thresholds: [{ value: 0, color: 'green' }], showSparkline: true },
+          { id: 'ma-coinin', label: 'coin-in/min', datasourceUid: '', query: '', format: '$${value}', section: 'Revenue', isSummary: true, thresholds: [t(0, 'green')], showSparkline: true },
+          { id: 'ma-theo', label: 'theo hold', datasourceUid: '', query: '', format: '${value}%', section: 'Revenue', isSummary: true, thresholds: [t(0, 'green'), t(12, 'yellow'), t(15, 'red')], showSparkline: false },
+          { id: 'ma-tito', label: 'tito printed', datasourceUid: '', query: '', format: '${value}', section: 'Revenue', isSummary: false, thresholds: [t(0, 'green')], showSparkline: true },
+          { id: 'ma-bv-err', label: 'bv errors', datasourceUid: '', query: '', format: '${value}', section: 'Hardware', isSummary: false, thresholds: [t(0, 'green'), t(1, 'yellow'), t(5, 'red')], showSparkline: false },
         ],
       },
       {
-        id: 'n-pl', name: 'Web Pool', role: '6/6 up', type: 'pool',
-        position: { x: 370, y: 470 }, compact: false, width: 150,
+        id: 'n-bank', name: 'Slot Bank 7', role: '6/6 online', type: 'pool',
+        position: { x: 370, y: 470 }, compact: false, width: 160,
         metrics: [
-          { id: 'pl-act', label: 'active', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: true, thresholds: [{ value: 0, color: 'green' }], showSparkline: false },
-          { id: 'pl-que', label: 'queued', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: true, thresholds: [{ value: 0, color: 'green' }, { value: 1, color: 'yellow' }, { value: 10, color: 'red' }], showSparkline: false },
-          { id: 'pl-algo', label: 'algo', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: false, thresholds: [], showSparkline: false },
-          { id: 'pl-health', label: 'health', datasourceUid: '', query: '', format: '${value}', section: 'Monitor', isSummary: false, thresholds: [], showSparkline: false },
+          { id: 'bank-up', label: 'online', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: true, thresholds: [t(0, 'green')], showSparkline: false },
+          { id: 'bank-tilt', label: 'tilts', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: true, thresholds: [t(0, 'green'), t(1, 'yellow'), t(3, 'red')], showSparkline: false },
+          { id: 'bank-denom', label: 'denom mix', datasourceUid: '', query: '', format: '${value}', section: 'Pool', isSummary: false, thresholds: [], showSparkline: false },
+          { id: 'bank-health', label: 'health', datasourceUid: '', query: '', format: '${value}', section: 'Monitor', isSummary: false, thresholds: [], showSparkline: false },
         ],
       },
       ...Array.from({ length: 6 }, (_, i) => ({
-        id: `n-s${i + 1}`, name: `Server 0${i + 1}`, role: '', type: 'server' as const,
-        position: { x: 15 + i * 110, y: 570 }, compact: true, width: 100, groupId: 'grp-srv',
+        id: `n-reel${i + 1}`, name: `REEL-0${i + 1}`, role: '', type: 'server' as const,
+        position: { x: 15 + i * 110, y: 570 }, compact: true, width: 100, groupId: 'grp-bank',
         metrics: [
-          { id: `s${i + 1}-cpu`, label: 'cpu', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [t(0, 'green'), t(60, 'yellow'), t(80, 'red')], showSparkline: false },
-          { id: `s${i + 1}-ram`, label: 'ram', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: true, thresholds: [t(0, 'green'), t(40, 'yellow'), t(70, 'red')], showSparkline: false },
-          { id: `s${i + 1}-rps`, label: 'rps', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: false, thresholds: [t(0, 'green')], showSparkline: true },
-          { id: `s${i + 1}-5xx`, label: '5xx', datasourceUid: '', query: '', format: '${value}', section: 'System', isSummary: false, thresholds: [t(0, 'green'), t(1, 'yellow'), t(5, 'red')], showSparkline: false },
+          { id: `reel${i + 1}-pulls`, label: 'pulls/min', datasourceUid: '', query: '', format: '${value}', section: 'Play', isSummary: true, thresholds: [t(0, 'green')], showSparkline: false },
+          { id: `reel${i + 1}-hold`, label: 'actual hold', datasourceUid: '', query: '', format: '${value}%', section: 'Play', isSummary: true, thresholds: [t(0, 'green'), t(12, 'yellow'), t(15, 'red')], showSparkline: false },
+          { id: `reel${i + 1}-coin`, label: 'coin-in', datasourceUid: '', query: '', format: '$${value}', section: 'Play', isSummary: false, thresholds: [t(0, 'green')], showSparkline: true },
+          { id: `reel${i + 1}-tilt`, label: 'tilts', datasourceUid: '', query: '', format: '${value}', section: 'Hardware', isSummary: false, thresholds: [t(0, 'green'), t(1, 'yellow'), t(3, 'red')], showSparkline: false },
         ],
       })),
     ],
     edges: [
-      { id: 'e-cdn-fw1', sourceId: 'n-cdn', targetId: 'n-fw1', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'auto', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '18.2k rps' },
-      { id: 'e-cdn-fw2', sourceId: 'n-cdn', targetId: 'n-fw2', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '6.1k rps' },
-      { id: 'e-fw1-lb1', sourceId: 'n-fw1', targetId: 'n-lb1', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'fast', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '34.6k sess' },
-      { id: 'e-fw2-lb2', sourceId: 'n-fw2', targetId: 'n-lb2', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: 'standby' },
-      { id: 'e-lb1-vs', sourceId: 'n-lb1', targetId: 'n-vs', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
-      { id: 'e-lb2-vs', sourceId: 'n-lb2', targetId: 'n-vs', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
-      { id: 'e-vs-pl', sourceId: 'n-vs', targetId: 'n-pl', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [{ value: 0, color: 'green' }], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '128' },
+      { id: 'e-wap-fg1', sourceId: 'n-wap', targetId: 'n-fg1', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [t(0, 'green')], flowAnimation: true, flowSpeed: 'auto', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '18.2k sas pps' },
+      { id: 'e-wap-fg2', sourceId: 'n-wap', targetId: 'n-fg2', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [t(0, 'green')], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: 'standby' },
+      { id: 'e-fg1-sp1', sourceId: 'n-fg1', targetId: 'n-sp1', type: 'traffic', thicknessMode: 'proportional', thicknessMin: 1.5, thicknessMax: 4, thresholds: [t(0, 'green')], flowAnimation: true, flowSpeed: 'fast', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '34.6k polls/s' },
+      { id: 'e-fg2-sp2', sourceId: 'n-fg2', targetId: 'n-sp2', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [t(0, 'green')], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: 'standby' },
+      { id: 'e-sp1-ma', sourceId: 'n-sp1', targetId: 'n-ma', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [t(0, 'green')], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
+      { id: 'e-sp2-ma', sourceId: 'n-sp2', targetId: 'n-ma', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [t(0, 'green')], flowAnimation: true, flowSpeed: 'slow', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto' },
+      { id: 'e-ma-bank', sourceId: 'n-ma', targetId: 'n-bank', type: 'traffic', thicknessMode: 'fixed', thicknessMin: 1.5, thicknessMax: 4, thresholds: [t(0, 'green')], flowAnimation: true, flowSpeed: 'normal', bidirectional: false, anchorSource: 'auto', anchorTarget: 'auto', labelTemplate: '128 emgs' },
       ...Array.from({ length: 6 }, (_, i) => ({
-        id: `e-pl-s${i + 1}`, sourceId: 'n-pl', targetId: `n-s${i + 1}`, type: 'traffic' as const,
+        id: `e-bank-reel${i + 1}`, sourceId: 'n-bank', targetId: `n-reel${i + 1}`, type: 'traffic' as const,
         thicknessMode: 'fixed' as const, thicknessMin: 1.5, thicknessMax: 4,
-        thresholds: [{ value: 0, color: 'green' as const }],
+        thresholds: [t(0, 'green')],
         flowAnimation: true, flowSpeed: 'auto' as const,
         bidirectional: false, anchorSource: 'auto' as const, anchorTarget: 'auto' as const,
       })),
     ],
     groups: [
-      { id: 'grp-fw', label: 'HA — Firewalls', type: 'ha_pair', nodeIds: ['n-fw1', 'n-fw2'], style: 'dashed' },
-      { id: 'grp-lb', label: 'HA — Load Balancers', type: 'ha_pair', nodeIds: ['n-lb1', 'n-lb2'], style: 'dashed' },
-      { id: 'grp-srv', label: 'Web Server Cluster', type: 'cluster', nodeIds: ['n-s1', 'n-s2', 'n-s3', 'n-s4', 'n-s5', 'n-s6'], style: 'dashed' },
+      { id: 'grp-fg', label: 'HA — Floor Gateways', type: 'ha_pair', nodeIds: ['n-fg1', 'n-fg2'], style: 'dashed' },
+      { id: 'grp-sp', label: 'HA — SAS Pollers', type: 'ha_pair', nodeIds: ['n-sp1', 'n-sp2'], style: 'dashed' },
+      { id: 'grp-bank', label: 'Slot Bank 7', type: 'cluster', nodeIds: ['n-reel1', 'n-reel2', 'n-reel3', 'n-reel4', 'n-reel5', 'n-reel6'], style: 'dashed' },
     ],
   };
 }

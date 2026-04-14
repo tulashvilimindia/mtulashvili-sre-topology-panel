@@ -183,7 +183,7 @@ volumes:
 The plugin ships with a built-in example topology. When the panel is empty:
 
 - A **"Load example"** button appears in the panel toolbar (view mode) or the editor sidebar
-- Click it to populate a complete tiered stack: **CDN → Firewall (HA) → Load Balancer (HA) → Virtual Server → Pool → 6x Web Servers**
+- Click it to populate a complete tiered stack: **WAP Controller → Floor Gateway (HA) → SAS Poller (HA) → Meter Aggregator → Slot Bank → 6x Electronic Gaming Machines** (a land-based casino slot-floor network)
 - A transient banner appears explaining that the example metrics are visual mocks — configure real datasources in the panel editor to see live values
 - Dismiss the banner manually or let it auto-hide after 12 seconds
 
@@ -627,25 +627,34 @@ Every dependency listed with its exact resolved version, what it does in this pr
 
 ---
 
-## Example: Sample E2E Stack
+## Example: Slot Floor SAS Network
 
-The built-in example topology visualizes this infrastructure flow:
+The built-in example topology visualises a land-based casino slot-machine
+network. Vocabulary is drawn from IGT/Bally Slot Accounting System (SAS)
+land — `theo hold %`, `handle pulls`, `coin-in`, `TITO tickets`, `bill
+validator`, `WAP` (wide-area progressive). The shape demonstrates tiered
+auto-layout, HA pair grouping, pool fan-out, and metric threshold colour
+bands using real land-based-casino KPIs:
 
 ```
-Cloudflare Edge (CDN/WAF)
+WAP Controller (wide-area progressive jackpot)
     |
-    +-- Firewall_01 (active)  --+  HA Pair
-    +-- Firewall_02 (passive) --+
+    +-- Floor Gateway α (active)   --+  HA Pair
+    +-- Floor Gateway β (passive)  --+
             |
-    +-- LB_01 (active)  --+  HA Pair
-    +-- LB_02 (standby) --+
+    +-- SAS Poller North (active)  --+  HA Pair
+    +-- SAS Poller South (standby) --+
             |
-        VS Web 443 -- Web Pool
-            |
-    +---+---+---+---+---+---+
-   SRV01 SRV02 SRV03 SRV04 SRV05 SRV06
-         Web Server Cluster
+         Meter Aggregator -- Slot Bank 7
+                               |
+              +---+---+---+---+---+---+
+          REEL-01 .. REEL-02 .. REEL-06
+                     Slot Bank Cluster
 ```
+
+The example ships with empty datasource queries — it's a visual demo. A
+transient banner explains this after "Load example" is clicked, and
+auto-dismisses after 12 seconds.
 
 ---
 
