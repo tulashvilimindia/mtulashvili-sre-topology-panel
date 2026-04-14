@@ -26,7 +26,7 @@ Built by SID2 Platform Engineering.
 ### Multi-Datasource Metric Integration
 - **Prometheus** — instant queries via `/api/datasources/proxy/uid/{dsUid}/api/v1/query`
 - **CloudWatch** — `namespace` + `metricName` + `dimensions` + `stat` + `period` via unified `/api/ds/query`
-- **Infinity (NRQL / GraphQL / REST)** — `url` + `method` + `body` + `rootSelector` for any JSON-returning HTTP API. Verified working end-to-end against New Relic NerdGraph at `api.newrelic.com/graphql`.
+- **Infinity datasource** — `url` + `method` + `body` + `rootSelector` for any JSON-returning HTTP API. Supports GraphQL-style POST bodies for systems that expose metrics via arbitrary JSON endpoints.
 - **Auto-fetch via `useSelfQueries`** — each metric polls its own datasource; debounced 500ms with AbortController cancellation and 10-second hard timeout per query
 - **Panel-query compatibility** — metrics can also be sourced from the panel's own Grafana queries via `refId` match or `frame.name` fallback
 - **Freshness SLO** — every self-queried metric carries a `fetchedAt` timestamp; a toolbar "N stale" pill surfaces metrics that exceed the configurable `metricFreshnessSLOSec` threshold
@@ -173,14 +173,12 @@ volumes:
 
 ### 2. Load Example Topology
 
-The plugin ships with a built-in example topology (Sample E2E stack):
+The plugin ships with a built-in example topology. When the panel is empty:
 
-- Open the panel editor
-- Scroll down to the **custom editor section**
-- Click **"Load example topology (Sample E2E)"**
-- Click **Apply**
-
-This loads a complete topology: **CDN > Firewall (HA) > Load Balancer (HA) > Virtual Server > Pool > 6x Web Servers**
+- A **"Load example"** button appears in the panel toolbar (view mode) or the editor sidebar
+- Click it to populate a complete tiered stack: **CDN → Firewall (HA) → Load Balancer (HA) → Virtual Server → Pool → 6x Web Servers**
+- A transient banner appears explaining that the example metrics are visual mocks — configure real datasources in the panel editor to see live values
+- Dismiss the banner manually or let it auto-hide after 12 seconds
 
 ### 3. Interact
 
@@ -234,7 +232,7 @@ The topology is configured via the panel's JSON options. Each topology consists 
 | `id` | string | Unique node identifier |
 | `name` | string | Display name |
 | `role` | string | Short role/description shown below name |
-| `type` | enum | Node type: `cloudflare`, `firewall`, `loadbalancer`, `virtualserver`, `pool`, `server`, `database`, `cache`, `queue`, `custom` |
+| `type` | enum | Node type: `cloudflare`, `firewall`, `loadbalancer`, `virtualserver`, `pool`, `server`, `database`, `cache`, `queue`, `alb`, `nlb`, `nat`, `kubernetes`, `accelerator`, `logs`, `probe`, `custom` |
 | `position` | {x, y} | Canvas position (auto-calculated if {100, 100}) |
 | `compact` | boolean | Compact mini-node style (for server pools) |
 | `width` | number | Fixed width in pixels (optional) |
@@ -245,15 +243,17 @@ The topology is configured via the panel's JSON options. Each topology consists 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Unique metric id, matched against DataFrame `refId` |
+| `id` | string | Internal unique metric id; used as stable React key and fallback refId match |
+| `refId` | string | Optional explicit Grafana panel-query `refId` — when set, takes precedence over `id` for matching panel data frames |
 | `label` | string | Display label (e.g. "cpu", "rps") |
 | `datasourceUid` | string | Grafana datasource UID |
-| `query` | string | Query expression |
-| `format` | string | Value format: `"${value}%"`, `"${value} rps"` |
-| `section` | string | Section name for expanded view grouping |
-| `isSummary` | boolean | `true` = visible in collapsed view (max 4), `false` = shown only when expanded |
-| `thresholds` | array | Color breakpoints: `[{value: 0, color: "green"}, {value: 80, color: "red"}]` |
-| `showSparkline` | boolean | Show mini bar chart of recent values in expanded view |
+| `query` | string | Query expression (PromQL for Prometheus, ignored for CloudWatch/Infinity which use `queryConfig`) |
+| `queryConfig` | object | Optional datasource-specific config: `namespace`/`metricName`/`dimensions`/`stat`/`period` (CloudWatch), or `url`/`method`/`body`/`rootSelector` (Infinity) |
+| `format` | string | Value format template: `"${value}%"`, `"${value} rps"`, `"${value} B/s"` — `${value}` is replaced with the formatted number |
+| `section` | string | Section name for grouping metrics in the expanded / popup view |
+| `isSummary` | boolean | `true` = visible in collapsed view and in the popup (max 4), `false` = shown only in the in-card expanded section |
+| `thresholds` | array | Color breakpoints: `[{value: 0, color: "green"}, {value: 80, color: "red"}]`. Evaluated descending — first match wins |
+| `showSparkline` | boolean | Show mini SVG sparkline chart in the popup |
 
 #### Edges
 
@@ -290,7 +290,7 @@ The topology is configured via the panel's JSON options. Each topology consists 
 | `id` | string | Unique edge identifier |
 | `sourceId` | string | Source node ID |
 | `targetId` | string | Target node ID |
-| `type` | enum | `traffic`, `ha_sync`, `failover`, `monitor`, `custom` |
+| `type` | enum | `traffic`, `ha_sync`, `failover`, `monitor`, `response`, `custom` |
 | `thicknessMode` | enum | `fixed`, `proportional` (scales with value), `threshold` (step function) |
 | `thicknessMin/Max` | number | Thickness range in pixels |
 | `thresholds` | array | Color breakpoints (same format as node metrics) |
@@ -381,19 +381,45 @@ Access Grafana at **http://localhost:13100** (anonymous access enabled, Admin ro
 
 ```
 src/
-  module.ts              -- Plugin entry, registers panel + options
-  types.ts               -- All type definitions (nodes, edges, groups, runtime state)
+  module.ts                         -- Plugin entry; registers PanelPlugin and setPanelOptions builder
+  plugin.json                       -- Plugin manifest (id, version, dependencies, URL allowlist)
+  types.ts                          -- All interfaces, defaults, enums, and color constants
   components/
-    TopologyPanel.tsx     -- Main panel wrapper, data processing, toolbar
-    TopologyPanel.css     -- All styles (Nord dark theme)
-    TopologyCanvas.tsx    -- Canvas with SVG edges, draggable nodes, groups
+    TopologyPanel.tsx               -- Main panel: toolbar, state orchestration, popup positioning
+    TopologyPanel.css               -- All styles: Nord theme, animations, mobile media queries
+    TopologyCanvas.tsx              -- SVG edge renderer + HTML node cards, pan/zoom, drag
+    NodePopup.tsx                   -- Click-to-expand popup with sparklines + alerts + links
   editors/
-    TopologyEditor.tsx    -- Panel editor UI + example topology loader
+    NodesEditor.tsx                 -- Nodes slice editor: search, bulk import, delete confirm, export/import
+    EdgesEditor.tsx                 -- Edges slice editor with search filter
+    GroupsEditor.tsx                -- Groups slice editor with search filter
+    exampleTopology.ts              -- Built-in example topology loader
+    editors.css                     -- Editor sidebar styles
+    components/
+      NodeCard.tsx                  -- Per-node editor card
+      EdgeCard.tsx                  -- Per-edge editor card
+      GroupCard.tsx                 -- Per-group editor card
+      MetricEditor.tsx              -- Metric query + thresholds + datasource-specific config
+      ThresholdList.tsx             -- Threshold row editor
+    utils/
+      editorUtils.ts                -- Pure editor helpers (id generation, validation)
+  hooks/
+    useSelfQueries.ts               -- Debounced multi-datasource metric fetch with AbortController
+    useAlertRules.ts                -- Grafana unified alerting API polling
+    useDynamicTargets.ts            -- Dynamic target query resolution (60s poll)
   utils/
-    edges.ts             -- Bezier paths, anchor points, edge state calculation
-    layout.ts            -- Auto-layout algorithm (topological sort + tier positioning)
+    datasourceQuery.ts              -- Unified query abstraction (Prometheus/CloudWatch/Infinity)
+    alertRules.ts                   -- Alert rule fetch + label matcher logic
+    dynamicTargets.ts               -- Dynamic target resolvers for all 3 datasource types
+    edges.ts                        -- Pure edge math: bezier paths, anchors, status, thickness, speed
+    layout.ts                       -- Topological sort + tier assignment + positioning
+    viewport.ts                     -- Pan/zoom math, fit-to-view calculation
+    viewportStore.ts                -- Per-panel viewport persistence across remounts
+    panelEvents.ts                  -- Cross-subtree pub/sub (panel <-> editor sidebar)
+    __tests__/                      -- Jest unit tests for all utilities and hooks
+  components/__tests__/             -- Component integration tests (NodePopup, TopologyPanel)
   img/
-    logo.svg             -- Plugin icon
+    logo.svg                        -- Plugin icon
 ```
 
 ### Commands
@@ -402,10 +428,12 @@ src/
 |---------|-------------|
 | `npm run dev` | Webpack watch mode (rebuilds on save) |
 | `npm run build` | Production build to `dist/` |
-| `npm run test` | Run Jest tests |
+| `npm run test` | Run Jest tests (watches in dev) |
+| `npm run test:ci` | Run Jest in CI mode (parallel, non-watch) — used in the 4-gate validation |
 | `npm run lint` | ESLint check |
 | `npm run typecheck` | TypeScript type check (no emit) |
-| `npm run server` | Start Docker Compose Grafana |
+| `npm run server` | Start Docker Compose Grafana (`docker compose up --build`) |
+| `npm run sign` | Sign the plugin via `@grafana/sign-plugin` (requires `GRAFANA_ACCESS_POLICY_TOKEN` and `GRAFANA_ROOT_URLS` env vars) |
 
 ### Technology Stack
 
@@ -420,7 +448,7 @@ Every dependency listed with its exact resolved version, what it does in this pr
 | **@grafana/data** | 12.0.10 | Grafana Plugin SDK — core data types. Provides `PanelPlugin` class for plugin registration, `PanelProps` interface for panel component props, `DataFrames` for query result structure, `FieldType` for data matching, and `StandardEditorProps` for custom editors. | `module.ts` (PanelPlugin + setPanelOptions), `TopologyPanel.tsx` (PanelProps, data.series), all editor components |
 | **@grafana/runtime** | 12.0.10 | Grafana Plugin SDK — runtime services. Provides `getDataSourceSrv()` for datasource instance lookup (used by `detectDatasourceType`) and `replaceVariables()` for template variable interpolation. | `datasourceQuery.ts`, `useSelfQueries.ts` |
 | **@grafana/ui** | 12.0.10 | Grafana Plugin SDK — React component library. Provides themed components (`Button`, `IconButton`, `Input`, `Select`, `TextArea`, `CollapsableSection`, `Checkbox`, `DataSourcePicker`) used throughout editor components. | `NodeCard.tsx`, `EdgeCard.tsx`, `GroupCard.tsx`, `MetricEditor.tsx`, `ThresholdList.tsx`, `NodePopup.tsx` (Icon) |
-| **Lodash** | 4.18.1 | Utility library. Loaded as external by Grafana. Currently unused in plugin source but available for future use. | Declared external in webpack |
+| **Lodash** | 4.17.21 | Utility library. Loaded as external by Grafana. Currently unused in plugin source but available for future use. | Declared external in webpack |
 
 #### Grafana Plugin SDK (Build & Configuration)
 
@@ -428,7 +456,7 @@ Every dependency listed with its exact resolved version, what it does in this pr
 |---------|---------|---------|---------|
 | **@grafana/tsconfig** | 2.0.1 | Shared TypeScript compiler configuration for Grafana plugins. Extended by `.config/tsconfig.json`. Sets strict mode, ES2021 target, ESNext modules, and all standard Grafana TS conventions. | `tsconfig.json` (extends `.config/tsconfig.json`) |
 | **@grafana/eslint-config** | 7.0.0 | Shared ESLint ruleset for Grafana plugins. Configures React, TypeScript, import ordering, and Grafana-specific rules. Extended by `.config/_eslintrc`. | `.eslintrc` (extends `.config/_eslintrc`) |
-| **@grafana/plugin-e2e** | 1.0.0 | Grafana's Playwright-based E2E testing framework for plugins. Available for writing end-to-end tests against a running Grafana instance. | Reserved for Phase 2 (E2E test suite) |
+| **@grafana/plugin-e2e** | 3.4.12 | Grafana's Playwright-based E2E testing framework for plugins. Available for writing end-to-end tests against a running Grafana instance. | Reserved for future E2E suite |
 
 #### Build System -- Webpack 5 + SWC
 
@@ -479,7 +507,7 @@ Every dependency listed with its exact resolved version, what it does in this pr
 | **@types/react** | 18.2.0 | TypeScript definitions for React API |
 | **@types/react-dom** | 18.2.0 | TypeScript definitions for React DOM API |
 | **@types/jest** | 29.5.0 | TypeScript definitions for Jest API |
-| **@types/lodash** | 4.14.200 | TypeScript definitions for Lodash utilities |
+| **@types/lodash** | 4.17.24 | TypeScript definitions for Lodash utilities |
 | **@types/node** | 20.0.0 | TypeScript definitions for Node.js built-ins (used in webpack config) |
 
 #### Development Infrastructure
@@ -489,7 +517,8 @@ Every dependency listed with its exact resolved version, what it does in this pr
 | **Docker** | (host) | Runs local Grafana 12.0.0 via `docker-compose.yaml` for plugin development and testing |
 | **Grafana Enterprise** | 12.0.0 | Target panel host. Docker image `grafana/grafana-enterprise:12.0.0` with anonymous auth (Admin role), unsigned plugin allowlist, debug logging. Dev port 13100 per `docker-compose.yaml`. |
 | **supervisord** | Alpine pkg | Process manager inside Docker container. Runs Grafana's `/run.sh` with stdout logging |
-| **Node.js** | >= 18 (24.14.0 used) | JavaScript runtime for build tools. Requires `TS_NODE_COMPILER_OPTIONS` workaround on v24+ |
+| **Node.js** | >= 18 (Node 24 LTS tested) | JavaScript runtime for build tools. The `TS_NODE_COMPILER_OPTIONS='{"module":"commonjs"}'` env var required by Node 24+ is wired through `cross-env` in every npm script, so Windows CMD / macOS / Linux all work identically. |
+| **cross-env** | 10.1.0 (devDep) | The one explicit exception to the "no new deps" rule — a 5 KB build-time-only wrapper that sets env vars portably. Used by `npm run build`, `npm run dev`, and `npm run server`. |
 | **npm** | 11.9.0 | Package manager |
 
 ### Technical Approach
@@ -502,18 +531,27 @@ Every dependency listed with its exact resolved version, what it does in this pr
 | **Position persistence** | Debounced `onOptionsChange()` (300ms) writes positions back to Grafana panel JSON | Positions survive page reload. Debounce prevents hammering Grafana's state system on every mousemove during drag. |
 | **Edge geometry** | Cubic bezier curves with auto-calculated anchor points based on relative node positions | `getAnchorPoint()` chooses top/bottom/left/right based on source-to-target angle. `getBezierPath()` generates smooth S-curves. |
 | **Layout algorithm** | BFS topological sort → tier assignment → centered X positioning per tier | Handles DAGs. Skips bidirectional edges (HA sync) to prevent cycles. Per-tier width calculation sums actual node widths for correct alignment. |
-| **Flow animation** | CSS `@keyframes` with `stroke-dashoffset` on SVG paths | Pure CSS animation -- no JavaScript animation loop. Speed controlled by animation-duration. Dashoffset = -16 matches dasharray cycle (6+10). |
-| **Edge data pipeline** | `useMemo` computes `Map<string, EdgeRuntimeState>` from DataFrames | Same pattern as node states. Matches frame.refId or frame.name to edge metric alias. Computes color/thickness/speed/label per edge. |
+| **Flow animation** | `@keyframes topoFlow` with `stroke-dashoffset` + double `drop-shadow` SVG filter | Dashes slide along the bezier path via CSS animation, and the overlay path carries a double drop-shadow filter (3px inner + 6px outer halo) keyed to the edge's status colour so critical edges glow red and healthy edges glow soft green. No JS animation loop. |
+| **Edge rendering perf** | `React.memo`-wrapped `EdgeRender` sub-component with primitive-only props (`fromX`/`fromY`/`toX`/`toY`, `edgeColor`, `thickness`, `flowSpeed`, etc.) | Default shallow comparison skips re-render when `edgeStates` rebuilds but this edge's computed values didn't change. Parent loop still computes rects + paths; child is dumb. |
+| **Edge data pipeline** | `useMemo` computes `Map<string, EdgeRuntimeState>` from DataFrames | Matches frame.refId or frame.name to edge metric alias. Computes color/thickness/speed/label per edge. |
+| **Parallel edges** | Perpendicular unit-normal offset derived from `(toRaw − fromRaw)` vector | Multiple edges between the same node pair spread symmetrically in the correct direction regardless of edge orientation (vertical, diagonal, or horizontal). |
+| **SVG overflow** | `overflow: visible` on the topology edge SVG root | SVG root elements default to `overflow: hidden` (unlike `<div>`). Without this override, bezier paths that extend past the SVG's layout box — common after Auto Layout + Fit places nodes at coordinates beyond the initial viewport — get clipped before the pan/zoom wrapper's CSS transform is applied. |
+| **Group z-order** | Groups at `zIndex: 0`, SVG edges at `zIndex: 1`, nodes at `zIndex: 2` | Group containers sit below the edge layer so edges that cross a group's bounding rectangle remain visible. Nodes still sit on top of everything. |
 | **Multi-panel safety** | `useRef<Map<string, HTMLDivElement>>` with ref callbacks instead of `document.getElementById` | Scoped to component instance. No global DOM ID collisions when multiple topology panels exist on one dashboard. |
-| **Metric thresholds** | Descending sort → first match wins | `[{value: 0, color: green}, {value: 70, color: yellow}, {value: 90, color: red}]` -- value 85 matches yellow (85 >= 70, checked before 0). |
-| **Theme** | Nord-inspired palette in single CSS file | `#13161a` background, `#1a1e24` cards, `#2d3748` borders, `#a3be8c/#ebcb8b/#bf616a` status colors. No CSS modules -- all styles scoped by class prefix. |
+| **Viewport persistence** | Module-level `Map<panelId, ViewportState>` in `viewportStore.ts` | React state inside the canvas component is lost when Grafana remounts the panel (edit↔view toggle). Module state survives remount because the webpack singleton outlives any component lifecycle. |
+| **Metric thresholds** | Descending sort → first match wins | `[{value: 0, color: green}, {value: 70, color: yellow}, {value: 90, color: red}]` — value 85 matches yellow (85 ≥ 70, checked before 0). |
+| **Null vs NaN handling** | `null`/`undefined` in query response → `{value: null}` with no error flag; actual parse failure also treated as empty | Aggregations over zero rows (`percentage()`, `percentile()`, `average()` in NRQL; division-by-zero NaN in PromQL) are legitimate "no data in window" signals, not parse errors. Flagging them would pollute the toolbar stale-metrics counter for sparse services. |
+| **Fetch cancellation** | `AbortController` + 10s hard timeout on every query, signal threaded through `useSelfQueries` | Unmounting a panel or switching dashboards cancels in-flight fetches immediately. A hung datasource is bounded to 10 seconds instead of ~2 minutes of TCP default. |
+| **Toolbar responsiveness** | `ResizeObserver` on the toolbar element + state-driven canvas height | The toolbar wraps to multiple rows on narrow viewports; hardcoding 36px clipped the canvas on mobile. The observer feeds the live height into the canvas `height` calculation. |
+| **Cross-subtree events** | Module-level pub/sub in `panelEvents.ts` — `emitNodeClicked`, `emitNodeEditRequest`, `emitOrphanEdgeCleanup`, `emitTopologyImport` | `NodesEditor` renders inside Grafana's panel-editor subtree, which is a completely different React tree from `TopologyPanel`. React Context cannot cross that boundary. A tiny module-level pub/sub does. |
+| **Theme** | Nord-inspired palette in a single CSS file | `#13161a` background, `#1a1e24` cards, `#2d3748` borders, status colours from `STATUS_COLORS` constant. No CSS modules — all styles scoped by class prefix. Respects `prefers-reduced-motion: reduce`. |
 
 ### Architecture Decisions
 
 - **No external diagramming libraries** -- custom SVG edge renderer + HTML node cards (no dagre, d3-force, or elkjs). Sufficient for <50 nodes.
 - **Drag-and-drop** via pointer events, positions persisted in panel JSON via `onOptionsChange`
 - **Auto-layout** via topological sort + tier-based positioning with cycle detection (handles bidirectional HA edges)
-- **Dark theme only** in v1, using Nord-inspired palette
+- **Dark theme only** — Nord-inspired palette (light theme is on the roadmap)
 - **Single CSS file** -- no CSS modules, no styled-components
 - **Scoped DOM refs** -- component-scoped `useRef<Map>` instead of `document.getElementById` (safe for multi-panel dashboards)
 - **SWC over Babel** -- Rust-based compiler for 10-20x faster builds
@@ -545,9 +583,9 @@ Cloudflare Edge (CDN/WAF)
 
 ## Roadmap
 
-**Shipped since v1.0.0** (roughly 50+ tasks across Phases 1–6, the PR-review-driven improvement plan, and PMS/Sauron stress-testing):
+**Shipped since v1.0.0** (roughly 50+ tasks across Phases 1–6 plus a PR-review-driven improvement plan):
 
-- [x] **Multi-datasource support** — Prometheus, CloudWatch, and Infinity (any JSON HTTP API including New Relic NerdGraph) via a unified `queryDatasource` abstraction
+- [x] **Multi-datasource support** — Prometheus, CloudWatch, and Infinity (any JSON HTTP API) via a unified `queryDatasource` abstraction
 - [x] **Dynamic target query** — `DynamicTargetQuery` with virtual-edge expansion via `parentId::targetValue` convention, resolvers for all three datasource types
 - [x] **Grafana alert rule integration** — `useAlertRules` hook + `alertLabelMatchers` on nodes, configurable poll cadence, runbook deep-links
 - [x] **Freshness SLO** — per-metric `fetchedAt` stamping, configurable `metricFreshnessSLOSec`, live-ticking popup freshness labels, toolbar "N stale" indicator
@@ -590,22 +628,3 @@ Cloudflare Edge (CDN/WAF)
 [Apache License 2.0](LICENSE)
 
 Copyright 2026 SID2 Platform Engineering
-
----
-
-## Reference dashboards
-
-The `demo-screenshots/` directory ships four reproducible dashboard JSON payloads used to stress-test the plugin against real production data:
-
-- **`angular-portal-dashboard.json`** — 9-node Angular Portal topology wired to a local coroot Prometheus datasource
-- **`sauron-topology-dashboard.json`** — 14-node "Sauron's Eye" clone wired to chained `prod-prom-proxy` (real Cloudflare / F5 / IIS data via a dev Grafana that proxies to production Grafana's K8s Prometheus)
-- **`sauron-production.json`** — the 200 KB upstream Sauron's Eye dashboard pulled from production Grafana for reference (layer-per-layer stat/timeseries view, pre-topology)
-- **`pms-topology-dashboard.json`** — 21-node PMS (Player Management System) service graph wired **100% to New Relic** via a chained Infinity datasource → NerdGraph GraphQL. 63 NRQL queries across 14 APM services + 2 datastores + legacy on-prem + external PSPs + AKS cluster landmark
-
-To deploy any of them to your own dev Grafana with matching datasources, POST the JSON to `/api/dashboards/db`:
-
-```bash
-curl -u admin:admin -X POST -H "Content-Type: application/json" \
-  --data-binary @demo-screenshots/pms-topology-dashboard.json \
-  http://localhost:13100/api/dashboards/db
-```
