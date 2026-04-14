@@ -238,7 +238,7 @@ function useDynamicTargets(edges: TopologyEdge[]): Map<string, string[]> {
   return targetsByEdge;
 }
 
-export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data, width, height, replaceVariables }) => {
+export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, data, width, height, replaceVariables }) => {
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [popupNodeId, setPopupNodeId] = useState<string | null>(null);
@@ -807,6 +807,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         displayOptions={display}
         width={width}
         height={height - 36 - (timeOffset !== 0 ? 28 : 0)}
+        panelId={id}
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
         onNodeDoubleClick={handleNodeDoubleClick}

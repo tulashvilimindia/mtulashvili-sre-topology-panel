@@ -6,6 +6,7 @@ import {
 } from '../types';
 import { getAnchorPoint, getBezierPath, getBezierMidpoint, EDGE_TYPE_STYLES } from '../utils/edges';
 import { ViewportState, DEFAULT_VIEWPORT, zoomAtPoint, fitToView } from '../utils/viewport';
+import { getStoredViewport, setStoredViewport } from '../utils/viewportStore';
 
 interface CanvasProps {
   nodes: TopologyNode[];
@@ -19,6 +20,7 @@ interface CanvasProps {
   displayOptions: TopologyPanelOptions['display'];
   width: number;
   height: number;
+  panelId: number;
   onNodeDrag: (nodeId: string, x: number, y: number) => void;
   onNodeToggle: (nodeId: string, rect?: DOMRect) => void;
   onNodeDoubleClick?: (nodeId: string) => void;
@@ -27,17 +29,24 @@ interface CanvasProps {
 export const TopologyCanvas: React.FC<CanvasProps> = ({
   nodes, edges, groups, nodePositions, nodeStates, edgeStates,
   canvasOptions, animationOptions, displayOptions,
-  width, height, onNodeDrag, onNodeToggle, onNodeDoubleClick,
+  width, height, panelId, onNodeDrag, onNodeToggle, onNodeDoubleClick,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [dragging, setDragging] = useState<{ nodeId: string; offX: number; offY: number } | null>(null);
   const hasMovedRef = useRef(false);
 
-  // Viewport zoom/pan state
-  const [viewport, setViewport] = useState<ViewportState>(DEFAULT_VIEWPORT);
+  // Viewport zoom/pan state — initial value is read from the module-level
+  // store so toggling edit/view mode (which remounts the whole panel) does
+  // not reset pan/zoom. Every update is mirrored back into the store.
+  const [viewport, setViewport] = useState<ViewportState>(
+    () => getStoredViewport(panelId) || DEFAULT_VIEWPORT
+  );
   const viewportRef = useRef(viewport);
   viewportRef.current = viewport;
+  useEffect(() => {
+    setStoredViewport(panelId, viewport);
+  }, [panelId, viewport]);
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
 
@@ -87,11 +96,19 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     setViewport(fitToView(nodePositions, widths, width, height));
   }, [nodePositions, nodes, width, height]);
 
-  // Auto fit-to-view on first render (when nodes load for the first time)
+  // Auto fit-to-view on first render (when nodes load for the first time).
+  // Skip auto-fit if the panel already has a stored viewport — the user
+  // either previously fitted and then panned/zoomed, or the panel was
+  // remounted (edit/view mode toggle) and their pan/zoom must survive.
   const prevNodeCountRef = useRef(0);
+  const hadStoredViewportRef = useRef(getStoredViewport(panelId) !== undefined);
   const autoFitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (prevNodeCountRef.current === 0 && nodes.length > 0) {
+    if (
+      prevNodeCountRef.current === 0 &&
+      nodes.length > 0 &&
+      !hadStoredViewportRef.current
+    ) {
       autoFitTimerRef.current = setTimeout(handleFitToView, 100);
     }
     prevNodeCountRef.current = nodes.length;
