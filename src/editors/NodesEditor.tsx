@@ -5,6 +5,7 @@ import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
 import { TopologyPanelOptions, TopologyNode, NodeMetricConfig } from '../types';
 import { NodeCard } from './components/NodeCard';
 import { generateId, sanitizeLabel } from './utils/editorUtils';
+import { onNodeClicked } from '../utils/panelEvents';
 import './editors.css';
 
 type Props = StandardEditorProps<TopologyNode[], object, TopologyPanelOptions>;
@@ -304,18 +305,24 @@ export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
   const nodes = value || [];
   const edges = context.options?.edges || [];
   const groups = context.options?.groups || [];
-  const selectedNodeId = (context.options as TopologyPanelOptions)?._selectedNodeId;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [filterText, setFilterText] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Canvas-sidebar sync: auto-expand node clicked on canvas
+  // Subscribes to the module-level event emitter so clicks cross the
+  // panel/editor React subtree boundary without persisting through options.
   useEffect(() => {
-    if (selectedNodeId && !expandedIds.has(selectedNodeId)) {
-      setExpandedIds((prev) => new Set(prev).add(selectedNodeId));
-    }
-  }, [selectedNodeId, expandedIds]);
+    return onNodeClicked((nodeId) => {
+      setExpandedIds((prev) => {
+        if (prev.has(nodeId)) { return prev; }
+        const next = new Set(prev);
+        next.add(nodeId);
+        return next;
+      });
+    });
+  }, []);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds((prev) => {

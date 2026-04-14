@@ -6,6 +6,7 @@ import { autoLayout } from '../utils/layout';
 import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
 import { queryDatasource, QueryResult, QueryError } from '../utils/datasourceQuery';
 import { fetchAlertRules, matchAlertsToNode } from '../utils/alertRules';
+import { emitNodeClicked } from '../utils/panelEvents';
 import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
 import './TopologyPanel.css';
@@ -484,8 +485,9 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   const handleNodeToggle = useCallback((nodeId: string) => {
     const isEditMode = window.location.search.includes('editPanel');
     if (isEditMode) {
-      // Canvas-sidebar sync: write selected node to options so editor can auto-expand it
-      onOptionsChange({ ...optionsRef.current, _selectedNodeId: nodeId } as TopologyPanelOptions);
+      // Canvas-sidebar sync via module-level event emitter — no options roundtrip,
+      // no dashboard-dirty side effects, works across the panel/editor React subtree boundary.
+      emitNodeClicked(nodeId);
     } else {
       // View mode: toggle popup (click again to close)
       setPopupNodeId((prev) => (prev === nodeId ? null : nodeId));
@@ -495,7 +497,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       if (next.has(nodeId)) { next.delete(nodeId); } else { next.add(nodeId); }
       return next;
     });
-  }, [onOptionsChange]);
+  }, []);
 
   const handleResetLayout = useCallback(() => {
     const autoPositions = autoLayout(nodes, edges, {
