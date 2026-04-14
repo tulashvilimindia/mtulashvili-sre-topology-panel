@@ -1,0 +1,1650 @@
+{
+  "nodes": [
+    {
+      "id": "n-gate-1a",
+      "name": "Gate-1A",
+      "role": "active",
+      "type": "firewall",
+      "position": {
+        "x": 180,
+        "y": 20
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l1",
+      "metrics": [
+        {
+          "id": "gate-1a-v",
+          "refId": "A",
+          "label": "Gate-1A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-gate-1b",
+      "name": "Gate-1B",
+      "role": "standby",
+      "type": "firewall",
+      "position": {
+        "x": 480,
+        "y": 20
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l1",
+      "metrics": [
+        {
+          "id": "gate-1b-v",
+          "refId": "B",
+          "label": "Gate-1B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-dist-2a",
+      "name": "Dist-2A",
+      "role": "active",
+      "type": "loadbalancer",
+      "position": {
+        "x": 180,
+        "y": 95
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l2",
+      "metrics": [
+        {
+          "id": "dist-2a-v",
+          "refId": "C",
+          "label": "Dist-2A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-dist-2b",
+      "name": "Dist-2B",
+      "role": "standby",
+      "type": "loadbalancer",
+      "position": {
+        "x": 480,
+        "y": 95
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l2",
+      "metrics": [
+        {
+          "id": "dist-2b-v",
+          "refId": "D",
+          "label": "Dist-2B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-hub-3a",
+      "name": "Hub-3A",
+      "role": "active",
+      "type": "virtualserver",
+      "position": {
+        "x": 180,
+        "y": 170
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l3",
+      "metrics": [
+        {
+          "id": "hub-3a-v",
+          "refId": "E",
+          "label": "Hub-3A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-hub-3b",
+      "name": "Hub-3B",
+      "role": "standby",
+      "type": "virtualserver",
+      "position": {
+        "x": 480,
+        "y": 170
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l3",
+      "metrics": [
+        {
+          "id": "hub-3b-v",
+          "refId": "F",
+          "label": "Hub-3B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-bus-4a",
+      "name": "Bus-4A",
+      "role": "active",
+      "type": "queue",
+      "position": {
+        "x": 180,
+        "y": 245
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l4",
+      "metrics": [
+        {
+          "id": "bus-4a-v",
+          "refId": "G",
+          "label": "Bus-4A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-bus-4b",
+      "name": "Bus-4B",
+      "role": "standby",
+      "type": "queue",
+      "position": {
+        "x": 480,
+        "y": 245
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l4",
+      "metrics": [
+        {
+          "id": "bus-4b-v",
+          "refId": "H",
+          "label": "Bus-4B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-proc-5a",
+      "name": "Proc-5A",
+      "role": "active",
+      "type": "server",
+      "position": {
+        "x": 180,
+        "y": 320
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l5",
+      "metrics": [
+        {
+          "id": "proc-5a-v",
+          "refId": "I",
+          "label": "Proc-5A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-proc-5b",
+      "name": "Proc-5B",
+      "role": "standby",
+      "type": "server",
+      "position": {
+        "x": 480,
+        "y": 320
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l5",
+      "metrics": [
+        {
+          "id": "proc-5b-v",
+          "refId": "J",
+          "label": "Proc-5B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-mem-6a",
+      "name": "Mem-6A",
+      "role": "active",
+      "type": "cache",
+      "position": {
+        "x": 180,
+        "y": 395
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l6",
+      "metrics": [
+        {
+          "id": "mem-6a-v",
+          "refId": "K",
+          "label": "Mem-6A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-mem-6b",
+      "name": "Mem-6B",
+      "role": "standby",
+      "type": "cache",
+      "position": {
+        "x": 480,
+        "y": 395
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l6",
+      "metrics": [
+        {
+          "id": "mem-6b-v",
+          "refId": "L",
+          "label": "Mem-6B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-pod-7a",
+      "name": "Pod-7A",
+      "role": "active",
+      "type": "kubernetes",
+      "position": {
+        "x": 180,
+        "y": 470
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l7",
+      "metrics": [
+        {
+          "id": "pod-7a-v",
+          "refId": "M",
+          "label": "Pod-7A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-pod-7b",
+      "name": "Pod-7B",
+      "role": "standby",
+      "type": "kubernetes",
+      "position": {
+        "x": 480,
+        "y": 470
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l7",
+      "metrics": [
+        {
+          "id": "pod-7b-v",
+          "refId": "N",
+          "label": "Pod-7B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-feed-8a",
+      "name": "Feed-8A",
+      "role": "active",
+      "type": "queue",
+      "position": {
+        "x": 180,
+        "y": 545
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l8",
+      "metrics": [
+        {
+          "id": "feed-8a-v",
+          "refId": "O",
+          "label": "Feed-8A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-feed-8b",
+      "name": "Feed-8B",
+      "role": "standby",
+      "type": "queue",
+      "position": {
+        "x": 480,
+        "y": 545
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l8",
+      "metrics": [
+        {
+          "id": "feed-8b-v",
+          "refId": "P",
+          "label": "Feed-8B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-route-9a",
+      "name": "Route-9A",
+      "role": "active",
+      "type": "loadbalancer",
+      "position": {
+        "x": 180,
+        "y": 620
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l9",
+      "metrics": [
+        {
+          "id": "route-9a-v",
+          "refId": "Q",
+          "label": "Route-9A",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-route-9b",
+      "name": "Route-9B",
+      "role": "standby",
+      "type": "loadbalancer",
+      "position": {
+        "x": 480,
+        "y": 620
+      },
+      "compact": true,
+      "width": 130,
+      "groupId": "grp-l9",
+      "metrics": [
+        {
+          "id": "route-9b-v",
+          "refId": "R",
+          "label": "Route-9B",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-db-01",
+      "name": "DB-01",
+      "role": "shard 1/4",
+      "type": "database",
+      "position": {
+        "x": 60,
+        "y": 710
+      },
+      "compact": true,
+      "width": 120,
+      "groupId": "grp-db",
+      "metrics": [
+        {
+          "id": "db-01-v",
+          "refId": "S",
+          "label": "DB-01",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-db-02",
+      "name": "DB-02",
+      "role": "shard 2/4",
+      "type": "database",
+      "position": {
+        "x": 210,
+        "y": 710
+      },
+      "compact": true,
+      "width": 120,
+      "groupId": "grp-db",
+      "metrics": [
+        {
+          "id": "db-02-v",
+          "refId": "T",
+          "label": "DB-02",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-db-03",
+      "name": "DB-03",
+      "role": "shard 3/4",
+      "type": "database",
+      "position": {
+        "x": 360,
+        "y": 710
+      },
+      "compact": true,
+      "width": 120,
+      "groupId": "grp-db",
+      "metrics": [
+        {
+          "id": "db-03-v",
+          "refId": "U",
+          "label": "DB-03",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    },
+    {
+      "id": "n-db-04",
+      "name": "DB-04",
+      "role": "shard 4/4",
+      "type": "database",
+      "position": {
+        "x": 510,
+        "y": 710
+      },
+      "compact": true,
+      "width": 120,
+      "groupId": "grp-db",
+      "metrics": [
+        {
+          "id": "db-04-v",
+          "refId": "V",
+          "label": "DB-04",
+          "datasourceUid": "testdata",
+          "query": "",
+          "format": "${value}",
+          "section": "Value",
+          "isSummary": true,
+          "thresholds": [
+            {
+              "value": 0,
+              "color": "green"
+            },
+            {
+              "value": 60,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "red"
+            }
+          ],
+          "showSparkline": true
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-ha-l1",
+      "sourceId": "n-gate-1a",
+      "targetId": "n-gate-1b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-ha-l2",
+      "sourceId": "n-dist-2a",
+      "targetId": "n-dist-2b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-ha-l3",
+      "sourceId": "n-hub-3a",
+      "targetId": "n-hub-3b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-ha-l4",
+      "sourceId": "n-bus-4a",
+      "targetId": "n-bus-4b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-ha-l5",
+      "sourceId": "n-proc-5a",
+      "targetId": "n-proc-5b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-ha-l6",
+      "sourceId": "n-mem-6a",
+      "targetId": "n-mem-6b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-ha-l7",
+      "sourceId": "n-pod-7a",
+      "targetId": "n-pod-7b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-ha-l8",
+      "sourceId": "n-feed-8a",
+      "targetId": "n-feed-8b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-ha-l9",
+      "sourceId": "n-route-9a",
+      "targetId": "n-route-9b",
+      "type": "ha_sync",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": true,
+      "anchorSource": "right",
+      "anchorTarget": "left"
+    },
+    {
+      "id": "e-t1-2a",
+      "sourceId": "n-gate-1a",
+      "targetId": "n-dist-2a",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t1-2b",
+      "sourceId": "n-gate-1b",
+      "targetId": "n-dist-2b",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t2-3a",
+      "sourceId": "n-dist-2a",
+      "targetId": "n-hub-3a",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t2-3b",
+      "sourceId": "n-dist-2b",
+      "targetId": "n-hub-3b",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t3-4a",
+      "sourceId": "n-hub-3a",
+      "targetId": "n-bus-4a",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t3-4b",
+      "sourceId": "n-hub-3b",
+      "targetId": "n-bus-4b",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t4-5a",
+      "sourceId": "n-bus-4a",
+      "targetId": "n-proc-5a",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t4-5b",
+      "sourceId": "n-bus-4b",
+      "targetId": "n-proc-5b",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t5-6a",
+      "sourceId": "n-proc-5a",
+      "targetId": "n-mem-6a",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t5-6b",
+      "sourceId": "n-proc-5b",
+      "targetId": "n-mem-6b",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t6-7a",
+      "sourceId": "n-mem-6a",
+      "targetId": "n-pod-7a",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t6-7b",
+      "sourceId": "n-mem-6b",
+      "targetId": "n-pod-7b",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t7-8a",
+      "sourceId": "n-pod-7a",
+      "targetId": "n-feed-8a",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t7-8b",
+      "sourceId": "n-pod-7b",
+      "targetId": "n-feed-8b",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t8-9a",
+      "sourceId": "n-feed-8a",
+      "targetId": "n-route-9a",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-t8-9b",
+      "sourceId": "n-feed-8b",
+      "targetId": "n-route-9b",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-9a-db01",
+      "sourceId": "n-route-9a",
+      "targetId": "n-db-01",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-9a-db02",
+      "sourceId": "n-route-9a",
+      "targetId": "n-db-02",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-9a-db03",
+      "sourceId": "n-route-9a",
+      "targetId": "n-db-03",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-9a-db04",
+      "sourceId": "n-route-9a",
+      "targetId": "n-db-04",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "auto",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-9b-db01",
+      "sourceId": "n-route-9b",
+      "targetId": "n-db-01",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-9b-db02",
+      "sourceId": "n-route-9b",
+      "targetId": "n-db-02",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-9b-db03",
+      "sourceId": "n-route-9b",
+      "targetId": "n-db-03",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    },
+    {
+      "id": "e-9b-db04",
+      "sourceId": "n-route-9b",
+      "targetId": "n-db-04",
+      "type": "traffic",
+      "thicknessMode": "fixed",
+      "thicknessMin": 1.5,
+      "thicknessMax": 4,
+      "thresholds": [
+        {
+          "value": 0,
+          "color": "green"
+        }
+      ],
+      "flowAnimation": true,
+      "flowSpeed": "slow",
+      "bidirectional": false,
+      "anchorSource": "bottom",
+      "anchorTarget": "top"
+    }
+  ],
+  "groups": [
+    {
+      "id": "grp-l1",
+      "label": "HA — Layer 1 Gate",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-gate-1a",
+        "n-gate-1b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-l2",
+      "label": "HA — Layer 2 Dist",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-dist-2a",
+        "n-dist-2b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-l3",
+      "label": "HA — Layer 3 Hub",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-hub-3a",
+        "n-hub-3b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-l4",
+      "label": "HA — Layer 4 Bus",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-bus-4a",
+        "n-bus-4b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-l5",
+      "label": "HA — Layer 5 Proc",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-proc-5a",
+        "n-proc-5b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-l6",
+      "label": "HA — Layer 6 Mem",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-mem-6a",
+        "n-mem-6b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-l7",
+      "label": "HA — Layer 7 Pod",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-pod-7a",
+        "n-pod-7b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-l8",
+      "label": "HA — Layer 8 Feed",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-feed-8a",
+        "n-feed-8b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-l9",
+      "label": "HA — Layer 9 Route",
+      "type": "ha_pair",
+      "nodeIds": [
+        "n-route-9a",
+        "n-route-9b"
+      ],
+      "style": "dashed"
+    },
+    {
+      "id": "grp-db",
+      "label": "DB Cluster (4 shards)",
+      "type": "cluster",
+      "nodeIds": [
+        "n-db-01",
+        "n-db-02",
+        "n-db-03",
+        "n-db-04"
+      ],
+      "style": "dashed"
+    }
+  ]
+}
