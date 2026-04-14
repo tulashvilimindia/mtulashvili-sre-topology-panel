@@ -222,6 +222,18 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       return;
     }
 
+    // Honor the layout.autoLayout toggle: when false, use stored node.position
+    // directly for every node — even default (100,100) — and skip auto-layout.
+    if (!layout.autoLayout) {
+      const positions = new Map<string, { x: number; y: number }>();
+      nodes.forEach((node) => {
+        const existing = currentPositions.get(node.id);
+        positions.set(node.id, existing || { ...node.position });
+      });
+      setNodePositions(positions);
+      return;
+    }
+
     const positions = new Map<string, { x: number; y: number }>();
     let needsAutoLayout = false;
 
