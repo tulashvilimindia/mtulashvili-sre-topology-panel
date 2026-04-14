@@ -1,38 +1,60 @@
 # E2E Topology Panel for Grafana
 
-Interactive end-to-end topology diagram panel for Grafana. Visualize infrastructure flows with live metrics, drag-and-drop node positioning, animated traffic connections, and expandable metric panels per node.
+Interactive end-to-end topology diagram panel for Grafana. Visualize infrastructure flows with live metrics from any datasource, drag-and-drop node positioning, animated traffic connections with neon glow, and multi-metric popups with sparklines and freshness SLO tracking.
 
 Built by SID2 Platform Engineering.
 
-![Grafana 10+](https://img.shields.io/badge/Grafana-10.0%2B-orange)
+![Grafana 12+](https://img.shields.io/badge/Grafana-12.0%2B-orange)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 ![Plugin Type](https://img.shields.io/badge/Type-Panel-green)
+![Tests](https://img.shields.io/badge/tests-216%20passing-green)
+![Bundle](https://img.shields.io/badge/bundle-151KB-blue)
 
 ---
 
 ## Features
 
 ### Topology Visualization
-- **Draggable nodes** -- freely position nodes on a grid canvas; positions persist with the dashboard JSON
-- **Animated flow connections** -- bezier curve edges with animated dashes showing traffic direction
-- **HA pair & cluster grouping** -- dashed containers visually group HA pairs, clusters, and server pools
-- **Auto-layout** -- topological sort positions nodes in tiers automatically (top-down or left-right)
+- **Draggable nodes** — freely position nodes on a grid canvas; positions persist with the dashboard JSON
+- **Animated flow connections** — bezier curve edges with animated dashes showing traffic direction, enhanced with double drop-shadow neon glow that pulses in the edge's status color
+- **HA pair & cluster grouping** — dashed/dotted containers visually bracket HA pairs, clusters, and server pools
+- **Auto-layout** — topological sort positions nodes in tiers automatically (top-down or left-right) with O(V+E) complexity (no duplicate-enqueue bug on diamond fan-in)
+- **Pan/zoom** — mouse wheel zoom, Ctrl+drag pan, "1:1" reset and "Fit" auto-fit-to-view buttons; viewport persists across panel remounts (edit↔view mode toggle)
+- **Mobile responsive** — `@media (max-width: 768px)` bottom-sheet popup, wrapped toolbar, touch-action pan/pinch-zoom
+- **Reduced motion** — respects `prefers-reduced-motion: reduce` and disables flow animations for users with vestibular disorders
 
-### Metric Integration
-- **Live metric values** -- each node metric maps to a Grafana datasource query via `refId` or `frame.name`
-- **Status-driven visuals** -- node borders, status dots, and edge colors reflect metric thresholds (green/yellow/red)
-- **Edge metrics** -- edge color, thickness, flow speed, and labels driven by metric values
-- **Expandable metric panels** -- summary metrics always visible, click to expand full sectioned detail view
-- **Sparkline bars** -- mini bar charts of recent metric history in expanded view
+### Multi-Datasource Metric Integration
+- **Prometheus** — instant queries via `/api/datasources/proxy/uid/{dsUid}/api/v1/query`
+- **CloudWatch** — `namespace` + `metricName` + `dimensions` + `stat` + `period` via unified `/api/ds/query`
+- **Infinity (NRQL / GraphQL / REST)** — `url` + `method` + `body` + `rootSelector` for any JSON-returning HTTP API. Verified working end-to-end against New Relic NerdGraph at `api.newrelic.com/graphql`.
+- **Auto-fetch via `useSelfQueries`** — each metric polls its own datasource; debounced 500ms with AbortController cancellation and 10-second hard timeout per query
+- **Panel-query compatibility** — metrics can also be sourced from the panel's own Grafana queries via `refId` match or `frame.name` fallback
+- **Freshness SLO** — every self-queried metric carries a `fetchedAt` timestamp; a toolbar "N stale" pill surfaces metrics that exceed the configurable `metricFreshnessSLOSec` threshold
+
+### Alert Integration
+- **Grafana unified alerting** — `useAlertRules` hook polls the Grafana alerting API and matches alerts to nodes via `alertLabelMatchers` (key-value pairs the plugin looks for in alert labels)
+- **Configurable poll interval** — `animation.alertPollIntervalMs` panel option, default 30s, clamped to 5s minimum so a user typo can't hammer the API
+- **Runbook deep-links** — if a firing alert has a `runbook_url` annotation, the popup exposes it as a clickable link
+- **Observability drill-downs** — per-node `observabilityLinks` with `${token}` interpolation (resolves from node fields and `alertLabelMatchers`)
+
+### Dynamic Target Queries
+Edges can define a `targetQuery` that resolves at runtime to N virtual edges, one per discovered target value. Supports all three datasource types (Prometheus label values, CloudWatch dimension enumeration, Infinity HTTP discovery). Virtual edges inherit parent metric values via the `parentId::targetValue` id convention. Poll interval: 60s.
+
+### Click-to-expand Popup
+Clicking any node opens a popup positioned next to the clicked rect with:
+- Up to 4 summary metrics with mini SVG sparklines and "Updated Ns ago" freshness labels that tick live every 15 seconds
+- Firing alerts section with state badges, rule links, summary annotations, and optional runbook buttons
+- Observability links with `${name}` / `${id}` / matcher-token URL templating
+- Edit button (only in edit mode) that scrolls the matching sidebar card into view via a cross-subtree event bus
 
 ### Topology Patterns
 The plugin supports three relationship patterns that cover all common topologies:
 
 | Pattern | Example | Description |
 |---------|---------|-------------|
-| **1:1 direct** | CDN -> FW | Single source, single target, one metric drives edge |
-| **1:N fan-out** | Pool -> Members | One source fans out to multiple targets |
-| **HA pair bond** | PA1 <-> PA2 | Bidirectional edge with state mapping |
+| **1:1 direct** | CDN → WAF | Single source, single target, one metric drives edge |
+| **1:N fan-out** | Pool → Members | One source fans out to multiple targets (optionally dynamic via `targetQuery`) |
+| **HA pair bond** | PA1 ↔ PA2 | Bidirectional edge with optional `stateMap` for non-numeric states (e.g. `ha_sync`) |
 
 ### Panel Options
 
@@ -41,13 +63,20 @@ The plugin supports three relationship patterns that cover all common topologies
 | Show grid | On | Dot grid background for positioning reference |
 | Snap to grid | On | Snap nodes to grid when dragging |
 | Grid size | 20px | Grid spacing in pixels |
-| Flow animation | On | Animate flow dashes on traffic edges |
+| Background color | transparent | Canvas background (any CSS color; "transparent" inherits dashboard theme) |
+| Flow animation | On | Animate flow dashes on traffic edges (per-edge `flowAnimation` must also be true) |
+| Default flow speed | auto | Panel-wide fallback flow speed (`auto`/`slow`/`normal`/`fast`/`none`) for edges that don't override |
 | Pulse on critical | On | Pulse status dot when node is in critical state |
-| Layout direction | Top to bottom | Auto-layout flow direction (top-down or left-right) |
-| Tier spacing | 120px | Vertical space between tiers in auto-layout |
-| Node spacing | 20px | Horizontal space between nodes in same tier |
+| **Alert poll interval (ms)** | 30000 | How often to refresh firing alerts (min 5000) |
+| **Metric freshness SLO (s)** | 60 | Mark self-queried metric rows as Stale in the popup when fetchedAt age exceeds this |
+| Auto layout | On | Run topological-sort auto-layout when node positions are at default. Off = honor stored positions exactly |
+| Layout direction | Top-down | Auto-layout flow direction (`top-down` / `left-right`) |
+| Tier spacing | 120px | Space between tiers in auto-layout |
+| Node spacing | 20px | Space between nodes in the same tier |
 | Show edge labels | On | Display metric values on edges |
 | Show status dots | On | Show colored status indicator dots on nodes |
+| Show metrics on cards | On | Show summary metric rows in collapsed node view |
+| Show node icons | On | Show type-specific icons (CF, FW, LB, SRV, DB, etc.) |
 | Max summary metrics | 4 | Number of metrics shown in collapsed node view |
 
 ---
@@ -56,8 +85,8 @@ The plugin supports three relationship patterns that cover all common topologies
 
 ### Prerequisites
 
-- **Grafana 10.0 or later**
-- **Node.js 18+** (for building from source)
+- **Grafana 12.0 or later** (SDK 12.0.10 targeted; earlier 10.x may work but isn't tested)
+- **Node.js 18+** (for building from source; Node 24 LTS supported via `cross-env`)
 
 ### Build from Source
 
@@ -388,9 +417,9 @@ Every dependency listed with its exact resolved version, what it does in this pr
 |---------|---------|---------|---------|
 | **React** | 18.3.1 | UI component framework. All topology nodes, toolbar, and canvas are React functional components using hooks (`useState`, `useEffect`, `useMemo`, `useCallback`, `useRef`). React is provided as an external by Grafana at runtime -- not bundled. | `TopologyPanel.tsx`, `TopologyCanvas.tsx`, `TopologyEditor.tsx` |
 | **React DOM** | 18.3.1 | React renderer for browser DOM. Provided as external by Grafana. | Implicit via React |
-| **@grafana/data** | 10.4.19 | Grafana Plugin SDK -- core data types. Provides `PanelPlugin` class for plugin registration, `PanelProps` interface for panel component props, `DataFrames` for query result structure, and `FieldType` for data matching. | `module.ts` (PanelPlugin), `TopologyPanel.tsx` (PanelProps, data.series) |
-| **@grafana/runtime** | 10.4.19 | Grafana Plugin SDK -- runtime services. Provides `replaceVariables()` for dashboard template variable interpolation and runtime datasource access. Loaded as external. | Reserved for Phase 2 (template variable support) |
-| **@grafana/ui** | 10.4.19 | Grafana Plugin SDK -- React component library. Provides themed UI components (Button, Icon, Select). Loaded as external. Currently unused directly -- plugin uses custom CSS for Nord theme consistency. | Available for Phase 3 (visual editor) |
+| **@grafana/data** | 12.0.10 | Grafana Plugin SDK — core data types. Provides `PanelPlugin` class for plugin registration, `PanelProps` interface for panel component props, `DataFrames` for query result structure, `FieldType` for data matching, and `StandardEditorProps` for custom editors. | `module.ts` (PanelPlugin + setPanelOptions), `TopologyPanel.tsx` (PanelProps, data.series), all editor components |
+| **@grafana/runtime** | 12.0.10 | Grafana Plugin SDK — runtime services. Provides `getDataSourceSrv()` for datasource instance lookup (used by `detectDatasourceType`) and `replaceVariables()` for template variable interpolation. | `datasourceQuery.ts`, `useSelfQueries.ts` |
+| **@grafana/ui** | 12.0.10 | Grafana Plugin SDK — React component library. Provides themed components (`Button`, `IconButton`, `Input`, `Select`, `TextArea`, `CollapsableSection`, `Checkbox`, `DataSourcePicker`) used throughout editor components. | `NodeCard.tsx`, `EdgeCard.tsx`, `GroupCard.tsx`, `MetricEditor.tsx`, `ThresholdList.tsx`, `NodePopup.tsx` (Icon) |
 | **Lodash** | 4.18.1 | Utility library. Loaded as external by Grafana. Currently unused in plugin source but available for future use. | Declared external in webpack |
 
 #### Grafana Plugin SDK (Build & Configuration)
@@ -516,16 +545,43 @@ Cloudflare Edge (CDN/WAF)
 
 ## Roadmap
 
-- [ ] Visual node/edge editor in panel editor (drag-to-connect)
-- [ ] Zoom/pan with mouse wheel
+**Shipped since v1.0.0** (roughly 50+ tasks across Phases 1–6, the PR-review-driven improvement plan, and PMS/Sauron stress-testing):
+
+- [x] **Multi-datasource support** — Prometheus, CloudWatch, and Infinity (any JSON HTTP API including New Relic NerdGraph) via a unified `queryDatasource` abstraction
+- [x] **Dynamic target query** — `DynamicTargetQuery` with virtual-edge expansion via `parentId::targetValue` convention, resolvers for all three datasource types
+- [x] **Grafana alert rule integration** — `useAlertRules` hook + `alertLabelMatchers` on nodes, configurable poll cadence, runbook deep-links
+- [x] **Freshness SLO** — per-metric `fetchedAt` stamping, configurable `metricFreshnessSLOSec`, live-ticking popup freshness labels, toolbar "N stale" indicator
+- [x] **Multi-metric popups** — up to 4 summary metrics per popup with mini SVG sparklines and "Updated Ns ago" labels
+- [x] **Observability drill-downs** — per-node `observabilityLinks` with `${token}` URL interpolation
+- [x] **Import/export topology JSON** — full round-trip including `canvas`, `animation`, `layout`, `display` sub-options via cross-subtree event bus
+- [x] **CloudWatch & Infinity editors** — namespace/metricName/dimensions/stat/period and url/method/body/rootSelector fields in `MetricEditor` and `EdgeCard`
+- [x] **State map for non-numeric edges** — `stateMap` editor + `calculateEdgeStatus` support for string-valued metrics
+- [x] **Zoom/pan with mouse wheel** + Fit-to-view + 1:1 reset + viewport persistence across panel remounts (module-level `viewportStore`)
+- [x] **Neon glow animated edges** — double `drop-shadow` SVG filter on flow overlays
+- [x] **Search filters** in NodesEditor, EdgesEditor, GroupsEditor
+- [x] **Bulk node import** from Prometheus metric discovery
+- [x] **Auto-delete orphan edges** when a node is deleted
+- [x] **Double-click node** → scroll matching editor card into view
+- [x] **Edit Node** button in popup (edit mode only)
+- [x] **Example topology explainer banner** — 12s dismissible after "Load example"
+- [x] **Mobile responsive layout** — `@media (max-width: 768px)` bottom-sheet popup, wrapped toolbar, `touch-action` pan/pinch-zoom
+- [x] **Reduced-motion accessibility** — `@media (prefers-reduced-motion: reduce)` disables flow and pulse animations
+- [x] **216 unit tests** across 10 suites (edges, layout, viewport, viewportStore, datasourceQuery, alertRules, dynamicTargets, panelEvents, NodePopup, TopologyPanel)
+- [x] **GitHub Actions CI** — typecheck + lint + test + build on every push; tag-triggered signing workflow with env-driven `GRAFANA_ROOT_URLS` secret
+- [x] **Cross-platform build** — `cross-env` shim so Windows CMD works with the `TS_NODE_COMPILER_OPTIONS` env var
+- [x] **SVG overflow clipping fix** — edges past the layout box now render correctly after Auto Layout + Fit
+- [x] **Z-order fix** — groups no longer occlude edges that cross their bounding box
+- [x] **AbortController + 10s timeout** on all datasource queries so hung datasources don't freeze the panel
+
+**Still on the roadmap:**
+
+- [ ] Visual node/edge editor (drag-to-connect directly on canvas)
 - [ ] Edge hover highlighting (dim others to 20%)
-- [ ] Edge click for metric detail overlay
+- [ ] Edge click → metric detail overlay
 - [ ] Right-click context menu on nodes and edges
-- [ ] Dynamic target query (pool member auto-discovery from metric queries)
-- [ ] Multiple datasources per node
-- [ ] Import/export topology JSON
-- [ ] Template variable support (`$cf_zone`, `$app`)
+- [ ] Template variable support inside NRQL/PromQL via `replaceVariables()`
 - [ ] Light theme support
+- [ ] Plugin signing for public Grafana plugin catalog submission
 
 ---
 
@@ -534,3 +590,22 @@ Cloudflare Edge (CDN/WAF)
 [Apache License 2.0](LICENSE)
 
 Copyright 2026 SID2 Platform Engineering
+
+---
+
+## Reference dashboards
+
+The `demo-screenshots/` directory ships four reproducible dashboard JSON payloads used to stress-test the plugin against real production data:
+
+- **`angular-portal-dashboard.json`** — 9-node Angular Portal topology wired to a local coroot Prometheus datasource
+- **`sauron-topology-dashboard.json`** — 14-node "Sauron's Eye" clone wired to chained `prod-prom-proxy` (real Cloudflare / F5 / IIS data via a dev Grafana that proxies to production Grafana's K8s Prometheus)
+- **`sauron-production.json`** — the 200 KB upstream Sauron's Eye dashboard pulled from production Grafana for reference (layer-per-layer stat/timeseries view, pre-topology)
+- **`pms-topology-dashboard.json`** — 21-node PMS (Player Management System) service graph wired **100% to New Relic** via a chained Infinity datasource → NerdGraph GraphQL. 63 NRQL queries across 14 APM services + 2 datastores + legacy on-prem + external PSPs + AKS cluster landmark
+
+To deploy any of them to your own dev Grafana with matching datasources, POST the JSON to `/api/dashboards/db`:
+
+```bash
+curl -u admin:admin -X POST -H "Content-Type: application/json" \
+  --data-binary @demo-screenshots/pms-topology-dashboard.json \
+  http://localhost:13100/api/dashboards/db
+```
