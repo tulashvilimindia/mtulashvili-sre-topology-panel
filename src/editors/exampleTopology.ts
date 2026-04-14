@@ -1,65 +1,13 @@
-import React from 'react';
-import { StandardEditorProps } from '@grafana/data';
 import { TopologyPanelOptions, ThresholdStep } from '../types';
 
-type Props = StandardEditorProps<unknown, object, TopologyPanelOptions>;
-
 /**
- * TopologyEditor - Custom editor widget for topology configuration info.
- * Registered via addCustomEditor() in the Topology category.
- * Displays node/edge/group counts and setup instructions.
- * The "Load example" action lives in the TopologyPanel toolbar.
+ * exampleTopology.ts — Example topology used by the "Load example" button in TopologyPanel.
+ *
+ * Pure data module: no React, no state. Returns a Partial<TopologyPanelOptions>
+ * containing 13 nodes (CDN + HA firewalls + HA LBs + virtual server + pool + 6 servers),
+ * 13 edges, and 3 groups. All metrics have empty datasource/query — the example is a
+ * visual demo; users must wire real datasources to see live data.
  */
-export const TopologyEditor: React.FC<Props> = ({ context }) => {
-  const options = context.options;
-  const nodeCount = options?.nodes?.length || 0;
-  const edgeCount = options?.edges?.length || 0;
-  const groupCount = options?.groups?.length || 0;
-
-  return (
-    <div style={{ padding: '4px 0' }}>
-      <div style={{
-        background: '#1e2228',
-        borderRadius: '6px',
-        padding: '12px',
-        marginBottom: '12px',
-        fontSize: '13px',
-        lineHeight: '1.6'
-      }}>
-        <div><strong>Nodes:</strong> {nodeCount}</div>
-        <div><strong>Edges:</strong> {edgeCount}</div>
-        <div><strong>Groups:</strong> {groupCount}</div>
-      </div>
-
-      <div style={{
-        background: '#1e2228',
-        borderRadius: '6px',
-        padding: '12px',
-        fontSize: '12px',
-        color: '#88c0d0',
-        lineHeight: '1.6'
-      }}>
-        <p style={{ marginBottom: '8px' }}>
-          <strong>Setup:</strong> Configure topology via dashboard JSON editor
-          or use the <em>Load example</em> button in the panel toolbar.
-        </p>
-        <p style={{ marginBottom: '8px' }}>
-          1. Click the dashboard settings gear icon<br/>
-          2. Select &quot;JSON Model&quot;<br/>
-          3. Find this panel&apos;s <code>options</code> object<br/>
-          4. Add <code>nodes</code>, <code>edges</code>, and <code>groups</code> arrays
-        </p>
-        <p style={{ color: '#616e88' }}>
-          See project documentation for the full JSON schema and example configurations.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================
-// Example topology data — exported for use by TopologyPanel toolbar
-// ============================================================
 
 // Helper to type threshold colors as literal union
 function t(value: number, color: 'green' | 'yellow' | 'red'): ThresholdStep {

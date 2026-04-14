@@ -6,7 +6,7 @@ import { autoLayout } from '../utils/layout';
 import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
 import { queryDatasource, QueryResult, QueryError } from '../utils/datasourceQuery';
 import { fetchAlertRules, matchAlertsToNode } from '../utils/alertRules';
-import { getExampleTopology } from '../editors/TopologyEditor';
+import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
 import './TopologyPanel.css';
 
