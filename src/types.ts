@@ -24,8 +24,6 @@ export interface NodeMetricConfig {
   thresholds: ThresholdStep[];
   /** Show sparkline in expanded view */
   showSparkline: boolean;
-  /** Datasource type hint for query routing (auto-detected if not set) */
-  datasourceType?: string;
   /** Extra config for non-Prometheus datasources (CloudWatch dimensions, Infinity URL/rootSelector) */
   queryConfig?: DatasourceQueryConfig;
 }

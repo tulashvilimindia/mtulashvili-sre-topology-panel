@@ -18,7 +18,6 @@ interface UncoveredMetric {
   metricId: string;
   dsUid: string;
   query: string;
-  dsType?: string;
   queryConfig?: DatasourceQueryConfig;
 }
 
@@ -47,7 +46,6 @@ function useSelfQueries(
             metricId: m.id,
             dsUid: m.datasourceUid,
             query: m.query,
-            dsType: m.datasourceType,
             queryConfig: m.queryConfig,
           });
         }
@@ -91,8 +89,9 @@ function useSelfQueries(
       const newFailures = new Map<string, QueryError>();
 
       // Query all uncovered metrics using the multi-DS abstraction
+      // (queryDatasource auto-detects the datasource type from the UID)
       const promises = uncoveredMetrics.map(async (m) => {
-        const result = await queryDatasource(m.dsUid, m.query, m.dsType, m.queryConfig, replaceVars, historicalTime);
+        const result = await queryDatasource(m.dsUid, m.query, undefined, m.queryConfig, replaceVars, historicalTime);
         newResults.set(m.metricId, result);
         if (result.error) {
           newFailures.set(m.metricId, result.error);
