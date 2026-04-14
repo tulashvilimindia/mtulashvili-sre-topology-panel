@@ -329,6 +329,59 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     return { x: pos.x, y: pos.y, w, h };
   };
 
+  // Consolidated per-edge geometry. Both the visual edge SVG layer and the
+  // invisible hit-test overlay below consume this map so the two layers can
+  // never diverge (a single bezier computed once, shared by both). Computed
+  // inline (not memoized) so it always reflects the latest measured node
+  // offsetWidth/offsetHeight from the ref map — matching the prior per-render
+  // behaviour of the visual edges.map loop.
+  type EdgeGeometry = {
+    fromX: number; fromY: number; toX: number; toY: number;
+    midX: number; midY: number; renderPath: string;
+    thickness: number; isResponse: boolean;
+  };
+  const edgeGeometry = new Map<string, EdgeGeometry>();
+  for (const edge of edges) {
+    const sourceRect = getNodeRect(edge.sourceId);
+    const targetId = edge.targetId;
+    if (!sourceRect || !targetId) { continue; }
+    const targetRect = getNodeRect(targetId);
+    if (!targetRect) { continue; }
+
+    const pairKey = [edge.sourceId, targetId].sort().join('-');
+    const parallelEdges = parallelEdgeMap.get(pairKey) || [edge];
+    const parallelIndex = parallelEdges.indexOf(edge);
+    const parallelOffset = parallelEdges.length > 1
+      ? (parallelIndex - (parallelEdges.length - 1) / 2) * 15
+      : 0;
+
+    const fromRaw = getAnchorPoint(sourceRect, edge.anchorSource, targetRect);
+    const toRaw = getAnchorPoint(targetRect, edge.anchorTarget, sourceRect);
+    const dx = toRaw.x - fromRaw.x;
+    const dy = toRaw.y - fromRaw.y;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const fromX = fromRaw.x + nx * parallelOffset;
+    const fromY = fromRaw.y + ny * parallelOffset;
+    const toX = toRaw.x + nx * parallelOffset;
+    const toY = toRaw.y + ny * parallelOffset;
+    const mid = getBezierMidpoint({ x: fromX, y: fromY }, { x: toX, y: toY });
+
+    const es = edgeStates.get(edge.id);
+    const thickness = es?.thickness || edge.thicknessMin;
+    const isResponse = edge.type === 'response';
+    const from = { x: fromX, y: fromY };
+    const to = { x: toX, y: toY };
+    const renderFrom = isResponse ? to : from;
+    const renderTo = isResponse ? from : to;
+    const renderPath = getBezierPath(renderFrom, renderTo);
+
+    edgeGeometry.set(edge.id, {
+      fromX, fromY, toX, toY, midX: mid.x, midY: mid.y, renderPath, thickness, isResponse,
+    });
+  }
+
   // Grid background
   const gridStyle = canvasOptions.showGrid ? {
     backgroundImage: `radial-gradient(circle at 1px 1px, #2d374833 1px, transparent 0)`,
@@ -372,47 +425,18 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           </marker>
         </defs>
 
-        {/* Pre-compute parallel edge offsets */}
+        {/* Edges — reads geometry from the shared edgeGeometry map computed
+            above so this layer and the hit-test overlay below can never
+            diverge. */}
         {edges.map((edge) => {
-          const sourceRect = getNodeRect(edge.sourceId);
-          const targetId = edge.targetId;
-          if (!sourceRect || !targetId) {return null;}
-          const targetRect = getNodeRect(targetId);
-          if (!targetRect) {return null;}
-
-          // Detect parallel edges via pre-computed map (CR-12: O(1) instead of O(E²))
-          const pairKey = [edge.sourceId, targetId].sort().join('-');
-          const parallelEdges = parallelEdgeMap.get(pairKey) || [edge];
-          const parallelIndex = parallelEdges.indexOf(edge);
-          const parallelOffset = parallelEdges.length > 1 ? (parallelIndex - (parallelEdges.length - 1) / 2) * 15 : 0;
-
-          const fromRaw = getAnchorPoint(sourceRect, edge.anchorSource, targetRect);
-          const toRaw = getAnchorPoint(targetRect, edge.anchorTarget, sourceRect);
-          // Apply parallel offset along the perpendicular normal of the edge
-          // vector. Previously this was applied only to the x axis, which
-          // produced broken anchors for vertical or diagonal edges between
-          // stacked nodes (the offset pushed endpoints sideways off the node
-          // face instead of spreading them apart in the perpendicular plane).
-          const dx = toRaw.x - fromRaw.x;
-          const dy = toRaw.y - fromRaw.y;
-          const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          const nx = -dy / len;
-          const ny = dx / len;
-          const fromX = fromRaw.x + nx * parallelOffset;
-          const fromY = fromRaw.y + ny * parallelOffset;
-          const toX = toRaw.x + nx * parallelOffset;
-          const toY = toRaw.y + ny * parallelOffset;
-          const mid = getBezierMidpoint({ x: fromX, y: fromY }, { x: toX, y: toY });
-
+          const geom = edgeGeometry.get(edge.id);
+          if (!geom) { return null; }
           const edgeStyle = EDGE_TYPE_STYLES[edge.type] || EDGE_TYPE_STYLES.traffic;
           const es = edgeStates.get(edge.id);
           const edgeColor = es?.color || STATUS_COLORS.nodata;
-          const thickness = es?.thickness || edge.thicknessMin;
           const flowSpeed = es?.animationSpeed || 0;
           const label = es?.formattedLabel;
-
-          const isResponse = edge.type === 'response';
-          const arrowId = isResponse ? 'topo-arrow-response'
+          const arrowId = geom.isResponse ? 'topo-arrow-response'
             : edgeColor === '#bf616a' ? 'topo-arrow-crit'
             : edgeColor === '#ebcb8b' ? 'topo-arrow-warn'
             : edgeColor === '#a3be8c' ? 'topo-arrow-ok'
@@ -423,21 +447,57 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               key={edge.id}
               edgeId={edge.id}
               bidirectional={edge.bidirectional}
-              isResponse={isResponse}
+              isResponse={geom.isResponse}
               latencyLabel={edge.latencyLabel}
               dashArray={edgeStyle.dashArray}
-              fromX={fromX}
-              fromY={fromY}
-              toX={toX}
-              toY={toY}
-              midX={mid.x}
-              midY={mid.y}
+              fromX={geom.fromX}
+              fromY={geom.fromY}
+              toX={geom.toX}
+              toY={geom.toY}
+              midX={geom.midX}
+              midY={geom.midY}
               edgeColor={edgeColor}
-              thickness={thickness}
+              thickness={geom.thickness}
               flowSpeed={flowSpeed}
               label={label}
               showEdgeLabels={displayOptions.showEdgeLabels}
               arrowId={arrowId}
+            />
+          );
+        })}
+      </svg>
+
+      {/* Edge hit-test layer — invisible wide strokes receive pointer events.
+          The visual edge layer above stays pointerEvents:none; all edge
+          interactions route through this layer. zIndex: 2 puts it between
+          the visual SVG (1) and HTML node divs (also 2; divs win at equal
+          z-index due to paint order). pointerEvents flips to 'none' during
+          a node drag so a fast cursor cannot hit-test an edge mid-drag. */}
+      <svg
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'visible',
+          pointerEvents: dragging ? 'none' : 'auto',
+          zIndex: 2,
+        }}
+      >
+        {edges.map((edge) => {
+          const geom = edgeGeometry.get(edge.id);
+          if (!geom) { return null; }
+          return (
+            <path
+              key={`hit-${edge.id}`}
+              d={geom.renderPath}
+              fill="none"
+              stroke="transparent"
+              strokeWidth={Math.max(geom.thickness + 12, 16)}
+              data-edge-id={edge.id}
+              data-testid={`edge-hit-${edge.id}`}
+              style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
             />
           );
         })}
