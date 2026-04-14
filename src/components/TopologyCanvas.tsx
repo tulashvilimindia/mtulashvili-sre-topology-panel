@@ -53,6 +53,13 @@ interface EdgeRenderProps {
   label?: string;
   showEdgeLabels: boolean;
   arrowId: string;
+  // When any edge is hovered, every other edge receives isDimmed=true and
+  // fades to 20% opacity with its flow animation paused. This gives users
+  // a focus-mode read on dense topologies without a click or persisted state.
+  isDimmed: boolean;
+  // False when the user has prefers-reduced-motion set — skips the 180ms
+  // opacity fade so the dim change snaps instead of animating.
+  transitionOpacity: boolean;
 }
 
 const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
@@ -60,6 +67,7 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
     bidirectional, isResponse, latencyLabel, dashArray,
     fromX, fromY, toX, toY, midX, midY,
     edgeColor, thickness, flowSpeed, label, showEdgeLabels, arrowId,
+    isDimmed, transitionOpacity,
   } = props;
   const from = { x: fromX, y: fromY };
   const to = { x: toX, y: toY };
@@ -67,6 +75,9 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
   const renderTo = isResponse ? from : to;
   const renderPath = getBezierPath(renderFrom, renderTo);
   const renderColor = isResponse ? ACCENT_COLOR : edgeColor;
+  const dimFactor = isDimmed ? 0.2 : 1;
+  const opacityTransition: string | undefined = transitionOpacity ? 'opacity 180ms ease-out' : undefined;
+  const flowAnimationState: 'paused' | 'running' = isDimmed ? 'paused' : 'running';
   return (
     <g>
       {/* Base wire */}
@@ -77,6 +88,8 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
         strokeWidth={thickness}
         strokeDasharray={dashArray}
         markerEnd={`url(#${arrowId})`}
+        opacity={dimFactor}
+        style={{ transition: opacityTransition }}
       />
       {/* Animated flow overlay — the moving coloured dashes that trace the
           traffic direction. The SVG drop-shadow filter gives it a neon-glow
@@ -89,10 +102,12 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
           stroke={renderColor}
           strokeWidth={Math.max(thickness + 1, 2.5)}
           strokeDasharray="6 10"
-          opacity={isResponse ? 0.4 : 0.55}
+          opacity={(isResponse ? 0.4 : 0.55) * dimFactor}
           style={{
             animation: `topoFlow ${flowSpeed}s linear infinite`,
+            animationPlayState: flowAnimationState,
             filter: `drop-shadow(0 0 3px ${renderColor}) drop-shadow(0 0 6px ${renderColor})`,
+            transition: opacityTransition,
           }}
         />
       )}
@@ -106,7 +121,8 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
             strokeWidth={thickness}
             strokeDasharray={dashArray}
             markerEnd={`url(#${arrowId})`}
-            opacity={0.5}
+            opacity={0.5 * dimFactor}
+            style={{ transition: opacityTransition }}
           />
           {flowSpeed > 0 && (
             <path
@@ -115,10 +131,12 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
               stroke={edgeColor}
               strokeWidth={Math.max(thickness + 1, 2.5)}
               strokeDasharray="6 10"
-              opacity={0.35}
+              opacity={0.35 * dimFactor}
               style={{
                 animation: `topoFlow ${flowSpeed}s linear infinite`,
+                animationPlayState: flowAnimationState,
                 filter: `drop-shadow(0 0 3px ${edgeColor}) drop-shadow(0 0 6px ${edgeColor})`,
+                transition: opacityTransition,
               }}
             />
           )}
@@ -164,6 +182,16 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [dragging, setDragging] = useState<{ nodeId: string; offX: number; offY: number } | null>(null);
   const hasMovedRef = useRef(false);
+
+  // Edge hover state (Phase 2): when non-null, every OTHER edge renders
+  // dimmed to 20% opacity with its flow animation paused. The value is the
+  // id of the currently hovered edge, cleared on mouseleave.
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  // prefers-reduced-motion is read once on mount — if the user toggles it
+  // live we'd need a matchMedia listener, but that's rare enough to skip.
+  const prefersReducedMotionRef = useRef<boolean>(
+    typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  );
 
   // Viewport zoom/pan state — initial value is read from the module-level
   // store so toggling edit/view mode (which remounts the whole panel) does
@@ -462,6 +490,8 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               label={label}
               showEdgeLabels={displayOptions.showEdgeLabels}
               arrowId={arrowId}
+              isDimmed={hoveredEdgeId !== null && hoveredEdgeId !== edge.id}
+              transitionOpacity={!prefersReducedMotionRef.current}
             />
           );
         })}
@@ -498,6 +528,8 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               data-edge-id={edge.id}
               data-testid={`edge-hit-${edge.id}`}
               style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+              onMouseEnter={() => setHoveredEdgeId(edge.id)}
+              onMouseLeave={() => setHoveredEdgeId(null)}
             />
           );
         })}
