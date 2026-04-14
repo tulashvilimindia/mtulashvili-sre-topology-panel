@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Icon, IconName } from '@grafana/ui';
 import { TopologyNode, FiringAlert, STATUS_COLORS, ACCENT_COLOR } from '../types';
+import { queryDatasourceRange, TimeseriesPoint } from '../utils/datasourceQuery';
 
 /**
  * Replace ${token} placeholders in a URL template with values from the node.
@@ -22,44 +23,11 @@ interface PopupProps {
   onClose: () => void;
 }
 
-interface TimeseriesPoint {
-  timestamp: number;
-  value: number;
-}
-
 interface MetricTimeseries {
   metricId: string;
   label: string;
   points: TimeseriesPoint[];
   current: number | null;
-}
-
-/** Fetch range query data for a metric over the last 1h */
-async function fetchTimeseries(dsUid: string, query: string, signal?: AbortSignal): Promise<TimeseriesPoint[]> {
-  if (!dsUid || !query) {
-    return [];
-  }
-  try {
-    const end = Math.floor(Date.now() / 1000);
-    const start = end - 3600;
-    const resp = await fetch(
-      `/api/datasources/proxy/uid/${dsUid}/api/v1/query_range?` +
-      new URLSearchParams({ query, start: String(start), end: String(end), step: '60' }),
-      signal ? { signal } : undefined
-    );
-    if (!resp.ok) {
-      return [];
-    }
-    const data = await resp.json();
-    const result = data?.data?.result?.[0]?.values;
-    if (!result) {
-      return [];
-    }
-    return result.map((v: [number, string]) => ({ timestamp: v[0], value: parseFloat(v[1]) }))
-      .filter((p: TimeseriesPoint) => !isNaN(p.value));
-  } catch {
-    return [];
-  }
 }
 
 export const NodePopup: React.FC<PopupProps> = ({ node, firingAlerts, onClose }) => {
@@ -80,7 +48,14 @@ export const NodePopup: React.FC<PopupProps> = ({ node, firingAlerts, onClose })
       const results: MetricTimeseries[] = [];
 
       for (const metric of summaryMetrics) {
-        const points = await fetchTimeseries(metric.datasourceUid, metric.query, controller.signal);
+        // queryDatasourceRange routes by datasource type — Prometheus uses the PromQL
+        // query string, CloudWatch uses metric.queryConfig, Infinity returns [].
+        const points = await queryDatasourceRange(
+          metric.datasourceUid,
+          metric.query,
+          metric.queryConfig,
+          controller.signal
+        );
         if (cancelled) {
           return;
         }

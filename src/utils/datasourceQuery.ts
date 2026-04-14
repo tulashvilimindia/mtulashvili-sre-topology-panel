@@ -18,6 +18,12 @@ export interface QueryResult {
   error?: QueryError;
 }
 
+/** One sample of a time series — used by the NodePopup sparkline */
+export interface TimeseriesPoint {
+  timestamp: number;
+  value: number;
+}
+
 /**
  * Detect datasource type by UID using Grafana's DataSourceSrv.
  * Returns the type string (e.g. 'prometheus', 'cloudwatch', 'yesoreyeram-infinity-datasource')
@@ -251,5 +257,149 @@ async function queryInfinity(
     }
     console.warn('[topology] infinity network error', { dsUid, url: config.url, err });
     return { value: null, error: 'network' };
+  }
+}
+
+// ============================================================
+// RANGE QUERIES (used by NodePopup sparklines)
+// ============================================================
+
+/**
+ * Query a datasource for a range of samples over the last hour (3600s).
+ * Used by NodePopup to render 1h sparklines. Routes by datasource type.
+ *
+ * Returns [] on any failure or for unsupported datasource types (e.g. Infinity,
+ * which doesn't have a natural time-series response shape). Callers should
+ * treat empty result as "no sparkline data" and render accordingly.
+ */
+export async function queryDatasourceRange(
+  dsUid: string,
+  query: string,
+  queryConfig?: DatasourceQueryConfig,
+  signal?: AbortSignal
+): Promise<TimeseriesPoint[]> {
+  const type = detectDatasourceType(dsUid);
+  switch (type) {
+    case 'prometheus':
+      return queryPrometheusRange(dsUid, query, signal);
+    case 'cloudwatch':
+      return queryCloudWatchRange(dsUid, queryConfig, signal);
+    case 'yesoreyeram-infinity-datasource':
+      // Infinity returns point-in-time snapshots, not time series. No natural
+      // range query mapping — return empty and let the popup show "no trends".
+      return [];
+    default:
+      return queryPrometheusRange(dsUid, query, signal);
+  }
+}
+
+async function queryPrometheusRange(
+  dsUid: string,
+  query: string,
+  signal?: AbortSignal
+): Promise<TimeseriesPoint[]> {
+  if (!dsUid || !query) {
+    return [];
+  }
+  try {
+    const end = Math.floor(Date.now() / 1000);
+    const start = end - 3600;
+    const resp = await fetch(
+      `/api/datasources/proxy/uid/${dsUid}/api/v1/query_range?` +
+      new URLSearchParams({ query, start: String(start), end: String(end), step: '60' }),
+      signal ? { signal } : undefined
+    );
+    if (!resp.ok) {
+      return [];
+    }
+    const data = await resp.json();
+    const result = data?.data?.result?.[0]?.values;
+    if (!Array.isArray(result)) {
+      return [];
+    }
+    const points: TimeseriesPoint[] = [];
+    for (const row of result) {
+      const ts = typeof row?.[0] === 'number' ? row[0] : parseFloat(row?.[0]);
+      const val = parseFloat(row?.[1]);
+      if (!isNaN(ts) && !isNaN(val)) {
+        points.push({ timestamp: ts, value: val });
+      }
+    }
+    return points;
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      return [];
+    }
+    console.warn('[topology] prom range error', { dsUid, query, err });
+    return [];
+  }
+}
+
+async function queryCloudWatchRange(
+  dsUid: string,
+  config?: DatasourceQueryConfig,
+  signal?: AbortSignal
+): Promise<TimeseriesPoint[]> {
+  if (!config?.namespace || !config?.metricName) {
+    return [];
+  }
+  try {
+    const dimensions: Record<string, string[]> = {};
+    if (config.dimensions) {
+      for (const [k, v] of Object.entries(config.dimensions)) {
+        dimensions[k] = [v];
+      }
+    }
+    const resp = await fetch('/api/ds/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        queries: [{
+          refId: 'A',
+          datasource: { uid: dsUid, type: 'cloudwatch' },
+          type: 'timeSeriesQuery',
+          namespace: config.namespace,
+          metricName: config.metricName,
+          dimensions,
+          statistic: config.stat || 'Average',
+          period: String(config.period || 60),
+          region: 'default',
+        }],
+        from: 'now-1h',
+        to: 'now',
+      }),
+      signal,
+    });
+    if (!resp.ok) {
+      return [];
+    }
+    const data = await resp.json();
+    const frames = data?.results?.A?.frames;
+    if (!Array.isArray(frames) || frames.length === 0) {
+      return [];
+    }
+    const values = frames[0]?.data?.values;
+    if (!Array.isArray(values) || values.length < 2) {
+      return [];
+    }
+    // CloudWatch frames return [timestamps[], values[]] in data.values
+    const timestamps = values[0] as number[];
+    const nums = values[1] as number[];
+    const points: TimeseriesPoint[] = [];
+    for (let i = 0; i < timestamps.length && i < nums.length; i++) {
+      const ts = timestamps[i];
+      const v = nums[i];
+      if (typeof ts === 'number' && typeof v === 'number' && !isNaN(v)) {
+        // CloudWatch timestamps are in milliseconds — normalise to seconds for consistency
+        points.push({ timestamp: ts > 1e12 ? Math.floor(ts / 1000) : ts, value: v });
+      }
+    }
+    return points;
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      return [];
+    }
+    console.warn('[topology] cloudwatch range error', { dsUid, metric: config.metricName, err });
+    return [];
   }
 }
