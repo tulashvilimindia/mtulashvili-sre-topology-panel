@@ -23,6 +23,8 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
   const [timeOffset, setTimeOffset] = useState<number>(0); // 0 = now, negative = minutes ago
   const [exampleBannerVisible, setExampleBannerVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarHeight, setToolbarHeight] = useState<number>(36);
   const exampleBannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const nodes = useMemo(() => options.nodes || [], [options.nodes]);
@@ -412,43 +414,47 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
   const handleNodeToggle = useCallback((nodeId: string, rect?: DOMRect) => {
     const isEditMode = window.location.search.includes('editPanel');
     if (isEditMode) {
-      // Canvas-sidebar sync via module-level event emitter — no options roundtrip,
-      // no dashboard-dirty side effects, works across the panel/editor React subtree boundary.
+      // Edit mode: sidebar is the expansion target. Emit the event so
+      // NodesEditor scrolls/expands its card, and return early WITHOUT
+      // toggling the canvas expanded-metrics section — expanding both
+      // at once is visual noise and confuses the user about which
+      // surface they're editing.
       emitNodeClicked(nodeId);
-    } else {
-      // View mode: toggle popup (click again to close). Compute panel-relative
-      // popup position from the clicked node's DOMRect, clamped to panel bounds.
-      setPopupNodeId((prev) => {
-        const next = prev === nodeId ? null : nodeId;
-        if (next && rect && panelRef.current) {
-          const panelRect = panelRef.current.getBoundingClientRect();
-          const POPUP_W = 240;
-          const POPUP_H = 300;
-          // Default: position to the right of the node with an 8px gap
-          let x = rect.right - panelRect.left + 8;
-          let y = rect.top - panelRect.top;
-          // If popup would overflow the right edge, place it to the LEFT of the node
-          if (x + POPUP_W > panelRect.width) {
-            x = rect.left - panelRect.left - POPUP_W - 8;
-          }
-          // If it still doesn't fit (node near left edge), clamp to left with small margin
-          if (x < 8) {
-            x = 8;
-          }
-          // Clamp bottom so popup fits vertically within the panel
-          if (y + POPUP_H > panelRect.height) {
-            y = Math.max(8, panelRect.height - POPUP_H - 8);
-          }
-          if (y < 8) {
-            y = 8;
-          }
-          setPopupPosition({ x, y });
-        } else if (!next) {
-          setPopupPosition(null);
-        }
-        return next;
-      });
+      return;
     }
+    // View mode: toggle popup AND expand the card's metrics section.
+    // Compute panel-relative popup position from the clicked node's
+    // DOMRect, clamped to panel bounds.
+    setPopupNodeId((prev) => {
+      const next = prev === nodeId ? null : nodeId;
+      if (next && rect && panelRef.current) {
+        const panelRect = panelRef.current.getBoundingClientRect();
+        const POPUP_W = 240;
+        const POPUP_H = 300;
+        // Default: position to the right of the node with an 8px gap
+        let x = rect.right - panelRect.left + 8;
+        let y = rect.top - panelRect.top;
+        // If popup would overflow the right edge, place it to the LEFT of the node
+        if (x + POPUP_W > panelRect.width) {
+          x = rect.left - panelRect.left - POPUP_W - 8;
+        }
+        // If it still doesn't fit (node near left edge), clamp to left with small margin
+        if (x < 8) {
+          x = 8;
+        }
+        // Clamp bottom so popup fits vertically within the panel
+        if (y + POPUP_H > panelRect.height) {
+          y = Math.max(8, panelRect.height - POPUP_H - 8);
+        }
+        if (y < 8) {
+          y = 8;
+        }
+        setPopupPosition({ x, y });
+      } else if (!next) {
+        setPopupPosition(null);
+      }
+      return next;
+    });
     setExpandedNodes((prev) => {
       const next = new Set(prev);
       if (next.has(nodeId)) { next.delete(nodeId); } else { next.add(nodeId); }
@@ -531,6 +537,23 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     };
   }, []);
 
+  // Observe the toolbar's rendered height so the canvas adapts when the
+  // toolbar wraps to 2+ rows on narrow viewports (the mobile media query
+  // sets flex-wrap: wrap). Hardcoding 36px caused the canvas to overflow
+  // when wrapped. ResizeObserver is guarded for jsdom (the test env
+  // does not provide it).
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') { return; }
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setToolbarHeight(Math.ceil(entry.contentRect.height));
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const handleExpandAll = useCallback(() => {
     setExpandedNodes((prev) => {
       if (prev.size === nodes.length) { return new Set(); }
@@ -545,7 +568,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
       style={{ width, height, backgroundColor: canvas.backgroundColor }}
       onClick={() => { setPopupNodeId(null); setPopupPosition(null); }}
     >
-      <div className="topology-toolbar">
+      <div className="topology-toolbar" ref={toolbarRef}>
         <span className="topology-title">E2E topology</span>
         {isFetchingMetrics && <span style={{ fontSize: 9, color: '#616e88', marginLeft: 6 }}>Loading...</span>}
         {healthSummary.length > 0 && (
@@ -665,7 +688,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         animationOptions={animation}
         displayOptions={display}
         width={width}
-        height={height - 36 - (timeOffset !== 0 ? 28 : 0) - (exampleBannerVisible ? 28 : 0)}
+        height={height - toolbarHeight - (timeOffset !== 0 ? 28 : 0) - (exampleBannerVisible ? 28 : 0)}
         panelId={id}
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}

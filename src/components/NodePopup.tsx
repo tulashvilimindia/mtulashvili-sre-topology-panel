@@ -61,9 +61,16 @@ export const NodePopup: React.FC<PopupProps> = ({
 }) => {
   const [seriesData, setSeriesData] = useState<MetricTimeseries[]>([]);
   const [loading, setLoading] = useState(true);
-  // Freeze "now" at render time so all freshness rows in a single popup
-  // show a consistent reference point. Popup reopens → new snapshot.
-  const now = Date.now();
+  // "now" ticks every 15 seconds so the freshness label ("Updated 30s ago")
+  // and the Stale pill update live while the popup stays open, instead of
+  // being frozen at render time. 15s cadence is cheap and gives 4 ticks per
+  // typical 60s SLO window — enough resolution to see a metric cross the
+  // staleness threshold without burning CPU.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, []);
 
   // Stable dependency: metric IDs string instead of array reference (CR-25)
   const metricIds = node.metrics.map((m) => m.id).join(',');

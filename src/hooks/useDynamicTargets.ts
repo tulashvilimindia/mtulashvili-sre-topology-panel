@@ -13,9 +13,21 @@ import { resolveDynamicTargets } from '../utils/dynamicTargets';
 export function useDynamicTargets(edges: TopologyEdge[]): Map<string, string[]> {
   const [targetsByEdge, setTargetsByEdge] = useState<Map<string, string[]>>(new Map());
 
-  // Only edges opted-in via targetQuery trigger polling
+  // Only edges opted-in via targetQuery trigger polling. Accept any of
+  // the three resolver flavors: PromQL query, CloudWatch namespace+metric,
+  // or Infinity url. Previously this filter required `query` to be truthy,
+  // which silently dropped every CloudWatch/Infinity dynamic-target edge
+  // before it could reach resolveDynamicTargets — breaking Task 3.1b.
   const dynamicEdges = useMemo(
-    () => edges.filter((e) => e.targetQuery && e.targetQuery.datasourceUid && e.targetQuery.query && e.targetQuery.nodeIdLabel),
+    () => edges.filter((e) => {
+      const tq = e.targetQuery;
+      if (!tq?.datasourceUid || !tq?.nodeIdLabel) { return false; }
+      return (
+        !!tq.query ||
+        !!(tq.queryConfig?.namespace && tq.queryConfig?.metricName) ||
+        !!tq.queryConfig?.url
+      );
+    }),
     [edges]
   );
 

@@ -388,11 +388,20 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
 
           const fromRaw = getAnchorPoint(sourceRect, edge.anchorSource, targetRect);
           const toRaw = getAnchorPoint(targetRect, edge.anchorTarget, sourceRect);
-          // Apply parallel offset perpendicular to edge direction
-          const fromX = fromRaw.x + parallelOffset;
-          const fromY = fromRaw.y;
-          const toX = toRaw.x + parallelOffset;
-          const toY = toRaw.y;
+          // Apply parallel offset along the perpendicular normal of the edge
+          // vector. Previously this was applied only to the x axis, which
+          // produced broken anchors for vertical or diagonal edges between
+          // stacked nodes (the offset pushed endpoints sideways off the node
+          // face instead of spreading them apart in the perpendicular plane).
+          const dx = toRaw.x - fromRaw.x;
+          const dy = toRaw.y - fromRaw.y;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          const nx = -dy / len;
+          const ny = dx / len;
+          const fromX = fromRaw.x + nx * parallelOffset;
+          const fromY = fromRaw.y + ny * parallelOffset;
+          const toX = toRaw.x + nx * parallelOffset;
+          const toY = toRaw.y + ny * parallelOffset;
           const mid = getBezierMidpoint({ x: fromX, y: fromY }, { x: toX, y: toY });
 
           const edgeStyle = EDGE_TYPE_STYLES[edge.type] || EDGE_TYPE_STYLES.traffic;
