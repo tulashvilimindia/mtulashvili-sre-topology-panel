@@ -217,3 +217,18 @@ describe('TopologyPanel — time travel', () => {
     expect(select.value).toBe('0');
   });
 });
+
+describe('TopologyPanel — load example banner', () => {
+  test('banner appears after clicking Load example', () => {
+    render(<TopologyPanel {...asPanelProps(makePanelProps())} />);
+    fireEvent.click(screen.getByText('Load example'));
+    expect(screen.getByText(/Metrics are visual mocks/)).toBeInTheDocument();
+  });
+
+  test('banner dismiss button hides the banner', () => {
+    render(<TopologyPanel {...asPanelProps(makePanelProps())} />);
+    fireEvent.click(screen.getByText('Load example'));
+    fireEvent.click(screen.getByLabelText('Dismiss example banner'));
+    expect(screen.queryByText(/Metrics are visual mocks/)).not.toBeInTheDocument();
+  });
+});

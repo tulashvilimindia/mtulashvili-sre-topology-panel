@@ -244,7 +244,9 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
   const [popupNodeId, setPopupNodeId] = useState<string | null>(null);
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
   const [timeOffset, setTimeOffset] = useState<number>(0); // 0 = now, negative = minutes ago
+  const [exampleBannerVisible, setExampleBannerVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const exampleBannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const nodes = useMemo(() => options.nodes || [], [options.nodes]);
   const edges = useMemo(() => options.edges || [], [options.edges]);
@@ -725,7 +727,26 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
   const handleLoadExample = useCallback(() => {
     const exampleTopology = getExampleTopology();
     onOptionsChange({ ...options, ...exampleTopology } as TopologyPanelOptions);
+    // Show a transient banner explaining that example metrics are visual
+    // mocks. Auto-dismiss after 12s; the user can also close it manually.
+    setExampleBannerVisible(true);
+    if (exampleBannerTimerRef.current) { clearTimeout(exampleBannerTimerRef.current); }
+    exampleBannerTimerRef.current = setTimeout(() => {
+      setExampleBannerVisible(false);
+      exampleBannerTimerRef.current = null;
+    }, 12000);
   }, [options, onOptionsChange]);
+
+  // Clean up the banner timer on unmount so a pending setTimeout cannot
+  // call setState after the component is gone.
+  useEffect(() => {
+    return () => {
+      if (exampleBannerTimerRef.current) {
+        clearTimeout(exampleBannerTimerRef.current);
+        exampleBannerTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleExpandAll = useCallback(() => {
     setExpandedNodes((prev) => {
@@ -808,6 +829,48 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
           <button className="topology-btn" onClick={() => setTimeOffset(0)}>Back to Live</button>
         </div>
       )}
+      {exampleBannerVisible && (
+        <div
+          role="status"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '4px 10px',
+            background: '#5e81ac22',
+            borderBottom: '1px solid #5e81ac44',
+            color: '#88c0d0',
+            fontSize: 11,
+            height: 28,
+            boxSizing: 'border-box',
+          }}
+        >
+          <span style={{ flex: 1 }}>
+            Example topology loaded. Metrics are visual mocks — configure datasources in the panel editor to see live data.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setExampleBannerVisible(false);
+              if (exampleBannerTimerRef.current) {
+                clearTimeout(exampleBannerTimerRef.current);
+                exampleBannerTimerRef.current = null;
+              }
+            }}
+            aria-label="Dismiss example banner"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#88c0d0',
+              cursor: 'pointer',
+              fontSize: 14,
+              padding: '0 4px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
       <TopologyCanvas
         nodes={nodes}
         edges={expandedEdges}
@@ -819,7 +882,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         animationOptions={animation}
         displayOptions={display}
         width={width}
-        height={height - 36 - (timeOffset !== 0 ? 28 : 0)}
+        height={height - 36 - (timeOffset !== 0 ? 28 : 0) - (exampleBannerVisible ? 28 : 0)}
         panelId={id}
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
