@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { CollapsableSection, Input, Checkbox, IconButton, Select, Button } from '@grafana/ui';
+import { CollapsableSection, Input, Checkbox, IconButton, Select, Button, TextArea } from '@grafana/ui';
 import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
 import { NodeMetricConfig, DatasourceQueryConfig } from '../../types';
 import { ThresholdList } from './ThresholdList';
@@ -15,6 +15,11 @@ const CLOUDWATCH_STATS = [
   { label: 'p90', value: 'p90' },
   { label: 'p95', value: 'p95' },
   { label: 'p99', value: 'p99' },
+];
+
+const INFINITY_METHODS = [
+  { label: 'GET', value: 'GET' },
+  { label: 'POST', value: 'POST' },
 ];
 
 interface Props {
@@ -278,6 +283,56 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
               />
             </div>
           </div>
+        </>
+      )}
+
+      {/* ═══════════ Infinity query editor ═══════════ */}
+      {metric.datasourceUid && dsType === 'yesoreyeram-infinity-datasource' && (
+        <>
+          <div className="topo-editor-section-title">Infinity query</div>
+          <div className="topo-editor-field">
+            <label>URL</label>
+            <Input
+              value={metric.queryConfig?.url || ''}
+              onChange={(e) => updateQueryConfig('url', e.currentTarget.value || undefined)}
+              placeholder="https://api.example.com/data"
+            />
+          </div>
+          <div className="topo-editor-row">
+            <div className="topo-editor-field" style={{ flex: 1 }}>
+              <label>Method</label>
+              <Select
+                options={INFINITY_METHODS}
+                value={metric.queryConfig?.method || 'GET'}
+                onChange={(v) => updateQueryConfig('method', v.value || 'GET')}
+              />
+            </div>
+            <div className="topo-editor-field" style={{ flex: 2 }}>
+              <label>
+                Root selector
+                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>JSON path to the value array</span>
+              </label>
+              <Input
+                value={metric.queryConfig?.rootSelector || ''}
+                onChange={(e) => updateQueryConfig('rootSelector', e.currentTarget.value || undefined)}
+                placeholder="data.result"
+              />
+            </div>
+          </div>
+          {metric.queryConfig?.method === 'POST' && (
+            <div className="topo-editor-field">
+              <label>
+                Body
+                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>raw JSON sent as request body</span>
+              </label>
+              <TextArea
+                value={metric.queryConfig?.body || ''}
+                onChange={(e) => updateQueryConfig('body', e.currentTarget.value || undefined)}
+                placeholder='{"query": "..."}'
+                rows={3}
+              />
+            </div>
+          )}
         </>
       )}
 
