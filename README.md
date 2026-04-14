@@ -1,14 +1,14 @@
 # E2E Topology Panel for Grafana
 
-Interactive end-to-end topology diagram panel for Grafana. Visualize infrastructure flows with live metrics from any datasource, drag-and-drop node positioning, animated traffic connections with neon glow, and multi-metric popups with sparklines and freshness SLO tracking.
+Interactive end-to-end topology diagram panel for Grafana. Visualize infrastructure flows with live metrics from any datasource, drag-and-drop node positioning, animated traffic connections with neon glow, and multi-metric popups with sparklines and freshness SLO tracking. Full canvas interactions: hover-to-focus edge dim, click-for-detail node and edge popups, right-click context menus, and Shift+drag to create new edges directly on the canvas.
 
 Built by SID2 Platform Engineering.
 
 ![Grafana 12+](https://img.shields.io/badge/Grafana-12.0%2B-orange)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 ![Plugin Type](https://img.shields.io/badge/Type-Panel-green)
-![Tests](https://img.shields.io/badge/tests-216%20passing-green)
-![Bundle](https://img.shields.io/badge/bundle-151KB-blue)
+![Tests](https://img.shields.io/badge/tests-242%20passing-green)
+![Bundle](https://img.shields.io/badge/bundle-162KB-blue)
 
 ---
 
@@ -22,6 +22,13 @@ Built by SID2 Platform Engineering.
 - **Pan/zoom** — mouse wheel zoom, Ctrl+drag pan, "1:1" reset and "Fit" auto-fit-to-view buttons; viewport persists across panel remounts (edit↔view mode toggle)
 - **Mobile responsive** — `@media (max-width: 768px)` bottom-sheet popup, wrapped toolbar, touch-action pan/pinch-zoom
 - **Reduced motion** — respects `prefers-reduced-motion: reduce` and disables flow animations for users with vestibular disorders
+
+### Canvas Interactions
+- **Edge hover dim** — hovering any edge fades every other edge to 20 % opacity and pauses their flow animation, giving a focus-mode read on dense topologies. Transition is a 180 ms opacity fade (skipped under `prefers-reduced-motion`).
+- **Edge click → metric popup** — clicking any edge opens an `EdgePopup` with the source → target header, current metric value coloured by status, mini SVG sparkline, and a threshold-band pill strip with the current band highlighted. Falls back to the runtime label when the range fetch returns no points (Infinity / CloudWatch snapshots).
+- **Right-click context menu** — right-clicking a node or edge opens a floating menu with Duplicate, Copy node id (nodes only), and Delete. In edit mode an additional "Edit in sidebar" item routes through the `emitNodeEditRequest` / `emitEdgeEditRequest` event bus to scroll the matching card into view. Closes on outside click or Escape; clamps to panel bounds.
+- **Shift+drag-to-connect** — in edit mode, Shift+pressing any node enters connect mode instead of drag mode; a dashed bezier rubber-band follows the cursor, and releasing over a target node appends a new edge via `onOptionsChange` and auto-opens the new edge's card in the sidebar editor. Escape cancels. Virtual (runtime-only) nodes are rejected.
+- **Isolated hit-test overlay** — every edge has a transparent wide-stroke path in a dedicated SVG layer so hover / click / context-menu events are received on the stroke without touching the visual pipeline. The overlay's `pointerEvents` flips to `none` during node drag or a connect gesture so a fast cursor can never intercept mid-gesture events.
 
 ### Multi-Datasource Metric Integration
 - **Prometheus** — instant queries via `/api/datasources/proxy/uid/{dsUid}/api/v1/query`
@@ -40,7 +47,7 @@ Built by SID2 Platform Engineering.
 ### Dynamic Target Queries
 Edges can define a `targetQuery` that resolves at runtime to N virtual edges, one per discovered target value. Supports all three datasource types (Prometheus label values, CloudWatch dimension enumeration, Infinity HTTP discovery). Virtual edges inherit parent metric values via the `parentId::targetValue` id convention. Poll interval: 60s.
 
-### Click-to-expand Popup
+### Node Click Popup
 Clicking any node opens a popup positioned next to the clicked rect with:
 - Up to 4 summary metrics with mini SVG sparklines and "Updated Ns ago" freshness labels that tick live every 15 seconds
 - Firing alerts section with state badges, rule links, summary annotations, and optional runbook buttons
@@ -183,7 +190,12 @@ The plugin ships with a built-in example topology. When the panel is empty:
 ### 3. Interact
 
 - **Drag** any node to reposition it (positions save with the dashboard)
-- **Click** a node to expand its metric details
+- **Click** a node to open the node popup with live metrics, sparklines, firing alerts, and observability links
+- **Click** any edge to open the edge popup with the current metric, sparkline, and threshold band breakdown
+- **Hover** any edge to dim the rest of the topology to 20 % so you can trace a single flow in a dense graph
+- **Right-click** any node or edge to open a context menu (Duplicate, Copy id, Delete; Edit in sidebar in edit mode)
+- **Shift+drag** from one node to another (edit mode only) to create a new edge between them; the new edge's card auto-opens in the sidebar editor
+- **Mouse wheel** to zoom in/out, **Ctrl+drag** (or middle-button drag) to pan, **"Fit"** button auto-frames all nodes, **"1:1"** resets zoom
 - **"Auto layout"** button recalculates tier-based positions
 - **"Expand all" / "Collapse all"** toggles all nodes
 
@@ -208,7 +220,8 @@ Open any topology panel in edit mode. The custom editor sidebar on the right ren
 
 #### Relationships (edges) editor
 
-- **Add / delete / duplicate** — same card-based pattern as nodes
+- **Add / delete / duplicate** — same card-based pattern as nodes; new edges can also be created directly on the canvas by **Shift+drag** between two nodes (see [Canvas Interactions](#canvas-interactions)), which appends the edge and auto-scrolls its card into view
+- **Auto-surface on edit request** — right-clicking an edge on the canvas and choosing "Edit in sidebar" (or clicking the Edit button inside the edge popup) scrolls the matching card into view and expands it via the `emitEdgeEditRequest` cross-subtree channel
 - **Search filter** — by source/target name, source/target id, or edge type
 - **Source/target pickers** — dropdowns populated from the nodes list
 - **Type dropdown** — `traffic`, `ha_sync`, `failover`, `monitor`, `response`, `custom`
@@ -381,13 +394,20 @@ curl -s http://your-grafana/api/datasources | jq '.[].uid'
 |------|------|---------------|-------------|
 | `cloudflare` | CF | Gold | CDN / WAF edge |
 | `firewall` | FW | Red | Firewall |
-| `loadbalancer` | LB | Orange | Load balancer |
+| `loadbalancer` | LB | Orange | Generic load balancer |
+| `alb` | ALB | Orange | AWS Application Load Balancer |
+| `nlb` | NLB | Orange | AWS Network Load Balancer |
+| `accelerator` | GA | Gold | AWS Global Accelerator |
+| `nat` | NAT | Purple | NAT gateway |
 | `virtualserver` | VS | Purple | Virtual server / VIP |
 | `pool` | PL | Green | Server pool |
 | `server` | SRV | Cyan | Application server |
+| `kubernetes` | K8s | Blue | Kubernetes cluster or workload |
 | `database` | DB | Blue | Database |
 | `cache` | RD | Red | Cache (Redis, etc.) |
 | `queue` | MQ | Gold | Message queue |
+| `logs` | LOG | Blue | Log aggregator (Loki, CloudWatch Logs, etc.) |
+| `probe` | PRB | Cyan | Synthetic probe / uptime monitor |
 | `custom` | ? | Gray | Custom node type |
 
 ### Edge Visual Behavior
@@ -427,10 +447,12 @@ src/
   plugin.json                       -- Plugin manifest (id, version, dependencies, URL allowlist)
   types.ts                          -- All interfaces, defaults, enums, and color constants
   components/
-    TopologyPanel.tsx               -- Main panel: toolbar, state orchestration, popup positioning
+    TopologyPanel.tsx               -- Main panel: toolbar, state orchestration, popup positioning, context-menu dispatch, edge-create handler
     TopologyPanel.css               -- All styles: Nord theme, animations, mobile media queries
-    TopologyCanvas.tsx              -- SVG edge renderer + HTML node cards, pan/zoom, drag
-    NodePopup.tsx                   -- Click-to-expand popup with sparklines + alerts + links
+    TopologyCanvas.tsx              -- SVG edge renderer + hit-test overlay, pan/zoom, drag, hover dim, drag-to-connect
+    NodePopup.tsx                   -- Node click popup with sparklines + alerts + observability links
+    EdgePopup.tsx                   -- Edge click popup: current metric value, sparkline, threshold band pills
+    ContextMenu.tsx                 -- Right-click context menu for nodes and edges (Duplicate / Copy id / Delete / Edit in sidebar)
   editors/
     NodesEditor.tsx                 -- Nodes slice editor: search, bulk import, delete confirm, export/import
     EdgesEditor.tsx                 -- Edges slice editor with search filter
@@ -459,7 +481,7 @@ src/
     viewportStore.ts                -- Per-panel viewport persistence across remounts
     panelEvents.ts                  -- Cross-subtree pub/sub (panel <-> editor sidebar)
     __tests__/                      -- Jest unit tests for all utilities and hooks
-  components/__tests__/             -- Component integration tests (NodePopup, TopologyPanel)
+  components/__tests__/             -- Component integration tests (NodePopup, EdgePopup, ContextMenu, TopologyPanel)
   img/
     logo.svg                        -- Plugin icon
 ```
@@ -508,7 +530,7 @@ Every dependency listed with its exact resolved version, what it does in this pr
 | **webpack-cli** | 5.1.4 | Command-line interface for Webpack. Invoked via `npm run build` and `npm run dev`. Handles config file loading (TypeScript configs via ts-node). | `package.json` scripts |
 | **@swc/core** | 1.15.24 | Rust-based JavaScript/TypeScript compiler. Replaces Babel for 10-20x faster transpilation. Compiles TSX to ES2015 JavaScript with React JSX transform. | `.config/webpack/webpack.config.ts` (swc-loader options) |
 | **swc-loader** | 0.2.7 | Webpack loader that pipes `.ts`/`.tsx` files through SWC. Configured with TypeScript parser, TSX support, and ES2015 target. | `.config/webpack/webpack.config.ts` (module.rules) |
-| **@swc/helpers** | 0.5.0 | Runtime helpers for SWC-compiled code (async/await transforms, class properties, etc.). Avoids inlining helper code in every file. | Implicitly used by SWC output |
+| **@swc/helpers** | 0.5.21 | Runtime helpers for SWC-compiled code (async/await transforms, class properties, etc.). Avoids inlining helper code in every file. | Implicitly used by SWC output |
 | **css-loader** | 6.11.0 | Webpack loader that resolves `@import` and `url()` in CSS files, converting them to JavaScript modules. | `.config/webpack/webpack.config.ts` (CSS rule) |
 | **style-loader** | 3.3.4 | Webpack loader that injects CSS into the DOM via `<style>` tags at runtime. Paired with css-loader. | `.config/webpack/webpack.config.ts` (CSS rule) |
 | **sass** | 1.99.0 | Dart Sass compiler. Compiles SCSS/Sass to CSS. Available for SCSS support though the plugin currently uses plain CSS. | `.config/webpack/webpack.config.ts` (SCSS rule) |
@@ -540,17 +562,17 @@ Every dependency listed with its exact resolved version, what it does in this pr
 |---------|---------|---------|---------|
 | **ESLint** | 8.57.1 | JavaScript/TypeScript linter. Enforces Grafana coding standards via `@grafana/eslint-config`. Runs during development builds (via eslint-webpack-plugin) and via `npm run lint`. | `.eslintrc`, `npm run lint` |
 | **Prettier** | 3.8.2 | Code formatter. Configured for 120 char lines, trailing commas, single quotes, 2-space indent, auto line endings (CRLF/LF). | `.prettierrc.js` |
-| **glob** | 10.3.0 | File pattern matching. Used internally by build tools for file discovery. | Build tooling internals |
+| **glob** | 10.5.0 | File pattern matching. Used internally by build tools for file discovery. | Build tooling internals |
 
 #### Type Definitions
 
 | Library | Version | Purpose |
 |---------|---------|---------|
-| **@types/react** | 18.2.0 | TypeScript definitions for React API |
-| **@types/react-dom** | 18.2.0 | TypeScript definitions for React DOM API |
-| **@types/jest** | 29.5.0 | TypeScript definitions for Jest API |
+| **@types/react** | 18.3.28 | TypeScript definitions for React API |
+| **@types/react-dom** | 18.3.7 | TypeScript definitions for React DOM API |
+| **@types/jest** | 29.5.14 | TypeScript definitions for Jest API |
 | **@types/lodash** | 4.17.24 | TypeScript definitions for Lodash utilities |
-| **@types/node** | 20.0.0 | TypeScript definitions for Node.js built-ins (used in webpack config) |
+| **@types/node** | 20.19.39 | TypeScript definitions for Node.js built-ins (used in webpack config) |
 
 #### Development Infrastructure
 
@@ -577,6 +599,10 @@ Every dependency listed with its exact resolved version, what it does in this pr
 | **Edge rendering perf** | `React.memo`-wrapped `EdgeRender` sub-component with primitive-only props (`fromX`/`fromY`/`toX`/`toY`, `edgeColor`, `thickness`, `flowSpeed`, etc.) | Default shallow comparison skips re-render when `edgeStates` rebuilds but this edge's computed values didn't change. Parent loop still computes rects + paths; child is dumb. |
 | **Edge data pipeline** | `useMemo` computes `Map<string, EdgeRuntimeState>` from DataFrames | Matches frame.refId or frame.name to edge metric alias. Computes color/thickness/speed/label per edge. |
 | **Parallel edges** | Perpendicular unit-normal offset derived from `(toRaw − fromRaw)` vector | Multiple edges between the same node pair spread symmetrically in the correct direction regardless of edge orientation (vertical, diagonal, or horizontal). |
+| **Edge hit-test overlay** | Dedicated second SVG layer inside the pan/zoom wrapper with one transparent wide-stroke `<path>` per edge (`strokeWidth = thickness + 12`, `pointerEvents: 'stroke'`, `data-testid="edge-hit-${id}"`) | The visual edge layer keeps `pointerEvents: 'none'` so it never fights the node-drag state machine; all edge interactions (hover / click / right-click / drag-to-connect hit test) route through this invisible overlay. Geometry is computed once per render into a shared `edgeGeometry` map so the two layers cannot diverge. |
+| **Edge hover dim** | `hoveredEdgeId` state in `TopologyCanvas`; `EdgeRender` receives `isDimmed` as a primitive boolean prop (not a derived object) | Primitive props let `React.memo`'s shallow compare bound re-renders to exactly the two affected edges per hover toggle (previous hovered + new hovered). A 180 ms opacity transition animates the fade; `prefersReducedMotionRef` reads `matchMedia('(prefers-reduced-motion: reduce)')` once on mount and skips the transition. |
+| **Drag-to-connect** | Two-state split: `connectingSourceId` (stable for the whole gesture) and `connectingCursor` (ticks per `pointermove`). The document-listener `useEffect` depends only on `connectingSourceId` so it registers once on start and tears down once on end — not once per cursor tick. | A naive single-state shape would re-register document listeners every frame, producing measurable frame hitches under a fast drag. The rubber-band bezier lives inside the visual SVG layer so it inherits `pointerEvents: 'none'` and cannot intercept its own gesture. Virtual (runtime-only, `_virtual: true`) nodes are rejected as drag sources because they have no persisted slice entry. `hasMovedRef.current = true` is set on gesture start so the bubbled click event from pointerup cannot open a spurious node popup on the release target. |
+| **Context menu positioning** | `ContextMenu` is rendered by `TopologyPanel` inside its panel-relative wrapper, position clamped against `panelRect` | Mirrors the `NodePopup` / `EdgePopup` clamping path so menus, popups, and the hit-test layer all share one coordinate system. `document`-level `mousedown` + `keydown` listeners close on outside click or Escape and unregister in the cleanup. |
 | **SVG overflow** | `overflow: visible` on the topology edge SVG root | SVG root elements default to `overflow: hidden` (unlike `<div>`). Without this override, bezier paths that extend past the SVG's layout box — common after Auto Layout + Fit places nodes at coordinates beyond the initial viewport — get clipped before the pan/zoom wrapper's CSS transform is applied. |
 | **Group z-order** | Groups at `zIndex: 0`, SVG edges at `zIndex: 1`, nodes at `zIndex: 2` | Group containers sit below the edge layer so edges that cross a group's bounding rectangle remain visible. Nodes still sit on top of everything. |
 | **Multi-panel safety** | `useRef<Map<string, HTMLDivElement>>` with ref callbacks instead of `document.getElementById` | Scoped to component instance. No global DOM ID collisions when multiple topology panels exist on one dashboard. |
@@ -585,7 +611,7 @@ Every dependency listed with its exact resolved version, what it does in this pr
 | **Null vs NaN handling** | `null`/`undefined` in query response → `{value: null}` with no error flag; actual parse failure also treated as empty | Aggregations over zero rows (`percentage()`, `percentile()`, `average()` in NRQL; division-by-zero NaN in PromQL) are legitimate "no data in window" signals, not parse errors. Flagging them would pollute the toolbar stale-metrics counter for sparse services. |
 | **Fetch cancellation** | `AbortController` + 10s hard timeout on every query, signal threaded through `useSelfQueries` | Unmounting a panel or switching dashboards cancels in-flight fetches immediately. A hung datasource is bounded to 10 seconds instead of ~2 minutes of TCP default. |
 | **Toolbar responsiveness** | `ResizeObserver` on the toolbar element + state-driven canvas height | The toolbar wraps to multiple rows on narrow viewports; hardcoding 36px clipped the canvas on mobile. The observer feeds the live height into the canvas `height` calculation. |
-| **Cross-subtree events** | Module-level pub/sub in `panelEvents.ts` — `emitNodeClicked`, `emitNodeEditRequest`, `emitOrphanEdgeCleanup`, `emitTopologyImport` | `NodesEditor` renders inside Grafana's panel-editor subtree, which is a completely different React tree from `TopologyPanel`. React Context cannot cross that boundary. A tiny module-level pub/sub does. |
+| **Cross-subtree events** | Module-level pub/sub in `panelEvents.ts` — `emitNodeClicked`, `emitNodeEditRequest`, `emitEdgeEditRequest`, `emitOrphanEdgeCleanup`, `emitTopologyImport` | `NodesEditor` / `EdgesEditor` render inside Grafana's panel-editor subtree, which is a completely different React tree from `TopologyPanel`. React Context cannot cross that boundary. A tiny module-level pub/sub does. The edge channel is how the right-click "Edit in sidebar" item, the edge popup's Edit button, and the freshly-created edge from drag-to-connect all scroll + expand the matching card in `EdgesEditor`. |
 | **Theme** | Nord-inspired palette in a single CSS file | `#13161a` background, `#1a1e24` cards, `#2d3748` borders, status colours from `STATUS_COLORS` constant. No CSS modules — all styles scoped by class prefix. Respects `prefers-reduced-motion: reduce`. |
 
 ### Architecture Decisions
@@ -625,7 +651,7 @@ Cloudflare Edge (CDN/WAF)
 
 ## Roadmap
 
-**Shipped since v1.0.0** (roughly 50+ tasks across Phases 1–6 plus a PR-review-driven improvement plan):
+**Shipped since v1.0.0** (roughly 55+ tasks across Phases 1–6, a PR-review-driven improvement plan, and five canvas-interaction phases for hover dim / edge popup / context menu / drag-to-connect / hit-test overlay):
 
 - [x] **Multi-datasource support** — Prometheus, CloudWatch, and Infinity (any JSON HTTP API) via a unified `queryDatasource` abstraction
 - [x] **Dynamic target query** — `DynamicTargetQuery` with virtual-edge expansion via `parentId::targetValue` convention, resolvers for all three datasource types
@@ -646,12 +672,18 @@ Cloudflare Edge (CDN/WAF)
 - [x] **Example topology explainer banner** — 12s dismissible after "Load example"
 - [x] **Mobile responsive layout** — `@media (max-width: 768px)` bottom-sheet popup, wrapped toolbar, `touch-action` pan/pinch-zoom
 - [x] **Reduced-motion accessibility** — `@media (prefers-reduced-motion: reduce)` disables flow and pulse animations
-- [x] **216 unit tests** across 10 suites (edges, layout, viewport, viewportStore, datasourceQuery, alertRules, dynamicTargets, panelEvents, NodePopup, TopologyPanel)
+- [x] **242 unit tests** across 12 suites (edges, layout, viewport, viewportStore, datasourceQuery, alertRules, dynamicTargets, panelEvents, NodePopup, EdgePopup, ContextMenu, TopologyPanel)
 - [x] **GitHub Actions CI** — typecheck + lint + test + build on every push; tag-triggered signing workflow with env-driven `GRAFANA_ROOT_URLS` secret
 - [x] **Cross-platform build** — `cross-env` shim so Windows CMD works with the `TS_NODE_COMPILER_OPTIONS` env var
 - [x] **SVG overflow clipping fix** — edges past the layout box now render correctly after Auto Layout + Fit
 - [x] **Z-order fix** — groups no longer occlude edges that cross their bounding box
 - [x] **AbortController + 10s timeout** on all datasource queries so hung datasources don't freeze the panel
+- [x] **Edge hit-test overlay layer** — dedicated invisible SVG layer so edges can receive pointer events without touching the visual pipeline (prerequisite for the four canvas interactions below)
+- [x] **Edge hover dim** — hover any edge to fade every other edge to 20 % opacity and pause their flow animation; 180 ms transition skipped under `prefers-reduced-motion`
+- [x] **Edge click → metric popup** — `EdgePopup` component with source→target header, current value, mini sparkline, and highlighted threshold band pill; fetches time-series via `queryDatasourceRange` with `AbortController`
+- [x] **Right-click context menu on nodes and edges** — `ContextMenu` component with Duplicate / Copy id / Delete; edit-mode-only "Edit in sidebar" item routes through the `emitNodeEditRequest` / `emitEdgeEditRequest` pub/sub bus
+- [x] **Drag-to-connect directly on canvas** — Shift+drag from one node to another in edit mode creates a new edge via `onOptionsChange` and auto-opens its card in the sidebar editor
+- [x] **`emitEdgeEditRequest` cross-subtree channel** — 5th `panelEvents` pub/sub channel so `EdgesEditor` can subscribe and scroll+expand the matching edge card on request, mirror of the existing node-edit channel
 
 **Partially shipped — needs follow-up:**
 
@@ -660,11 +692,7 @@ Cloudflare Edge (CDN/WAF)
 
 **Still on the roadmap:**
 
-- [ ] Visual node/edge editor (drag-to-connect directly on canvas)
-- [ ] Edge hover highlighting (dim others to 20%)
-- [ ] Edge click → metric detail overlay
-- [ ] Right-click context menu on nodes and edges
-- [ ] Light theme support
+- [ ] **Light theme support** — the Nord dark palette is hard-coded in `TopologyPanel.css` and inline styles in the popup / context-menu components. A light theme variant would need a `useTheme2()` read from `@grafana/ui` plus palette tokens threaded through every hard-coded hex.
 
 ---
 
