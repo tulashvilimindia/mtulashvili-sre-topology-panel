@@ -7,7 +7,7 @@ import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpe
 import { queryDatasource, QueryResult, QueryError } from '../utils/datasourceQuery';
 import { fetchAlertRules, matchAlertsToNode } from '../utils/alertRules';
 import { resolveDynamicTargets } from '../utils/dynamicTargets';
-import { emitNodeClicked, emitNodeEditRequest } from '../utils/panelEvents';
+import { emitNodeClicked, emitNodeEditRequest, onOrphanEdgeCleanup } from '../utils/panelEvents';
 import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
 import './TopologyPanel.css';
@@ -676,6 +676,26 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   const handleNodeDoubleClick = useCallback((nodeId: string) => {
     emitNodeEditRequest(nodeId);
   }, []);
+
+  // Subscribe to orphan-edge-cleanup events fired by NodesEditor after a node
+  // delete. setTimeout(0) yields one tick so NodesEditor's own slice update
+  // (the node removal) has already propagated through Grafana's onOptionsChange
+  // pipeline — optionsRef.current is then guaranteed to reflect the removed
+  // node, and we apply a second onOptionsChange for the edges slice.
+  useEffect(() => {
+    return onOrphanEdgeCleanup((deletedNodeId) => {
+      setTimeout(() => {
+        const current = optionsRef.current;
+        const currentEdges = current.edges || [];
+        const filtered = currentEdges.filter(
+          (e) => e.sourceId !== deletedNodeId && e.targetId !== deletedNodeId
+        );
+        if (filtered.length < currentEdges.length) {
+          onOptionsChange({ ...current, edges: filtered });
+        }
+      }, 0);
+    });
+  }, [onOptionsChange]);
 
   const handleResetLayout = useCallback(() => {
     const autoPositions = autoLayout(nodesWithGroupId, expandedEdges, {

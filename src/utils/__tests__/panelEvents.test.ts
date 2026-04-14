@@ -3,6 +3,8 @@ import {
   onNodeClicked,
   emitNodeEditRequest,
   onNodeEditRequest,
+  emitOrphanEdgeCleanup,
+  onOrphanEdgeCleanup,
 } from '../panelEvents';
 
 describe('panelEvents pub/sub', () => {
@@ -96,5 +98,44 @@ describe('panelEvents edit-request pub/sub', () => {
     unsub();
     emitNodeEditRequest('second');
     expect(received).toEqual(['first']);
+  });
+});
+
+describe('panelEvents orphan-edge-cleanup pub/sub', () => {
+  test('subscriber receives the deleted node id', () => {
+    const received: string[] = [];
+    const unsub = onOrphanEdgeCleanup((id) => received.push(id));
+    emitOrphanEdgeCleanup('n-deleted');
+    unsub();
+    expect(received).toEqual(['n-deleted']);
+  });
+
+  test('all three event channels are independent', () => {
+    const clicks: string[] = [];
+    const edits: string[] = [];
+    const cleanups: string[] = [];
+    const unsubA = onNodeClicked((id) => clicks.push(id));
+    const unsubB = onNodeEditRequest((id) => edits.push(id));
+    const unsubC = onOrphanEdgeCleanup((id) => cleanups.push(id));
+    emitNodeClicked('click');
+    emitNodeEditRequest('edit');
+    emitOrphanEdgeCleanup('cleanup');
+    unsubA(); unsubB(); unsubC();
+    expect(clicks).toEqual(['click']);
+    expect(edits).toEqual(['edit']);
+    expect(cleanups).toEqual(['cleanup']);
+  });
+
+  test('orphan-cleanup handler that throws does not break other subscribers', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const received: string[] = [];
+    const unsubThrower = onOrphanEdgeCleanup(() => { throw new Error('boom'); });
+    const unsubGood = onOrphanEdgeCleanup((id) => received.push(id));
+    emitOrphanEdgeCleanup('survivor');
+    unsubThrower();
+    unsubGood();
+    expect(received).toEqual(['survivor']);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

@@ -5,7 +5,7 @@ import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
 import { TopologyPanelOptions, TopologyNode, NodeMetricConfig } from '../types';
 import { NodeCard } from './components/NodeCard';
 import { generateId, sanitizeLabel } from './utils/editorUtils';
-import { onNodeClicked, onNodeEditRequest } from '../utils/panelEvents';
+import { onNodeClicked, onNodeEditRequest, emitOrphanEdgeCleanup } from '../utils/panelEvents';
 import './editors.css';
 
 type Props = StandardEditorProps<TopologyNode[], object, TopologyPanelOptions>;
@@ -396,6 +396,11 @@ export const NodesEditor: React.FC<Props> = ({ value, onChange, context }) => {
   const handleDeleteConfirm = useCallback(() => {
     if (pendingDeleteId) {
       onChange(nodes.filter((n) => n.id !== pendingDeleteId));
+      // Ask TopologyPanel to also clean up edges that referenced this node.
+      // NodesEditor owns only the nodes slice via StandardEditorProps<TopologyNode[]>;
+      // cross-slice updates flow through the module-level event emitter so the
+      // panel can reach the edges slice via its own onOptionsChange.
+      emitOrphanEdgeCleanup(pendingDeleteId);
       setPendingDeleteId(null);
     }
   }, [pendingDeleteId, nodes, onChange]);
