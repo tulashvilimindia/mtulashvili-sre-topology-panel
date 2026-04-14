@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "E2E Topology Diagram Panel with live metrics, drag-and-drop, animated flow connections, and expandable metric panels",
   "scripts": {
-    "build": "TS_NODE_COMPILER_OPTIONS={\"module\":\"commonjs\"} webpack -c ./.config/webpack/webpack.config.ts --env production",
-    "dev": "TS_NODE_COMPILER_OPTIONS={\"module\":\"commonjs\"} webpack -w -c ./.config/webpack/webpack.config.ts --env development",
+    "build": "cross-env TS_NODE_COMPILER_OPTIONS=\"{\\\"module\\\":\\\"commonjs\\\"}\" webpack -c ./.config/webpack/webpack.config.ts --env production",
+    "dev": "cross-env TS_NODE_COMPILER_OPTIONS=\"{\\\"module\\\":\\\"commonjs\\\"}\" webpack -w -c ./.config/webpack/webpack.config.ts --env development",
     "test": "jest --passWithNoTests",
     "test:ci": "jest --passWithNoTests --maxWorkers 4",
     "typecheck": "tsc --noEmit",
@@ -29,6 +29,7 @@
     "@types/react": "18.3.28",
     "@types/react-dom": "18.3.7",
     "copy-webpack-plugin": "11.0.0",
+    "cross-env": "^10.1.0",
     "css-loader": "6.11.0",
     "eslint": "8.57.1",
     "eslint-webpack-plugin": "4.2.0",
