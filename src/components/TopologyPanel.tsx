@@ -821,12 +821,24 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         const wrapperStyle: React.CSSProperties = popupPosition
           ? { position: 'absolute', left: popupPosition.x, top: popupPosition.y, zIndex: 100 }
           : { position: 'absolute', top: 44, right: 8, zIndex: 100 };
+        // In edit mode, expose an "Edit" shortcut that emits on the
+        // panelEvents channel and closes the popup. NodesEditor subscribes
+        // to the same channel and scrolls the matching card into view.
+        const isEditMode = window.location.search.includes('editPanel');
+        const handleEdit = isEditMode
+          ? () => {
+              emitNodeEditRequest(popupNode.id);
+              setPopupNodeId(null);
+              setPopupPosition(null);
+            }
+          : undefined;
         return (
           <div style={wrapperStyle} onClick={(e) => e.stopPropagation()}>
             <NodePopup
               node={popupNode}
               firingAlerts={popupAlerts}
               onClose={() => { setPopupNodeId(null); setPopupPosition(null); }}
+              onEdit={handleEdit}
             />
           </div>
         );

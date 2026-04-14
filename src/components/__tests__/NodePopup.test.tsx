@@ -153,4 +153,18 @@ describe('NodePopup', () => {
     const link = screen.getByText('Dashboard').closest('a');
     expect(link).toHaveAttribute('href', 'https://dash/n-srv-01?n=web-01');
   });
+
+  test('Edit button is hidden when onEdit is not provided', () => {
+    render(<NodePopup node={makeNode()} onClose={jest.fn()} />);
+    expect(screen.queryByLabelText('Edit node')).not.toBeInTheDocument();
+  });
+
+  test('Edit button appears when onEdit is provided and fires the handler', () => {
+    const onEdit = jest.fn();
+    render(<NodePopup node={makeNode()} onClose={jest.fn()} onEdit={onEdit} />);
+    const button = screen.getByLabelText('Edit node');
+    expect(button).toBeInTheDocument();
+    button.click();
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
 });

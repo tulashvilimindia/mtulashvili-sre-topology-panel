@@ -21,6 +21,10 @@ interface PopupProps {
   node: TopologyNode;
   firingAlerts?: FiringAlert[];
   onClose: () => void;
+  // When defined, renders an "Edit" button in the header that calls this
+  // handler. TopologyPanel only wires it in edit mode so the button is
+  // hidden in view mode where the editor is not reachable.
+  onEdit?: () => void;
 }
 
 interface MetricTimeseries {
@@ -30,7 +34,7 @@ interface MetricTimeseries {
   current: number | null;
 }
 
-export const NodePopup: React.FC<PopupProps> = ({ node, firingAlerts, onClose }) => {
+export const NodePopup: React.FC<PopupProps> = ({ node, firingAlerts, onClose, onEdit }) => {
   const [seriesData, setSeriesData] = useState<MetricTimeseries[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -86,6 +90,30 @@ export const NodePopup: React.FC<PopupProps> = ({ node, firingAlerts, onClose })
     >
       <div className="topology-popup-header">
         <span className="topology-popup-title">{node.name}</span>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="Edit node"
+            title="Open in editor"
+            style={{
+              background: 'transparent',
+              border: '1px solid #4c566a',
+              color: '#d8dee9',
+              borderRadius: 3,
+              padding: '1px 6px',
+              fontSize: 10,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              marginRight: 4,
+            }}
+          >
+            <Icon name="edit" size="xs" />
+            Edit
+          </button>
+        )}
         <button className="topology-popup-close" onClick={onClose} aria-label="Close">&times;</button>
       </div>
       {node.observabilityLinks && node.observabilityLinks.length > 0 && (
