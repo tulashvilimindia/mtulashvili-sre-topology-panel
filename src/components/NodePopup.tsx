@@ -271,12 +271,18 @@ export const NodePopup: React.FC<PopupProps> = ({
         const isStale = mv?.fetchedAt
           ? now - mv.fetchedAt > freshnessSLOSec * 1000
           : false;
+        // Fall back to the card-level MetricValue.formatted when the range
+        // fetch returned no points (Infinity snapshots, CloudWatch failures,
+        // etc.). Shows the known-good scalar instead of a misleading "N/A".
+        const displayValue = series.current !== null
+          ? series.current.toFixed(1)
+          : (mv?.formatted ?? 'N/A');
         return (
           <div key={series.metricId} className="topology-popup-metric">
             <div className="topology-popup-metric-header">
               <span>{series.label}</span>
               <span className="topology-popup-metric-value">
-                {series.current !== null ? series.current.toFixed(1) : 'N/A'}
+                {displayValue}
               </span>
             </div>
             {freshness && (
