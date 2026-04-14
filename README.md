@@ -700,4 +700,4 @@ Cloudflare Edge (CDN/WAF)
 
 [Apache License 2.0](LICENSE)
 
-Copyright 2026 Mindia Tulashvili
+no copyright - Mindia Tulashvili
