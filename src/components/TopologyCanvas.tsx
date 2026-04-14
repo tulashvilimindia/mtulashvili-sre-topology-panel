@@ -78,7 +78,10 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
         strokeDasharray={dashArray}
         markerEnd={`url(#${arrowId})`}
       />
-      {/* Animated flow overlay */}
+      {/* Animated flow overlay — the moving coloured dashes that trace the
+          traffic direction. The SVG drop-shadow filter gives it a neon-glow
+          halo around the stroke, so healthy green edges pulse softly and
+          critical red edges broadcast the failure much harder. */}
       {flowSpeed > 0 && (
         <path
           d={renderPath}
@@ -87,7 +90,10 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
           strokeWidth={Math.max(thickness + 1, 2.5)}
           strokeDasharray="6 10"
           opacity={isResponse ? 0.4 : 0.55}
-          style={{ animation: `topoFlow ${flowSpeed}s linear infinite` }}
+          style={{
+            animation: `topoFlow ${flowSpeed}s linear infinite`,
+            filter: `drop-shadow(0 0 3px ${renderColor}) drop-shadow(0 0 6px ${renderColor})`,
+          }}
         />
       )}
       {/* Bidirectional reverse path */}
@@ -110,7 +116,10 @@ const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
               strokeWidth={Math.max(thickness + 1, 2.5)}
               strokeDasharray="6 10"
               opacity={0.35}
-              style={{ animation: `topoFlow ${flowSpeed}s linear infinite` }}
+              style={{
+                animation: `topoFlow ${flowSpeed}s linear infinite`,
+                filter: `drop-shadow(0 0 3px ${edgeColor}) drop-shadow(0 0 6px ${edgeColor})`,
+              }}
             />
           )}
         </>
