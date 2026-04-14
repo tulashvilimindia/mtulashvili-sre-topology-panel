@@ -26,6 +26,12 @@ export const plugin = new PanelPlugin<TopologyPanelOptions>(TopologyPanel)
         description: 'Grid spacing in pixels',
         defaultValue: DEFAULT_PANEL_OPTIONS.canvas.gridSize,
       })
+      .addColorPicker({
+        path: 'canvas.backgroundColor',
+        name: 'Background color',
+        description: 'Canvas background color ("transparent" inherits the dashboard theme)',
+        defaultValue: DEFAULT_PANEL_OPTIONS.canvas.backgroundColor,
+      })
       .addBooleanSwitch({
         path: 'animation.flowEnabled',
         name: 'Flow animation',
@@ -37,6 +43,27 @@ export const plugin = new PanelPlugin<TopologyPanelOptions>(TopologyPanel)
         name: 'Pulse on critical',
         description: 'Pulse status dot when node is critical',
         defaultValue: DEFAULT_PANEL_OPTIONS.animation.pulseOnCritical,
+      })
+      .addSelect({
+        path: 'animation.defaultFlowSpeed',
+        name: 'Default flow speed',
+        description: 'Panel-wide fallback flow speed for edges that do not set their own',
+        defaultValue: DEFAULT_PANEL_OPTIONS.animation.defaultFlowSpeed,
+        settings: {
+          options: [
+            { label: 'Auto', value: 'auto' },
+            { label: 'Slow', value: 'slow' },
+            { label: 'Normal', value: 'normal' },
+            { label: 'Fast', value: 'fast' },
+            { label: 'None', value: 'none' },
+          ],
+        },
+      })
+      .addBooleanSwitch({
+        path: 'layout.autoLayout',
+        name: 'Auto layout',
+        description: 'Automatically arrange nodes in tiers. When off, nodes use their stored position even when it is the default (100,100).',
+        defaultValue: DEFAULT_PANEL_OPTIONS.layout.autoLayout,
       })
       .addSelect({
         path: 'layout.direction',
