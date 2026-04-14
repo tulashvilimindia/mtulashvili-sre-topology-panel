@@ -32,6 +32,12 @@ interface CanvasProps {
   // Edge left-click (Phase 4). Same raw-coord convention as the context-menu
   // handlers above. Routed through the hit-test overlay introduced in Phase 1.
   onEdgeClick?: (edgeId: string, clientX: number, clientY: number) => void;
+  // Drag-to-connect (Phase 5). Fires when the user Shift+drags from one node
+  // to another. TopologyPanel validates + appends a new edge via
+  // onOptionsChange. Only wired when isEditMode is true.
+  onEdgeCreate?: (sourceId: string, targetId: string) => void;
+  /** True when the panel is rendered inside Grafana's panel editor chrome. */
+  isEditMode?: boolean;
 }
 
 // ─── Memoized edge SVG renderer ───
@@ -185,7 +191,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
   nodes, edges, groups, nodePositions, nodeStates, edgeStates,
   canvasOptions, animationOptions, displayOptions,
   width, height, panelId, onNodeDrag, onNodeToggle, onNodeDoubleClick,
-  onNodeContextMenu, onEdgeContextMenu, onEdgeClick,
+  onNodeContextMenu, onEdgeContextMenu, onEdgeClick, onEdgeCreate, isEditMode,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -196,6 +202,13 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
   // dimmed to 20% opacity with its flow animation paused. The value is the
   // id of the currently hovered edge, cleared on mouseleave.
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+
+  // Drag-to-connect state (Phase 5). Split into two states so the document
+  // listener useEffect only re-registers on start/stop, not on every cursor
+  // movement (setConnectingCursor ticks per pointermove). Mutually exclusive
+  // with `dragging` — the inline pointerdown branch picks one.
+  const [connectingSourceId, setConnectingSourceId] = useState<string | null>(null);
+  const [connectingCursor, setConnectingCursor] = useState<{ x: number; y: number } | null>(null);
   // prefers-reduced-motion is read once on mount — if the user toggles it
   // live we'd need a matchMedia listener, but that's rare enough to skip.
   const prefersReducedMotionRef = useRef<boolean>(
@@ -340,6 +353,69 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     }
   }, [onNodeToggle]);
 
+  // Drag-to-connect listeners (Phase 5). Attached only while a connect gesture
+  // is active. pointermove updates the rubber-band cursor; pointerup hit-tests
+  // the cursor position against node rects and creates a new edge if it lands
+  // on a non-source, non-virtual node. Escape cancels without creating.
+  useEffect(() => {
+    if (!connectingSourceId) { return; }
+    const clearConnecting = () => {
+      setConnectingSourceId(null);
+      setConnectingCursor(null);
+    };
+    const toWorld = (e: PointerEvent) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) { return null; }
+      const vp = viewportRef.current;
+      const scale = vp.scale || 1;
+      return {
+        x: (e.clientX - rect.left - vp.translateX) / scale,
+        y: (e.clientY - rect.top - vp.translateY) / scale,
+      };
+    };
+    const handleMove = (e: PointerEvent) => {
+      const w = toWorld(e);
+      if (w) { setConnectingCursor(w); }
+    };
+    const handleUp = (e: PointerEvent) => {
+      if (e.button !== 0 && e.button !== -1) { clearConnecting(); return; }
+      const w = toWorld(e);
+      if (!w) { clearConnecting(); return; }
+      // Hit-test: find the first node whose world-space rect contains the
+      // cursor. Skip virtual nodes (runtime-only, not persisted to options)
+      // and the source node itself (self-loops disallowed in this UI).
+      let targetId: string | null = null;
+      for (const node of nodes) {
+        if (node._virtual) { continue; }
+        if (node.id === connectingSourceId) { continue; }
+        const pos = nodePositions.get(node.id);
+        if (!pos) { continue; }
+        const el = nodeElRefs.current.get(node.id);
+        const width = el?.offsetWidth || node.width || (node.compact ? 110 : 180);
+        const height = el?.offsetHeight || (node.compact ? 60 : 90);
+        if (w.x >= pos.x && w.x <= pos.x + width && w.y >= pos.y && w.y <= pos.y + height) {
+          targetId = node.id;
+          break;
+        }
+      }
+      if (targetId && onEdgeCreate) {
+        onEdgeCreate(connectingSourceId, targetId);
+      }
+      clearConnecting();
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { clearConnecting(); }
+    };
+    document.addEventListener('pointermove', handleMove);
+    document.addEventListener('pointerup', handleUp);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('pointermove', handleMove);
+      document.removeEventListener('pointerup', handleUp);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [connectingSourceId, nodes, nodePositions, onEdgeCreate]);
+
   // Pre-computed node lookup map for O(1) access in edge rendering (CR-11)
   const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -429,7 +505,14 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
     <div
       ref={canvasRef}
       className="topology-canvas"
-      style={{ width, height, position: 'relative', overflow: 'hidden', cursor: isPanning ? 'grabbing' : 'default', ...gridStyle }}
+      style={{
+        width,
+        height,
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: isPanning ? 'grabbing' : connectingSourceId ? 'crosshair' : 'default',
+        ...gridStyle,
+      }}
       onPointerDown={handleCanvasPointerDown}
     >
       {/* Viewport transform wrapper */}
@@ -504,6 +587,38 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
             />
           );
         })}
+
+        {/* Rubber-band bezier for drag-to-connect (Phase 5). Rendered inside
+            the visual edge SVG so it inherits pointerEvents:none and can't
+            intercept the in-progress drag. Uses an auto source anchor
+            aimed at the cursor (fake 1x1 target rect) so the start point
+            sits on the correct face of the source node. */}
+        {connectingSourceId && connectingCursor && (() => {
+          const sourcePos = nodePositions.get(connectingSourceId);
+          const sourceNode = nodeById.get(connectingSourceId);
+          if (!sourcePos || !sourceNode) { return null; }
+          const sourceEl = nodeElRefs.current.get(connectingSourceId);
+          const sw = sourceEl?.offsetWidth || sourceNode.width || (sourceNode.compact ? 110 : 180);
+          const sh = sourceEl?.offsetHeight || (sourceNode.compact ? 60 : 90);
+          const sourceRect = { x: sourcePos.x, y: sourcePos.y, w: sw, h: sh };
+          const targetRect = { x: connectingCursor.x, y: connectingCursor.y, w: 1, h: 1 };
+          const fromAnchor = getAnchorPoint(sourceRect, 'auto', targetRect);
+          const to = { x: connectingCursor.x, y: connectingCursor.y };
+          const path = getBezierPath(fromAnchor, to);
+          return (
+            <g>
+              <path
+                d={path}
+                fill="none"
+                stroke={ACCENT_COLOR}
+                strokeWidth={2}
+                strokeDasharray="6 6"
+                opacity={0.8}
+              />
+              <circle cx={to.x} cy={to.y} r={4} fill={ACCENT_COLOR} opacity={0.9} />
+            </g>
+          );
+        })()}
       </svg>
 
       {/* Edge hit-test layer — invisible wide strokes receive pointer events.
@@ -520,7 +635,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           width: '100%',
           height: '100%',
           overflow: 'visible',
-          pointerEvents: dragging ? 'none' : 'auto',
+          pointerEvents: (dragging || connectingSourceId) ? 'none' : 'auto',
           zIndex: 2,
         }}
       >
@@ -631,7 +746,35 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               width: node.width || (node.compact ? 110 : 180),
               zIndex: isDragging ? 10 : 2,
             }}
-            onPointerDown={(e) => handlePointerDown(e, node.id)}
+            onPointerDown={(e) => {
+              // Shift+pointerdown in edit mode enters drag-to-connect mode
+              // instead of normal node drag. Virtual nodes are runtime-only
+              // and can't participate (they have no persisted slice entry).
+              if (isEditMode && e.shiftKey && e.button === 0 && !node._virtual && onEdgeCreate) {
+                const canvasRect = canvasRef.current?.getBoundingClientRect();
+                if (!canvasRect) { return; }
+                const vp = viewportRef.current;
+                const scale = vp.scale || 1;
+                const worldX = (e.clientX - canvasRect.left - vp.translateX) / scale;
+                const worldY = (e.clientY - canvasRect.top - vp.translateY) / scale;
+                // Mark this gesture as a "move" so the click event that
+                // bubbles from pointerup doesn't open a node popup on the
+                // target (or the source, for a self-drag-cancel). Cleared
+                // automatically on the next normal pointerdown via
+                // handlePointerDown.
+                hasMovedRef.current = true;
+                setConnectingSourceId(node.id);
+                setConnectingCursor({ x: worldX, y: worldY });
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
+              if (node._virtual && isEditMode && e.shiftKey) {
+                console.warn('[topology] drag-to-connect not supported from virtual (runtime-only) nodes', { nodeId: node.id });
+                return;
+              }
+              handlePointerDown(e, node.id);
+            }}
             tabIndex={0}
             onClick={(e) => {
               e.stopPropagation();

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { PanelProps } from '@grafana/data';
-import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, FiringAlert, NODE_TYPE_CONFIG, STATUS_COLORS, MUTED_TEXT_COLOR } from '../types';
+import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, FiringAlert, NODE_TYPE_CONFIG, STATUS_COLORS, MUTED_TEXT_COLOR, DEFAULT_EDGE } from '../types';
 import { TopologyCanvas } from './TopologyCanvas';
 import { autoLayout } from '../utils/layout';
 import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
@@ -550,6 +550,32 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     }
   }, [onOptionsChange]);
 
+  // Drag-to-connect handler (Phase 5). TopologyCanvas fires this when the
+  // user Shift+drags from one node to another. Validate (source != target,
+  // source exists) and append a new edge via onOptionsChange. Parallel-pair
+  // duplicates are deliberately allowed — the canvas already renders them
+  // with a perpendicular offset, and blocking duplicates would deny the
+  // legitimate case of multiple distinct metrics on the same hop.
+  const handleEdgeCreate = useCallback((sourceId: string, targetId: string) => {
+    if (!sourceId || !targetId || sourceId === targetId) { return; }
+    const current = optionsRef.current;
+    const currentNodes = current.nodes || [];
+    // Both endpoints must exist as persisted (non-virtual) nodes.
+    const sourceExists = currentNodes.some((n) => n.id === sourceId);
+    const targetExists = currentNodes.some((n) => n.id === targetId);
+    if (!sourceExists || !targetExists) { return; }
+    const newEdge: TopologyEdge = {
+      ...(DEFAULT_EDGE as TopologyEdge),
+      id: generateId('e'),
+      sourceId,
+      targetId,
+    };
+    onOptionsChange({ ...current, edges: [...(current.edges || []), newEdge] });
+    // Auto-surface the new edge in the sidebar editor so the user can
+    // immediately configure its metric / thresholds.
+    emitEdgeEditRequest(newEdge.id);
+  }, [onOptionsChange]);
+
   // Left-click on an edge (Phase 4): open an EdgePopup at the click point,
   // clamped to panel bounds the same way handleNodeToggle does for nodes.
   // Opening the edge popup also closes any open node popup.
@@ -818,6 +844,8 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         onNodeContextMenu={handleNodeContextMenu}
         onEdgeContextMenu={handleEdgeContextMenu}
         onEdgeClick={handleEdgeClick}
+        onEdgeCreate={handleEdgeCreate}
+        isEditMode={window.location.search.includes('editPanel')}
       />
       <ContextMenu
         target={contextMenu?.target ?? null}
