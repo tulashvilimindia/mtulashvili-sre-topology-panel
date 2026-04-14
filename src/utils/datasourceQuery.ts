@@ -107,10 +107,17 @@ async function queryPrometheus(dsUid: string, query: string, historicalTime?: nu
       // Empty result is NOT an error — legitimate "no samples in window"
       return { value: null };
     }
-    const val = parseFloat(results[0].value[1]);
+    const raw = results[0].value[1];
+    // Prometheus returns literal "NaN" for undefined math (division by zero,
+    // rate() over a sparse range, etc.). That's a legitimate "no data in
+    // window" signal, not a malformed response. Treat null/undefined/NaN as
+    // empty result so the stale counter isn't polluted by false positives.
+    if (raw === null || raw === undefined) {
+      return { value: null };
+    }
+    const val = parseFloat(raw);
     if (isNaN(val)) {
-      console.warn('[topology] prom parse error', { dsUid, query });
-      return { value: null, error: 'parse' };
+      return { value: null };
     }
     return { value: val };
   } catch (err) {
@@ -174,11 +181,15 @@ async function queryCloudWatch(
     if (!values || values.length < 2 || values[1].length === 0) {
       return { value: null };
     }
-    // Last value in the time series
+    // Last value in the time series. CloudWatch emits null for periods
+    // without any samples in the requested window — that's a legitimate
+    // "no data" signal, not a parse error.
     const val = values[1][values[1].length - 1];
+    if (val === null || val === undefined) {
+      return { value: null };
+    }
     if (typeof val !== 'number' || isNaN(val)) {
-      console.warn('[topology] cloudwatch parse error', { dsUid, metric: config.metricName });
-      return { value: null, error: 'parse' };
+      return { value: null };
     }
     return { value: val };
   } catch (err) {
@@ -242,10 +253,18 @@ async function queryInfinity(
     }
     const values = frames[0]?.data?.values;
     if (values && values[0] && values[0].length > 0) {
-      const val = parseFloat(values[0][0]);
+      const raw = values[0][0];
+      // null/undefined means the query ran fine but the aggregation was
+      // empty (NRQL percentage / percentile / average on zero matching
+      // rows, etc.) — legitimate "no data in window", not a parse error.
+      // Flagging it as 'parse' would pollute the stale pill for sparse
+      // services and drive false alarms.
+      if (raw === null || raw === undefined) {
+        return { value: null };
+      }
+      const val = parseFloat(raw);
       if (isNaN(val)) {
-        console.warn('[topology] infinity parse error', { dsUid, url: config.url });
-        return { value: null, error: 'parse' };
+        return { value: null };
       }
       return { value: val };
     }

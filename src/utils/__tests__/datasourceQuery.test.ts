@@ -106,12 +106,25 @@ describe('queryDatasource — Prometheus path', () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
-  test('parse error on NaN value', async () => {
+  test('non-numeric Prometheus value treated as empty (no parse error)', async () => {
+    // Prometheus returns literal "NaN" for undefined math (rate() on sparse
+    // data, division by zero, etc.). Those are legitimate "no data" signals,
+    // not malformed responses — should NOT be flagged as parse error.
     mockFetchOk({
       data: { result: [{ metric: {}, value: [1234567890, 'not-a-number'] }] },
     });
     const result = await queryDatasource('uid-1', 'up');
-    expect(result).toMatchObject({ value: null, error: 'parse' });
+    expect(result).toEqual(expect.objectContaining({ value: null }));
+    expect(result.error).toBeUndefined();
+  });
+
+  test('null Prometheus value treated as empty', async () => {
+    mockFetchOk({
+      data: { result: [{ metric: {}, value: [1234567890, null] }] },
+    });
+    const result = await queryDatasource('uid-1', 'up');
+    expect(result).toEqual(expect.objectContaining({ value: null }));
+    expect(result.error).toBeUndefined();
   });
 
   test('network error returns error network', async () => {
@@ -189,13 +202,16 @@ describe('queryDatasource — CloudWatch path', () => {
 
   test('parse error when last value is non-numeric', async () => {
     mockFetchOk({
-      results: { A: { frames: [{ data: { values: [[1000, 2000], [1, 'not-a-number']] } }] } },
+      results: { A: { frames: [{ data: { values: [[1000, 2000], [1, null]] } }] } },
     });
     const result = await queryDatasource('uid-1', '', undefined, {
       namespace: 'AWS/ApplicationELB',
       metricName: 'RequestCount',
     });
-    expect(result).toMatchObject({ value: null, error: 'parse' });
+    // CloudWatch returns null for periods without samples — legitimate
+    // "no data", not a parse error.
+    expect(result).toEqual(expect.objectContaining({ value: null }));
+    expect(result.error).toBeUndefined();
   });
 
   test('network error returns error network', async () => {
@@ -259,13 +275,25 @@ describe('queryDatasource — Infinity path', () => {
     expect(result).toMatchObject({ value: null, error: 'http' });
   });
 
-  test('parse error on non-numeric first value', async () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  test('null first value treated as empty (NRQL percentage/percentile on zero rows)', async () => {
+    // NRQL returns null for percentage/percentile/average over zero matching
+    // rows — legitimate "no data in window", not a parse error. Flagging
+    // it as parse error would pollute the stale counter for sparse services.
+    mockFetchOk({
+      results: { A: { frames: [{ data: { values: [[null]] } }] } },
+    });
+    const result = await queryDatasource('uid-1', '', undefined, { url: 'https://x.y' });
+    expect(result).toEqual(expect.objectContaining({ value: null }));
+    expect(result.error).toBeUndefined();
+  });
+
+  test('non-numeric first value also treated as empty (no parse error flag)', async () => {
     mockFetchOk({
       results: { A: { frames: [{ data: { values: [['not-a-number']] } }] } },
     });
     const result = await queryDatasource('uid-1', '', undefined, { url: 'https://x.y' });
-    expect(result).toMatchObject({ value: null, error: 'parse' });
+    expect(result).toEqual(expect.objectContaining({ value: null }));
+    expect(result.error).toBeUndefined();
   });
 
   test('network error returns error network', async () => {
