@@ -167,6 +167,24 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
     handleField('observabilityLinks', links.length > 0 ? links : undefined);
   }, [handleField]);
 
+  // Resync the matcher/link mirrors whenever the underlying node identity
+  // swaps. Without this, a parent re-render that hands this card a different
+  // node (e.g. filter search reusing the component instance) would leave
+  // stale matchers/links visible while handleField writes to the new node —
+  // a silent data-loss path. We deliberately depend ONLY on node.id, not on
+  // alertLabelMatchers/observabilityLinks themselves, because those fields
+  // are written via handleField on every edit and listing them here would
+  // overwrite the user's in-flight edit on the next render tick.
+  useEffect(() => {
+    setMatcherEntries(
+      Object.entries(node.alertLabelMatchers || {}).map(([key, value]) => ({ key, value }))
+    );
+    setLinkEntries(
+      (node.observabilityLinks || []).map((l) => ({ label: l.label, url: l.url, icon: l.icon || '' }))
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [node.id]);
+
   const addLink = useCallback(() => {
     syncLinks([...linkEntries, { label: '', url: '', icon: '' }]);
   }, [linkEntries, syncLinks]);

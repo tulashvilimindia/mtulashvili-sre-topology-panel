@@ -34,7 +34,7 @@ export const ThresholdList: React.FC<Props> = ({ thresholds, onChange }) => {
   return (
     <div>
       {thresholds.map((t, idx) => (
-        <div key={`${t.value}-${t.color}-${idx}`} className="topo-threshold-row">
+        <div key={idx} className="topo-threshold-row">
           <div
             className={`topo-threshold-color ${t.color}`}
             role="button"

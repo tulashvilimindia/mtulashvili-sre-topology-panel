@@ -287,6 +287,37 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
     syncStateMap(stateMapEntries.filter((_, i) => i !== idx));
   }, [stateMapEntries, syncStateMap]);
 
+  // Resync the three local state mirrors (targetDimEntries, dimEntries,
+  // stateMapEntries) whenever the underlying edge identity swaps OR the
+  // user toggles dynamic targets off. Without this:
+  // - Filter/search reusing an EdgeCard instance with a different edge
+  //   leaves stale dimensions visible while handleField writes new data
+  // - Disabling dynamic targets clears edge.targetQuery but leaves stale
+  //   targetDimEntries in local state, which resurrects on re-enable or
+  //   addTargetDim. Silent data-loss path (Task 1.3).
+  // We deliberately depend ONLY on [edge.id, isDynamic], not the underlying
+  // edge.metric/targetQuery/stateMap fields — those are written via the
+  // handlers above and listing them here would overwrite in-flight edits.
+  useEffect(() => {
+    if (isDynamic) {
+      setTargetDimEntries(
+        Object.entries(edge.targetQuery?.queryConfig?.dimensions || {})
+          .map(([key, value]) => ({ key, value }))
+      );
+    } else {
+      setTargetDimEntries([]);
+    }
+    setDimEntries(
+      Object.entries(edge.metric?.queryConfig?.dimensions || {})
+        .map(([key, value]) => ({ key, value }))
+    );
+    setStateMapEntries(
+      Object.entries(edge.stateMap || {})
+        .map(([key, color]) => ({ key, color: (color === 'yellow' || color === 'red' ? color : 'green') as 'green' | 'yellow' | 'red' }))
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edge.id, isDynamic]);
+
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
       <span>{sourceName} → {targetName}</span>

@@ -351,7 +351,7 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
       )}
 
       <div className="topo-editor-section-title">Thresholds</div>
-      <ThresholdList thresholds={metric.thresholds} onChange={(t) => handleField('thresholds', t)} />
+      <ThresholdList thresholds={metric.thresholds || []} onChange={(t) => handleField('thresholds', t)} />
     </CollapsableSection>
   );
 };
