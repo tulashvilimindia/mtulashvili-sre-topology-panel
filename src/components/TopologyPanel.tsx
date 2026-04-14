@@ -390,9 +390,15 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
       let worstStatus: NodeStatus = node.metrics.length === 0 ? 'nodata' : 'ok';
 
       node.metrics.forEach((metricConfig) => {
-        // Try panel data first
+        // Try panel data first. Matching precedence:
+        //  1. Explicit refId — preferred when the user has wired a Grafana panel query
+        //  2. Internal id — legacy / backward-compat fallback
+        //  3. Label — last-resort name-based match
         const matchingFrame = data.series.find(
-          (frame) => frame.refId === metricConfig.id || frame.name === metricConfig.label
+          (frame) =>
+            (metricConfig.refId && frame.refId === metricConfig.refId) ||
+            (!metricConfig.refId && frame.refId === metricConfig.id) ||
+            frame.name === metricConfig.label
         );
 
         let raw: number | null = null;

@@ -6,10 +6,17 @@ export type NodeType = 'cloudflare' | 'firewall' | 'loadbalancer' | 'virtualserv
 export type NodeStatus = 'ok' | 'warning' | 'critical' | 'unknown' | 'nodata';
 
 export interface NodeMetricConfig {
-  /** Unique metric id within this node */
+  /** Stable internal id used as React key, self-query map key, and fallback frame-matcher. Auto-generated. */
   id: string;
   /** Display label (e.g. "cpu", "rps", "sessions") */
   label: string;
+  /**
+   * Optional explicit Grafana panel query refId for matching against `data.series` frames.
+   * When set, takes precedence over `id` for frame matching — use this when the user
+   * adds a Grafana panel query with a specific refId (e.g. "A", "error_rate") that needs
+   * to drive this metric. When omitted, the matcher falls back to `id` then `label`.
+   */
+  refId?: string;
   /** Datasource uid */
   datasourceUid: string;
   /** Query expression */

@@ -148,8 +148,22 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
   return (
     <CollapsableSection label={header} isOpen={isOpen} onToggle={onToggle}>
       <div className="topo-editor-field">
-        <label>Ref ID <span style={{ fontSize: 9, color: '#4c566a' }}>(must match query refId)</span></label>
+        <label>Metric ID <span style={{ fontSize: 9, color: '#4c566a' }}>internal stable key (auto-generated)</span></label>
         <Input value={metric.id} onChange={(e) => handleField('id', e.currentTarget.value)} placeholder="cf-rps" />
+      </div>
+      <div className="topo-editor-field">
+        <label>
+          Panel query refId
+          <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>
+            match a Grafana panel query by its refId (leave blank to fall back to Metric ID)
+          </span>
+        </label>
+        <Input
+          value={metric.refId || ''}
+          onChange={(e) => handleField('refId', e.currentTarget.value || undefined)}
+          placeholder="A"
+          width={10}
+        />
       </div>
       <div className="topo-editor-field">
         <label>Label</label>
