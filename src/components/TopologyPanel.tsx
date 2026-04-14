@@ -128,7 +128,7 @@ function useSelfQueries(
 }
 
 // ─── Auto-fetch: poll Grafana unified alerting API and match alerts to nodes ───
-function useAlertRules(nodes: TopologyNode[]): Map<string, FiringAlert[]> {
+function useAlertRules(nodes: TopologyNode[], pollIntervalMs: number): Map<string, FiringAlert[]> {
   const [alertsByNode, setAlertsByNode] = useState<Map<string, FiringAlert[]>>(new Map());
 
   // Only nodes opted-in via alertLabelMatchers trigger polling
@@ -175,14 +175,17 @@ function useAlertRules(nodes: TopologyNode[]): Map<string, FiringAlert[]> {
     };
 
     run();
-    const interval = setInterval(run, 30000);
+    // Clamp to a sane minimum so a user typo like "50" doesn't hammer the
+    // Grafana alerting API at 20Hz. 5000ms is a hard floor.
+    const effectiveInterval = Math.max(pollIntervalMs, 5000);
+    const interval = setInterval(run, effectiveInterval);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
       controller.abort();
     };
-  }, [nodesWithMatchers]);
+  }, [nodesWithMatchers, pollIntervalMs]);
 
   return alertsByNode;
 }
@@ -286,7 +289,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
   const { data: selfQueryResults, isLoading: isFetchingMetrics, failures: selfQueryFailures } = useSelfQueries(nodes, edges, data.series, replaceVariables, historicalTime);
 
   // Auto-fetch Grafana alert rules and match to nodes (only polls if ≥1 node has alertLabelMatchers)
-  const alertsByNode = useAlertRules(nodes);
+  const alertsByNode = useAlertRules(nodes, animation.alertPollIntervalMs ?? 30000);
 
   // Auto-fetch dynamic target discovery for edges with targetQuery (only polls if ≥1 edge opts in)
   const targetsByEdge = useDynamicTargets(edges);

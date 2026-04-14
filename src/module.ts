@@ -59,6 +59,20 @@ export const plugin = new PanelPlugin<TopologyPanelOptions>(TopologyPanel)
           ],
         },
       })
+      .addNumberInput({
+        path: 'animation.alertPollIntervalMs',
+        name: 'Alert poll interval (ms)',
+        description: 'How often to refresh Grafana alert state for matched nodes. Minimum 5000ms. Default 30000ms (30s).',
+        defaultValue: DEFAULT_PANEL_OPTIONS.animation.alertPollIntervalMs,
+        settings: { min: 5000, step: 1000 },
+      })
+      .addNumberInput({
+        path: 'animation.metricFreshnessSLOSec',
+        name: 'Metric freshness SLO (s)',
+        description: 'Mark self-queried metric rows as Stale in the node popup when their fetchedAt age exceeds this many seconds. Default 60s.',
+        defaultValue: DEFAULT_PANEL_OPTIONS.animation.metricFreshnessSLOSec,
+        settings: { min: 5, step: 5 },
+      })
       .addBooleanSwitch({
         path: 'layout.autoLayout',
         name: 'Auto layout',

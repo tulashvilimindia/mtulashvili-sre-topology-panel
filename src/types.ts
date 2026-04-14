@@ -298,6 +298,13 @@ export interface TopologyPanelOptions {
      * stale. Default 60s (1 minute).
      */
     metricFreshnessSLOSec?: number;
+    /**
+     * Interval in milliseconds for polling the Grafana unified alerting
+     * API to refresh firing alerts matched against nodes. Default 30000
+     * (30s). Lower values increase API load; higher values delay how
+     * quickly new alerts surface on the topology.
+     */
+    alertPollIntervalMs?: number;
   };
   /** Layout settings */
   layout: {
@@ -358,6 +365,7 @@ export const DEFAULT_PANEL_OPTIONS: TopologyPanelOptions = {
     defaultFlowSpeed: 'auto',
     pulseOnCritical: true,
     metricFreshnessSLOSec: 60,
+    alertPollIntervalMs: 30000,
   },
   layout: {
     autoLayout: true,
