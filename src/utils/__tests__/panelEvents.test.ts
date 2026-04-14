@@ -3,6 +3,8 @@ import {
   onNodeClicked,
   emitNodeEditRequest,
   onNodeEditRequest,
+  emitEdgeEditRequest,
+  onEdgeEditRequest,
   emitOrphanEdgeCleanup,
   onOrphanEdgeCleanup,
   emitTopologyImport,
@@ -101,6 +103,51 @@ describe('panelEvents edit-request pub/sub', () => {
     unsub();
     emitNodeEditRequest('second');
     expect(received).toEqual(['first']);
+  });
+});
+
+describe('panelEvents edge-edit-request pub/sub', () => {
+  test('subscriber receives the emitted edge id', () => {
+    const received: string[] = [];
+    const unsub = onEdgeEditRequest((id) => received.push(id));
+    emitEdgeEditRequest('e-1');
+    unsub();
+    expect(received).toEqual(['e-1']);
+  });
+
+  test('unsubscribed edge-edit-request handler stops receiving events', () => {
+    const received: string[] = [];
+    const unsub = onEdgeEditRequest((id) => received.push(id));
+    emitEdgeEditRequest('first');
+    unsub();
+    emitEdgeEditRequest('second');
+    expect(received).toEqual(['first']);
+  });
+
+  test('edge-edit-request handler that throws does not break other subscribers', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const received: string[] = [];
+    const unsubThrower = onEdgeEditRequest(() => { throw new Error('boom'); });
+    const unsubGood = onEdgeEditRequest((id) => received.push(id));
+    emitEdgeEditRequest('survivor');
+    unsubThrower();
+    unsubGood();
+    expect(received).toEqual(['survivor']);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  test('edge-edit-request is independent from node-edit-request', () => {
+    const nodeEdits: string[] = [];
+    const edgeEdits: string[] = [];
+    const unsubA = onNodeEditRequest((id) => nodeEdits.push(id));
+    const unsubB = onEdgeEditRequest((id) => edgeEdits.push(id));
+    emitNodeEditRequest('n-1');
+    emitEdgeEditRequest('e-1');
+    unsubA();
+    unsubB();
+    expect(nodeEdits).toEqual(['n-1']);
+    expect(edgeEdits).toEqual(['e-1']);
   });
 });
 

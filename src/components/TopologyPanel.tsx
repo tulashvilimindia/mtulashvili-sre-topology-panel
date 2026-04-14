@@ -8,9 +8,11 @@ import { QueryError } from '../utils/datasourceQuery';
 import { useSelfQueries } from '../hooks/useSelfQueries';
 import { useAlertRules } from '../hooks/useAlertRules';
 import { useDynamicTargets } from '../hooks/useDynamicTargets';
-import { emitNodeClicked, emitNodeEditRequest, onOrphanEdgeCleanup, onTopologyImport } from '../utils/panelEvents';
+import { emitNodeClicked, emitNodeEditRequest, emitEdgeEditRequest, emitOrphanEdgeCleanup, onOrphanEdgeCleanup, onTopologyImport } from '../utils/panelEvents';
 import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
+import { ContextMenu, ContextMenuTarget } from './ContextMenu';
+import { generateId } from '../editors/utils/editorUtils';
 import './TopologyPanel.css';
 
 interface Props extends PanelProps<TopologyPanelOptions> {}
@@ -20,6 +22,13 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [popupNodeId, setPopupNodeId] = useState<string | null>(null);
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
+  // Context-menu state (Phase 3). Null when closed. `position` is in
+  // panel-relative coordinates — the child ContextMenu component clamps it
+  // against panelRect so it cannot paint outside the panel.
+  const [contextMenu, setContextMenu] = useState<{
+    target: ContextMenuTarget;
+    position: { x: number; y: number };
+  } | null>(null);
   const [timeOffset, setTimeOffset] = useState<number>(0); // 0 = now, negative = minutes ago
   const [exampleBannerVisible, setExampleBannerVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -468,6 +477,83 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     emitNodeEditRequest(nodeId);
   }, []);
 
+  // Right-click handlers: TopologyCanvas passes raw client coordinates;
+  // convert to panel-relative here so ContextMenu's clamping uses the same
+  // coordinate system as NodePopup and friends. Opening the context menu
+  // also closes any open node popup so only one floating UI is visible.
+  const handleNodeContextMenu = useCallback((nodeId: string, clientX: number, clientY: number) => {
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (!rect) { return; }
+    setPopupNodeId(null);
+    setPopupPosition(null);
+    setContextMenu({
+      target: { type: 'node', id: nodeId },
+      position: { x: clientX - rect.left, y: clientY - rect.top },
+    });
+  }, []);
+
+  const handleEdgeContextMenu = useCallback((edgeId: string, clientX: number, clientY: number) => {
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (!rect) { return; }
+    setPopupNodeId(null);
+    setPopupPosition(null);
+    setContextMenu({
+      target: { type: 'edge', id: edgeId },
+      position: { x: clientX - rect.left, y: clientY - rect.top },
+    });
+  }, []);
+
+  // Context-menu action dispatch. Edit routes to the panelEvents channels so
+  // the sidebar editor scrolls the matching card. Duplicate and Delete mutate
+  // the matching slice via onOptionsChange. Delete on a node also emits the
+  // orphan-edge-cleanup channel so dangling edges are trimmed the same way
+  // NodesEditor's own delete flow works.
+  const handleContextEdit = useCallback((target: ContextMenuTarget) => {
+    if (target.type === 'node') {
+      emitNodeEditRequest(target.id);
+    } else {
+      emitEdgeEditRequest(target.id);
+    }
+  }, []);
+
+  const handleContextDuplicate = useCallback((target: ContextMenuTarget) => {
+    const current = optionsRef.current;
+    if (target.type === 'node') {
+      const src = (current.nodes || []).find((n) => n.id === target.id);
+      if (!src) { return; }
+      const dup: TopologyNode = {
+        ...src,
+        id: generateId('n'),
+        name: `${src.name} copy`,
+        position: src.position
+          ? { x: src.position.x + 20, y: src.position.y + 20 }
+          : src.position,
+      };
+      onOptionsChange({ ...current, nodes: [...(current.nodes || []), dup] });
+    } else {
+      const src = (current.edges || []).find((e) => e.id === target.id);
+      if (!src) { return; }
+      // Virtual edges (id contains '::') are runtime-only; duplicating them
+      // would just create another virtual-looking id that collides. Skip.
+      if (src.id.includes('::')) { return; }
+      const dup: TopologyEdge = { ...src, id: generateId('e') };
+      onOptionsChange({ ...current, edges: [...(current.edges || []), dup] });
+    }
+  }, [onOptionsChange]);
+
+  const handleContextDelete = useCallback((target: ContextMenuTarget) => {
+    const current = optionsRef.current;
+    if (target.type === 'node') {
+      const filtered = (current.nodes || []).filter((n) => n.id !== target.id);
+      onOptionsChange({ ...current, nodes: filtered });
+      emitOrphanEdgeCleanup(target.id);
+    } else {
+      if (target.id.includes('::')) { return; }
+      const filtered = (current.edges || []).filter((e) => e.id !== target.id);
+      onOptionsChange({ ...current, edges: filtered });
+    }
+  }, [onOptionsChange]);
+
   // Subscribe to orphan-edge-cleanup events fired by NodesEditor after a node
   // delete. setTimeout(0) yields one tick so NodesEditor's own slice update
   // (the node removal) has already propagated through Grafana's onOptionsChange
@@ -566,7 +652,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
       ref={panelRef}
       className="topology-panel"
       style={{ width, height, backgroundColor: canvas.backgroundColor }}
-      onClick={() => { setPopupNodeId(null); setPopupPosition(null); }}
+      onClick={() => { setPopupNodeId(null); setPopupPosition(null); setContextMenu(null); }}
     >
       <div className="topology-toolbar" ref={toolbarRef}>
         <span className="topology-title">E2E topology</span>
@@ -693,6 +779,18 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
         onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeContextMenu={handleNodeContextMenu}
+        onEdgeContextMenu={handleEdgeContextMenu}
+      />
+      <ContextMenu
+        target={contextMenu?.target ?? null}
+        position={contextMenu?.position ?? null}
+        panelRect={{ width, height }}
+        isEditMode={window.location.search.includes('editPanel')}
+        onEdit={handleContextEdit}
+        onDuplicate={handleContextDuplicate}
+        onDelete={handleContextDelete}
+        onClose={() => setContextMenu(null)}
       />
       {popupNodeId && (() => {
         const popupNode = nodes.find((n) => n.id === popupNodeId);

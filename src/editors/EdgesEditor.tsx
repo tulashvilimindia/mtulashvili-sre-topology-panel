@@ -1,9 +1,10 @@
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useEffect, useRef } from 'react';
 import { StandardEditorProps } from '@grafana/data';
 import { Button, Input } from '@grafana/ui';
 import { TopologyPanelOptions, TopologyEdge, DEFAULT_EDGE } from '../types';
 import { EdgeCard } from './components/EdgeCard';
 import { generateId } from './utils/editorUtils';
+import { onEdgeEditRequest } from '../utils/panelEvents';
 import './editors.css';
 
 type Props = StandardEditorProps<TopologyEdge[], object, TopologyPanelOptions>;
@@ -41,6 +42,29 @@ export const EdgesEditor: React.FC<Props> = ({ value, onChange, context }) => {
       const next = new Set(prev);
       if (next.has(id)) { next.delete(id); } else { next.add(id); }
       return next;
+    });
+  }, []);
+
+  // Canvas edge-card refs for scroll-into-view on edge edit requests (mirror
+  // of the NodesEditor pattern). The TopologyPanel right-click context menu
+  // and edge popup both emit emitEdgeEditRequest when the user asks to edit
+  // an edge — we scroll and expand the matching card here.
+  const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
+  useEffect(() => {
+    return onEdgeEditRequest((edgeId) => {
+      setExpandedIds((prev) => {
+        if (prev.has(edgeId)) { return prev; }
+        const next = new Set(prev);
+        next.add(edgeId);
+        return next;
+      });
+      setTimeout(() => {
+        const el = cardRefs.current.get(edgeId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
     });
   }, []);
 
@@ -108,16 +132,26 @@ export const EdgesEditor: React.FC<Props> = ({ value, onChange, context }) => {
         <div className="topo-editor-empty">No edges match &quot;{filterText}&quot;</div>
       )}
       {filteredEdges.map((edge) => (
-        <EdgeCard
+        <div
           key={edge.id}
-          edge={edge}
-          nodes={nodes}
-          isOpen={expandedIds.has(edge.id)}
-          onToggle={() => toggleExpand(edge.id)}
-          onChange={handleChange}
-          onDelete={() => handleDelete(edge.id)}
-          onDuplicate={() => handleDuplicate(edge)}
-        />
+          ref={(el) => {
+            if (el) {
+              cardRefs.current.set(edge.id, el);
+            } else {
+              cardRefs.current.delete(edge.id);
+            }
+          }}
+        >
+          <EdgeCard
+            edge={edge}
+            nodes={nodes}
+            isOpen={expandedIds.has(edge.id)}
+            onToggle={() => toggleExpand(edge.id)}
+            onChange={handleChange}
+            onDelete={() => handleDelete(edge.id)}
+            onDuplicate={() => handleDuplicate(edge)}
+          />
+        </div>
       ))}
     </div>
   );

@@ -24,6 +24,11 @@ interface CanvasProps {
   onNodeDrag: (nodeId: string, x: number, y: number) => void;
   onNodeToggle: (nodeId: string, rect?: DOMRect) => void;
   onNodeDoubleClick?: (nodeId: string) => void;
+  // Context-menu callbacks (Phase 3). Raw clientX/clientY are passed through —
+  // TopologyPanel converts to panel-relative coordinates so it can clamp the
+  // menu against its own bounds, consistent with the existing popup path.
+  onNodeContextMenu?: (nodeId: string, clientX: number, clientY: number) => void;
+  onEdgeContextMenu?: (edgeId: string, clientX: number, clientY: number) => void;
 }
 
 // ─── Memoized edge SVG renderer ───
@@ -177,6 +182,7 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
   nodes, edges, groups, nodePositions, nodeStates, edgeStates,
   canvasOptions, animationOptions, displayOptions,
   width, height, panelId, onNodeDrag, onNodeToggle, onNodeDoubleClick,
+  onNodeContextMenu, onEdgeContextMenu,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -530,6 +536,12 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
               style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
               onMouseEnter={() => setHoveredEdgeId(edge.id)}
               onMouseLeave={() => setHoveredEdgeId(null)}
+              onContextMenu={(e) => {
+                if (!onEdgeContextMenu) { return; }
+                e.preventDefault();
+                e.stopPropagation();
+                onEdgeContextMenu(edge.id, e.clientX, e.clientY);
+              }}
             />
           );
         })}
@@ -621,6 +633,12 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
             onDoubleClick={(e) => {
               e.stopPropagation();
               onNodeDoubleClick?.(node.id);
+            }}
+            onContextMenu={(e) => {
+              if (!onNodeContextMenu) { return; }
+              e.preventDefault();
+              e.stopPropagation();
+              onNodeContextMenu(node.id, e.clientX, e.clientY);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {

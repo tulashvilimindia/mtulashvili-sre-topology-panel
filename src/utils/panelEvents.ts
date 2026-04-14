@@ -21,6 +21,7 @@ type TopologyImportHandler = (payload: Partial<TopologyPanelOptions>) => void;
 
 const nodeClickSubscribers = new Set<NodeClickHandler>();
 const nodeEditRequestSubscribers = new Set<NodeClickHandler>();
+const edgeEditRequestSubscribers = new Set<NodeClickHandler>();
 const orphanEdgeCleanupSubscribers = new Set<NodeClickHandler>();
 const topologyImportSubscribers = new Set<TopologyImportHandler>();
 
@@ -74,6 +75,34 @@ export function onNodeEditRequest(handler: NodeClickHandler): () => void {
   nodeEditRequestSubscribers.add(handler);
   return () => {
     nodeEditRequestSubscribers.delete(handler);
+  };
+}
+
+/**
+ * Publish an edge-edit-request event. Fired by TopologyPanel when the user
+ * asks to edit a specific edge from the canvas (right-click → Edit in
+ * sidebar, or the Edit button on an edge popup). EdgesEditor subscribes and
+ * scrolls the matching card into view + expands it — the mirror image of
+ * onNodeEditRequest.
+ */
+export function emitEdgeEditRequest(edgeId: string): void {
+  edgeEditRequestSubscribers.forEach((handler) => {
+    try {
+      handler(edgeId);
+    } catch (err) {
+      console.warn('[topology] panelEvents edge-edit-request handler threw', err);
+    }
+  });
+}
+
+/**
+ * Subscribe to edge-edit-request events.
+ * Returns an unsubscribe function — call it in your useEffect cleanup.
+ */
+export function onEdgeEditRequest(handler: NodeClickHandler): () => void {
+  edgeEditRequestSubscribers.add(handler);
+  return () => {
+    edgeEditRequestSubscribers.delete(handler);
   };
 }
 
