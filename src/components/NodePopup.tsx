@@ -1,5 +1,20 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { Icon, IconName } from '@grafana/ui';
 import { TopologyNode, NodeMetricConfig, FiringAlert, STATUS_COLORS, ACCENT_COLOR } from '../types';
+
+/**
+ * Replace ${token} placeholders in a URL template with values from the node.
+ * Source map: { ...node.alertLabelMatchers, name: node.name, id: node.id }.
+ * Unknown tokens are left as-is so typos are visible to the user.
+ */
+function interpolateUrl(urlTemplate: string, node: TopologyNode): string {
+  const ctx: Record<string, string> = {
+    ...(node.alertLabelMatchers || {}),
+    name: node.name,
+    id: node.id,
+  };
+  return urlTemplate.replace(/\$\{([^}]+)\}/g, (match, key) => ctx[key] ?? match);
+}
 
 interface PopupProps {
   node: TopologyNode;
@@ -99,6 +114,42 @@ export const NodePopup: React.FC<PopupProps> = ({ node, position, firingAlerts, 
         <span className="topology-popup-title">{node.name}</span>
         <button className="topology-popup-close" onClick={onClose} aria-label="Close">&times;</button>
       </div>
+      {node.observabilityLinks && node.observabilityLinks.length > 0 && (
+        <div
+          style={{
+            padding: '6px 8px',
+            borderBottom: '1px solid #2d3748',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 4,
+          }}
+        >
+          {node.observabilityLinks.map((link, i) => (
+            <a
+              key={`${link.label}-${i}`}
+              href={interpolateUrl(link.url, node)}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                fontSize: 10,
+                padding: '2px 6px',
+                borderRadius: 3,
+                background: '#5e81ac22',
+                color: '#5e81ac',
+                border: '1px solid #5e81ac44',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Icon name={((link.icon || 'external-link-alt') as IconName)} size="xs" />
+              {link.label}
+            </a>
+          ))}
+        </div>
+      )}
       {firingAlerts && firingAlerts.length > 0 && (
         <div style={{ padding: '6px 8px', borderBottom: '1px solid #2d3748' }}>
           <div style={{ fontSize: 10, color: '#616e88', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>

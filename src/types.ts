@@ -87,6 +87,21 @@ export interface TopologyNode {
    * Omit or leave empty to disable alert integration for this node.
    */
   alertLabelMatchers?: Record<string, string>;
+  /**
+   * Opt-in list of external drill-down links shown as buttons at the top of the node popup.
+   * URL templates support ${token} placeholders resolved against alertLabelMatchers + node built-ins (name, id).
+   */
+  observabilityLinks?: ObservabilityLink[];
+}
+
+/** External drill-down link from a node (logs, traces, runbooks, etc.) */
+export interface ObservabilityLink {
+  /** Display label on the button (e.g. "Logs", "Traces", "Runbook") */
+  label: string;
+  /** URL template — supports ${token} placeholders from node labels and built-ins (name, id) */
+  url: string;
+  /** Optional Grafana icon name (defaults to 'external-link-alt' when absent) */
+  icon?: string;
 }
 
 // ============================================================

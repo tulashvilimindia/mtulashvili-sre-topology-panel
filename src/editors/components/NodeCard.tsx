@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { CollapsableSection, Input, Select, Checkbox, IconButton, Button, TextArea } from '@grafana/ui';
 import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
-import { TopologyNode, NodeMetricConfig, NodeGroup, NODE_TYPE_CONFIG, ACCENT_COLOR } from '../../types';
+import { TopologyNode, NodeMetricConfig, NodeGroup, ObservabilityLink, NODE_TYPE_CONFIG, ACCENT_COLOR } from '../../types';
 import { MetricEditor } from './MetricEditor';
 import { getNodeTypeOptions, findNodeGroup, generateId, sanitizeLabel } from '../utils/editorUtils';
 import '../editors.css';
@@ -153,6 +153,31 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
   const removeMatcher = useCallback((idx: number) => {
     syncMatchers(matcherEntries.filter((_, i) => i !== idx));
   }, [matcherEntries, syncMatchers]);
+
+  // ─── Observability links (same local-state pattern as Alert matchers) ───
+  const [linkEntries, setLinkEntries] = useState<Array<{ label: string; url: string; icon: string }>>(
+    () => (node.observabilityLinks || []).map((l) => ({ label: l.label, url: l.url, icon: l.icon || '' }))
+  );
+
+  const syncLinks = useCallback((next: Array<{ label: string; url: string; icon: string }>) => {
+    setLinkEntries(next);
+    const links: ObservabilityLink[] = next
+      .filter((e) => e.label && e.url)
+      .map((e) => ({ label: e.label, url: e.url, ...(e.icon ? { icon: e.icon } : {}) }));
+    handleField('observabilityLinks', links.length > 0 ? links : undefined);
+  }, [handleField]);
+
+  const addLink = useCallback(() => {
+    syncLinks([...linkEntries, { label: '', url: '', icon: '' }]);
+  }, [linkEntries, syncLinks]);
+
+  const updateLink = useCallback((idx: number, field: 'label' | 'url' | 'icon', val: string) => {
+    syncLinks(linkEntries.map((l, i) => (i === idx ? { ...l, [field]: val } : l)));
+  }, [linkEntries, syncLinks]);
+
+  const removeLink = useCallback((idx: number) => {
+    syncLinks(linkEntries.filter((_, i) => i !== idx));
+  }, [linkEntries, syncLinks]);
 
   // ─── When user selects a host, auto-fill name ───
   const handleHostSelect = useCallback((instance: string) => {
@@ -447,6 +472,57 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
                 style={{ marginTop: 4 }}
               >
                 Add matcher
+              </Button>
+            </div>
+            <div className="topo-editor-field">
+              <label>
+                Observability links
+                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>
+                  drill-down buttons in node popup; URLs support {'${tokens}'} from labels/name/id
+                </span>
+              </label>
+              {linkEntries.length === 0 && (
+                <div style={{ fontSize: 10, color: '#616e88', padding: '4px 0' }}>
+                  No links — node has no drill-down buttons
+                </div>
+              )}
+              {linkEntries.map((entry, idx) => (
+                <div key={idx} style={{ marginBottom: 4 }}>
+                  <div className="topo-editor-row" style={{ gap: 4 }}>
+                    <Input
+                      value={entry.label}
+                      onChange={(e) => updateLink(idx, 'label', e.currentTarget.value)}
+                      placeholder="Logs"
+                      width={12}
+                    />
+                    <Input
+                      value={entry.icon}
+                      onChange={(e) => updateLink(idx, 'icon', e.currentTarget.value)}
+                      placeholder="icon (optional)"
+                      width={14}
+                    />
+                    <IconButton
+                      name="trash-alt"
+                      size="sm"
+                      onClick={() => removeLink(idx)}
+                      tooltip="Remove link"
+                    />
+                  </div>
+                  <Input
+                    value={entry.url}
+                    onChange={(e) => updateLink(idx, 'url', e.currentTarget.value)}
+                    placeholder="https://... or /explore?left=..."
+                  />
+                </div>
+              ))}
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="plus"
+                onClick={addLink}
+                style={{ marginTop: 4 }}
+              >
+                Add link
               </Button>
             </div>
           </CollapsableSection>
