@@ -606,9 +606,6 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
         height={height - 36 - (timeOffset !== 0 ? 28 : 0)}
         onNodeDrag={handleNodeDrag}
         onNodeToggle={handleNodeToggle}
-        popupNode={null}
-        popupPosition={null}
-        onPopupClose={() => setPopupNodeId(null)}
       />
       {popupNodeId && (() => {
         const popupNode = nodes.find((n) => n.id === popupNodeId);

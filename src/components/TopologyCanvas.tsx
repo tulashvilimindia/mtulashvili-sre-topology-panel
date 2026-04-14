@@ -21,16 +21,12 @@ interface CanvasProps {
   height: number;
   onNodeDrag: (nodeId: string, x: number, y: number) => void;
   onNodeToggle: (nodeId: string) => void;
-  popupNode?: TopologyNode | null;
-  popupPosition?: { x: number; y: number } | null;
-  onPopupClose?: () => void;
 }
 
 export const TopologyCanvas: React.FC<CanvasProps> = ({
   nodes, edges, groups, nodePositions, nodeStates, edgeStates,
   canvasOptions, animationOptions, displayOptions,
   width, height, onNodeDrag, onNodeToggle,
-  popupNode, popupPosition, onPopupClose
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
