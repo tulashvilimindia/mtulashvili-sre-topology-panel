@@ -653,15 +653,18 @@ Cloudflare Edge (CDN/WAF)
 - [x] **Z-order fix** — groups no longer occlude edges that cross their bounding box
 - [x] **AbortController + 10s timeout** on all datasource queries so hung datasources don't freeze the panel
 
+**Partially shipped — needs follow-up:**
+
+- [~] **Template variable support** — `replaceVariables` from `PanelProps` is threaded through `TopologyPanel → useSelfQueries → queryDatasource → replaceVars(query)` and applied to **Prometheus query strings** (`src/utils/datasourceQuery.ts:67`). **Not yet** applied to CloudWatch `queryConfig.namespace` / `metricName` / `dimensions` values, or to Infinity `queryConfig.url` / `body`. Extending the interpolation across all three datasource types is straightforward (map each string field through `replaceVars`) but hasn't been done.
+- [~] **Plugin signing** — the release workflow in `.github/workflows/release.yml` already runs `@grafana/sign-plugin` on tag push with an env-driven `GRAFANA_ROOT_URLS` secret (Task 4.3 in the GA plan). The plugin build zip can be signed today. **Public Grafana catalog submission** itself is a separate manual process (submit the signed zip + `plugin.json` + metadata to Grafana Labs via their plugin submission form) and has not been done — the plugin is currently installed as an unsigned allowlisted plugin.
+
 **Still on the roadmap:**
 
 - [ ] Visual node/edge editor (drag-to-connect directly on canvas)
 - [ ] Edge hover highlighting (dim others to 20%)
 - [ ] Edge click → metric detail overlay
 - [ ] Right-click context menu on nodes and edges
-- [ ] Template variable support inside NRQL/PromQL via `replaceVariables()`
 - [ ] Light theme support
-- [ ] Plugin signing for public Grafana plugin catalog submission
 
 ---
 
