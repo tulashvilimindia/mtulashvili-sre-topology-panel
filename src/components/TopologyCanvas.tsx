@@ -346,7 +346,13 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
       <div style={{ transform: `translate(${viewport.translateX}px, ${viewport.translateY}px) scale(${viewport.scale})`, transformOrigin: '0 0', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
       {/* SVG Layer for edges */}
       <svg
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}
+        // overflow: visible is CRITICAL — SVG root elements default to
+        // overflow: hidden (unlike <div>), so any edge path that extends
+        // beyond the SVG's layout box gets clipped. After Auto Layout +
+        // Fit, nodes can end up at coordinates outside the original
+        // canvas bounds (HTML node divs render fine because divs default
+        // to overflow: visible, but SVG paths were silently clipped).
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 1 }}
       >
         <defs>
           <marker id="topo-arrow-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
