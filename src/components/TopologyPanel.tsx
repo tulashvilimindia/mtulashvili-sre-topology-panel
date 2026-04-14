@@ -185,6 +185,21 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   const groups = useMemo(() => options.groups || [], [options.groups]);
   const { canvas, animation, layout, display } = options;
 
+  // Derive node.groupId at runtime from NodeGroup.nodeIds so the layout
+  // engine can sort grouped nodes adjacent within their tier. NodeGroup.nodeIds
+  // remains the single source of truth — this derived view is never persisted.
+  const nodesWithGroupId = useMemo(() => {
+    const nodeToGroup = new Map<string, string>();
+    groups.forEach((g) => {
+      g.nodeIds.forEach((nid) => nodeToGroup.set(nid, g.id));
+    });
+    return nodes.map((n) => {
+      const derivedGroupId = nodeToGroup.get(n.id);
+      if (derivedGroupId === n.groupId) { return n; }
+      return derivedGroupId ? { ...n, groupId: derivedGroupId } : { ...n, groupId: undefined };
+    });
+  }, [nodes, groups]);
+
   // Refs for stable closures in debounced/callback functions (CR-6, CR-7)
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -248,7 +263,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
 
     if (needsAutoLayout || positions.size < nodes.length) {
-      const autoPositions = autoLayout(nodes, edges, {
+      const autoPositions = autoLayout(nodesWithGroupId, edges, {
         direction: layout.direction,
         tierSpacing: layout.tierSpacing,
         nodeSpacing: layout.nodeSpacing,
@@ -263,7 +278,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     }
 
     setNodePositions(positions);
-  }, [nodes, edges, layout, width, height]);
+  }, [nodes, nodesWithGroupId, edges, layout, width, height]);
 
   // Compute runtime state from data frames + self-queried results
   const nodeStates = useMemo<Map<string, NodeRuntimeState>>(() => {
@@ -511,7 +526,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
   }, []);
 
   const handleResetLayout = useCallback(() => {
-    const autoPositions = autoLayout(nodes, edges, {
+    const autoPositions = autoLayout(nodesWithGroupId, edges, {
       direction: layout.direction,
       tierSpacing: layout.tierSpacing,
       nodeSpacing: layout.nodeSpacing,
@@ -520,7 +535,7 @@ export const TopologyPanel: React.FC<Props> = ({ options, onOptionsChange, data,
     });
     setNodePositions(autoPositions);
     setExpandedNodes(new Set());
-  }, [nodes, edges, layout, width, height]);
+  }, [nodesWithGroupId, edges, layout, width, height]);
 
   const handleLoadExample = useCallback(() => {
     const exampleTopology = getExampleTopology();
