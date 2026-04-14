@@ -26,6 +26,126 @@ interface CanvasProps {
   onNodeDoubleClick?: (nodeId: string) => void;
 }
 
+// ─── Memoized edge SVG renderer ───
+//
+// Extracted into its own component so React.memo's default shallow
+// comparison can skip re-rendering individual edges when edgeStates
+// ticks but that particular edge's computed state (color, thickness,
+// flowSpeed, label) is unchanged. Props are intentionally flattened
+// into primitives so shallow compare hits cleanly — the edgeStates
+// Map rebuilds on every parent render and would otherwise blow the
+// comparison if passed as an object.
+interface EdgeRenderProps {
+  edgeId: string;
+  bidirectional: boolean;
+  isResponse: boolean;
+  latencyLabel?: string;
+  dashArray: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  midX: number;
+  midY: number;
+  edgeColor: string;
+  thickness: number;
+  flowSpeed: number;
+  label?: string;
+  showEdgeLabels: boolean;
+  arrowId: string;
+}
+
+const EdgeRender: React.FC<EdgeRenderProps> = React.memo((props) => {
+  const {
+    bidirectional, isResponse, latencyLabel, dashArray,
+    fromX, fromY, toX, toY, midX, midY,
+    edgeColor, thickness, flowSpeed, label, showEdgeLabels, arrowId,
+  } = props;
+  const from = { x: fromX, y: fromY };
+  const to = { x: toX, y: toY };
+  const renderFrom = isResponse ? to : from;
+  const renderTo = isResponse ? from : to;
+  const renderPath = getBezierPath(renderFrom, renderTo);
+  const renderColor = isResponse ? ACCENT_COLOR : edgeColor;
+  return (
+    <g>
+      {/* Base wire */}
+      <path
+        d={renderPath}
+        fill="none"
+        stroke={isResponse ? '#2d374899' : '#2d3748'}
+        strokeWidth={thickness}
+        strokeDasharray={dashArray}
+        markerEnd={`url(#${arrowId})`}
+      />
+      {/* Animated flow overlay */}
+      {flowSpeed > 0 && (
+        <path
+          d={renderPath}
+          fill="none"
+          stroke={renderColor}
+          strokeWidth={Math.max(thickness + 1, 2.5)}
+          strokeDasharray="6 10"
+          opacity={isResponse ? 0.4 : 0.55}
+          style={{ animation: `topoFlow ${flowSpeed}s linear infinite` }}
+        />
+      )}
+      {/* Bidirectional reverse path */}
+      {bidirectional && (
+        <>
+          <path
+            d={getBezierPath(to, from)}
+            fill="none"
+            stroke="#2d3748"
+            strokeWidth={thickness}
+            strokeDasharray={dashArray}
+            markerEnd={`url(#${arrowId})`}
+            opacity={0.5}
+          />
+          {flowSpeed > 0 && (
+            <path
+              d={getBezierPath(to, from)}
+              fill="none"
+              stroke={edgeColor}
+              strokeWidth={Math.max(thickness + 1, 2.5)}
+              strokeDasharray="6 10"
+              opacity={0.35}
+              style={{ animation: `topoFlow ${flowSpeed}s linear infinite` }}
+            />
+          )}
+        </>
+      )}
+      {/* Edge label */}
+      {showEdgeLabels && label && (
+        <text
+          x={midX}
+          y={midY - 4}
+          textAnchor="middle"
+          fontSize={9}
+          fill="#5e81ac"
+          fontFamily="var(--font-sans)"
+        >
+          {label}
+        </text>
+      )}
+      {/* Secondary latency label */}
+      {showEdgeLabels && latencyLabel && (
+        <text
+          x={midX}
+          y={label ? midY + 8 : midY - 4}
+          textAnchor="middle"
+          fontSize={8}
+          fill="#616e88"
+          fontFamily="var(--font-sans)"
+        >
+          {latencyLabel}
+        </text>
+      )}
+    </g>
+  );
+});
+EdgeRender.displayName = 'EdgeRender';
+
 export const TopologyCanvas: React.FC<CanvasProps> = ({
   nodes, edges, groups, nodePositions, nodeStates, edgeStates,
   canvasOptions, animationOptions, displayOptions,
@@ -254,10 +374,11 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           const fromRaw = getAnchorPoint(sourceRect, edge.anchorSource, targetRect);
           const toRaw = getAnchorPoint(targetRect, edge.anchorTarget, sourceRect);
           // Apply parallel offset perpendicular to edge direction
-          const from = { x: fromRaw.x + parallelOffset, y: fromRaw.y };
-          const to = { x: toRaw.x + parallelOffset, y: toRaw.y };
-          const fwdPath = getBezierPath(from, to);
-          const mid = getBezierMidpoint(from, to);
+          const fromX = fromRaw.x + parallelOffset;
+          const fromY = fromRaw.y;
+          const toX = toRaw.x + parallelOffset;
+          const toY = toRaw.y;
+          const mid = getBezierMidpoint({ x: fromX, y: fromY }, { x: toX, y: toY });
 
           const edgeStyle = EDGE_TYPE_STYLES[edge.type] || EDGE_TYPE_STYLES.traffic;
           const es = edgeStates.get(edge.id);
@@ -272,88 +393,28 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
             : edgeColor === '#ebcb8b' ? 'topo-arrow-warn'
             : edgeColor === '#a3be8c' ? 'topo-arrow-ok'
             : 'topo-arrow-dim';
-          // Response edges render from target→source (reverse direction)
-          const renderFrom = isResponse ? to : from;
-          const renderTo = isResponse ? from : to;
-
-          const renderPath = getBezierPath(renderFrom, renderTo);
-          const renderColor = isResponse ? ACCENT_COLOR : edgeColor;
 
           return (
-            <g key={edge.id}>
-              {/* Base wire */}
-              <path
-                d={renderPath}
-                fill="none"
-                stroke={isResponse ? '#2d374899' : '#2d3748'}
-                strokeWidth={thickness}
-                strokeDasharray={edgeStyle.dashArray}
-                markerEnd={`url(#${arrowId})`}
-              />
-              {/* Animated flow overlay */}
-              {flowSpeed > 0 && (
-                <path
-                  d={renderPath}
-                  fill="none"
-                  stroke={renderColor}
-                  strokeWidth={Math.max(thickness + 1, 2.5)}
-                  strokeDasharray="6 10"
-                  opacity={isResponse ? 0.4 : 0.55}
-                  style={{ animation: `topoFlow ${flowSpeed}s linear infinite` }}
-                />
-              )}
-              {/* Bidirectional reverse path */}
-              {edge.bidirectional && (
-                <>
-                  <path
-                    d={getBezierPath(to, from)}
-                    fill="none"
-                    stroke="#2d3748"
-                    strokeWidth={thickness}
-                    strokeDasharray={edgeStyle.dashArray}
-                    markerEnd={`url(#${arrowId})`}
-                    opacity={0.5}
-                  />
-                  {flowSpeed > 0 && (
-                    <path
-                      d={getBezierPath(to, from)}
-                      fill="none"
-                      stroke={edgeColor}
-                      strokeWidth={Math.max(thickness + 1, 2.5)}
-                      strokeDasharray="6 10"
-                      opacity={0.35}
-                      style={{ animation: `topoFlow ${flowSpeed}s linear infinite` }}
-                    />
-                  )}
-                </>
-              )}
-              {/* Edge label */}
-              {displayOptions.showEdgeLabels && label && (
-                <text
-                  x={mid.x}
-                  y={mid.y - 4}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="#5e81ac"
-                  fontFamily="var(--font-sans)"
-                >
-                  {label}
-                </text>
-              )}
-              {/* Secondary latency label (shown below main label, or at midpoint if no main label) */}
-              {displayOptions.showEdgeLabels && edge.latencyLabel && (
-                <text
-                  x={mid.x}
-                  y={label ? mid.y + 8 : mid.y - 4}
-                  textAnchor="middle"
-                  fontSize={8}
-                  fill="#616e88"
-                  fontFamily="var(--font-sans)"
-                >
-                  {edge.latencyLabel}
-                </text>
-              )}
-            </g>
+            <EdgeRender
+              key={edge.id}
+              edgeId={edge.id}
+              bidirectional={edge.bidirectional}
+              isResponse={isResponse}
+              latencyLabel={edge.latencyLabel}
+              dashArray={edgeStyle.dashArray}
+              fromX={fromX}
+              fromY={fromY}
+              toX={toX}
+              toY={toY}
+              midX={mid.x}
+              midY={mid.y}
+              edgeColor={edgeColor}
+              thickness={thickness}
+              flowSpeed={flowSpeed}
+              label={label}
+              showEdgeLabels={displayOptions.showEdgeLabels}
+              arrowId={arrowId}
+            />
           );
         })}
       </svg>
