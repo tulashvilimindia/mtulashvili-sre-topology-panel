@@ -569,9 +569,9 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
           const flowSpeed = es?.animationSpeed || 0;
           const label = es?.formattedLabel;
           const arrowId = geom.isResponse ? 'topo-arrow-response'
-            : edgeColor === '#bf616a' ? 'topo-arrow-crit'
-            : edgeColor === '#ebcb8b' ? 'topo-arrow-warn'
-            : edgeColor === '#a3be8c' ? 'topo-arrow-ok'
+            : edgeColor === STATUS_COLORS.critical ? 'topo-arrow-crit'
+            : edgeColor === STATUS_COLORS.warning ? 'topo-arrow-warn'
+            : edgeColor === STATUS_COLORS.ok ? 'topo-arrow-ok'
             : 'topo-arrow-dim';
 
           return (
