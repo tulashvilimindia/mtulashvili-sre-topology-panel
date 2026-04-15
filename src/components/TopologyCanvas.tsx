@@ -6,7 +6,7 @@ import {
 } from '../types';
 import { getAnchorPoint, getBezierPath, getBezierMidpoint, EDGE_TYPE_STYLES } from '../utils/edges';
 import { ViewportState, DEFAULT_VIEWPORT, zoomAtPoint, fitToView } from '../utils/viewport';
-import { getStoredViewport, setStoredViewport } from '../utils/viewportStore';
+import { getStoredViewport, setStoredViewport, clearStoredViewport } from '../utils/viewportStore';
 
 interface CanvasProps {
   nodes: TopologyNode[];
@@ -226,6 +226,18 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
   useEffect(() => {
     setStoredViewport(panelId, viewport);
   }, [panelId, viewport]);
+  // Best-effort cleanup: clear this panel's stored viewport when its id
+  // changes. React cannot distinguish "panel deleted from dashboard" from
+  // "panel remounted for edit/view toggle" — both trigger unmount. This
+  // effect only clears on panelId change, which is a no-op in the common
+  // case (id is stable within a panel lifetime) but catches the edge case
+  // where a panel id mutates. Remaining leak is bounded: one entry per
+  // unique panelId the user has ever opened in this browser session.
+  useEffect(() => {
+    return () => {
+      clearStoredViewport(panelId);
+    };
+  }, [panelId]);
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
 
