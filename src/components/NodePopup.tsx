@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Icon, IconName } from '@grafana/ui';
 import { TopologyNode, FiringAlert, MetricValue, STATUS_COLORS, ACCENT_COLOR } from '../types';
 import { queryDatasourceRange, TimeseriesPoint } from '../utils/datasourceQuery';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /**
  * Human-readable "updated Ns ago" from a fetchedAt ms timestamp.
@@ -64,6 +65,12 @@ export const NodePopup: React.FC<PopupProps> = ({
   freshnessSLOSec = 60,
   replaceVars,
 }) => {
+  // Focus trap: on mount, move focus into the popup and trap Tab cycling;
+  // Escape calls onClose; on unmount restore focus to whatever was focused
+  // before the popup opened. Required for Grafana catalog a11y guidelines.
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(containerRef, onClose, true);
+
   const [seriesData, setSeriesData] = useState<MetricTimeseries[]>([]);
   const [loading, setLoading] = useState(true);
   // "now" ticks every 15 seconds so the freshness label ("Updated 30s ago")
@@ -125,6 +132,7 @@ export const NodePopup: React.FC<PopupProps> = ({
 
   return (
     <div
+      ref={containerRef}
       className="topology-popup"
       style={{ position: 'relative', left: 0, top: 0 }}
       onClick={(e) => e.stopPropagation()}

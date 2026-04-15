@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@grafana/ui';
 import { TopologyEdge, EdgeRuntimeState, STATUS_COLORS, ACCENT_COLOR, EdgeStatus } from '../types';
 import { queryDatasourceRange, TimeseriesPoint } from '../utils/datasourceQuery';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /**
  * EdgePopup — floating detail card for a clicked edge.
@@ -32,6 +33,10 @@ interface EdgePopupProps {
 export const EdgePopup: React.FC<EdgePopupProps> = ({
   edge, runtimeState, sourceName, targetName, onClose, onEdit, replaceVars,
 }) => {
+  // Focus trap: see NodePopup for rationale. Grafana catalog a11y.
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(containerRef, onClose, true);
+
   const [points, setPoints] = useState<TimeseriesPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,6 +72,7 @@ export const EdgePopup: React.FC<EdgePopupProps> = ({
 
   return (
     <div
+      ref={containerRef}
       className="topology-popup"
       style={{ position: 'relative', left: 0, top: 0 }}
       onClick={(e) => e.stopPropagation()}
