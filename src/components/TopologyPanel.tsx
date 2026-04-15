@@ -46,6 +46,11 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
   const groups = useMemo(() => options.groups || [], [options.groups]);
   const { canvas, animation, layout, display } = options;
 
+  // Memoized once — the URL query does not change during a panel's
+  // lifetime, so this is effectively a const. Parsing once and passing
+  // down as a prop is cheaper and more robust than 5 repeat parses.
+  const isEditMode = useMemo(() => window.location.search.includes('editPanel'), []);
+
   // Derive node.groupId at runtime from NodeGroup.nodeIds so the layout
   // engine can sort grouped nodes adjacent within their tier. NodeGroup.nodeIds
   // remains the single source of truth — this derived view is never persisted.
@@ -430,7 +435,6 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     // floating UI is visible at a time.
     setPopupEdgeId(null);
     setPopupEdgePosition(null);
-    const isEditMode = window.location.search.includes('editPanel');
     if (isEditMode) {
       // Edit mode: sidebar is the expansion target. Emit the event so
       // NodesEditor scrolls/expands its card, and return early WITHOUT
@@ -478,7 +482,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
       if (next.has(nodeId)) { next.delete(nodeId); } else { next.add(nodeId); }
       return next;
     });
-  }, []);
+  }, [isEditMode]);
 
   // Double-click emits the edit-request event. Only NodesEditor subscribes, so
   // this is a no-op in view mode and opens+scrolls the card in edit mode.
@@ -845,13 +849,13 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         onEdgeContextMenu={handleEdgeContextMenu}
         onEdgeClick={handleEdgeClick}
         onEdgeCreate={handleEdgeCreate}
-        isEditMode={window.location.search.includes('editPanel')}
+        isEditMode={isEditMode}
       />
       <ContextMenu
         target={contextMenu?.target ?? null}
         position={contextMenu?.position ?? null}
         panelRect={{ width, height }}
-        isEditMode={window.location.search.includes('editPanel')}
+        isEditMode={isEditMode}
         onEdit={handleContextEdit}
         onDuplicate={handleContextDuplicate}
         onDelete={handleContextDelete}
@@ -869,7 +873,6 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         // In edit mode, expose an "Edit" shortcut that emits on the
         // panelEvents channel and closes the popup. NodesEditor subscribes
         // to the same channel and scrolls the matching card into view.
-        const isEditMode = window.location.search.includes('editPanel');
         const handleEdit = isEditMode
           ? () => {
               emitNodeEditRequest(popupNode.id);
@@ -895,7 +898,6 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         if (!popupEdge) { return null; }
         const sourceNode = nodes.find((n) => n.id === popupEdge.sourceId);
         const targetNode = nodes.find((n) => n.id === popupEdge.targetId);
-        const isEditMode = window.location.search.includes('editPanel');
         // Edit routes through the edge-edit-request panelEvents channel;
         // EdgesEditor subscribes and scrolls/expands the matching card.
         // Virtual edges (id contains '::') have no real slice entry, so
