@@ -107,6 +107,34 @@ describe('ContextMenu', () => {
     // 600 - 144 - 8 = 448
     expect(menu.style.top).toBe('448px');
   });
+
+  // ─── a11y: arrow-key navigation and initial focus (T4.2) ────────────
+  //
+  // The queueMicrotask-based initial focus needs one microtask flush
+  // after render before the assertion sees the updated activeElement.
+
+  test('first menuitem receives focus when menu opens', async () => {
+    renderMenu();
+    await Promise.resolve();
+    expect(document.activeElement).toBe(screen.getByText('Edit in sidebar'));
+  });
+
+  test('ArrowDown cycles focus to the next menuitem', async () => {
+    renderMenu();
+    await Promise.resolve();
+    // First item ("Edit in sidebar") is focused. ArrowDown → Duplicate.
+    fireEvent.keyDown(document, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(screen.getByText('Duplicate'));
+  });
+
+  test('ArrowDown from the last menuitem wraps to the first', async () => {
+    renderMenu();
+    await Promise.resolve();
+    // Focus the last item (Delete) directly, then ArrowDown should wrap.
+    (screen.getByText('Delete') as HTMLButtonElement).focus();
+    fireEvent.keyDown(document, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(screen.getByText('Edit in sidebar'));
+  });
 });
 
 /** jsdom normalizes inline hex colors to rgb() when read from .style. */

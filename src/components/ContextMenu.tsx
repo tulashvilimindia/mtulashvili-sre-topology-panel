@@ -43,10 +43,35 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); }
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      // Arrow-key navigation between menu items. Re-query on every press
+      // so dynamic items (e.g. "Edit in sidebar" shown only in edit mode)
+      // are handled correctly.
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') { return; }
+      if (!containerRef.current) { return; }
+      const items = containerRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]');
+      if (items.length === 0) { return; }
+      const active = document.activeElement as HTMLElement | null;
+      const idx = Array.from(items).indexOf(active as HTMLElement);
+      const next = e.key === 'ArrowDown'
+        ? items[(idx + 1 + items.length) % items.length]
+        : items[(idx - 1 + items.length) % items.length];
+      e.preventDefault();
+      next.focus();
     };
     document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('keydown', handleKeyDown);
+    // Move focus to the first menuitem on open so arrow keys and Enter
+    // work immediately without requiring the user to Tab in. Deferred one
+    // microtask so the DOM is painted before querying.
+    queueMicrotask(() => {
+      if (!containerRef.current) { return; }
+      const firstItem = containerRef.current.querySelector<HTMLElement>('[role="menuitem"]');
+      if (firstItem) { firstItem.focus(); }
+    });
     return () => {
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('keydown', handleKeyDown);
