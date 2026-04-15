@@ -1,7 +1,7 @@
 # Project Guide — E2E Topology Grafana Plugin
 
 ## Project overview
-This is a custom Grafana panel plugin (`sid2-grafana-topology`) that renders interactive E2E topology diagrams with live metrics from any Grafana datasource. It is built for platform engineering teams to visualize infrastructure flows like:
+This is a custom Grafana panel plugin (`mindiatulashvili-sre-topology-panel`) that renders interactive E2E topology diagrams with live metrics from any Grafana datasource. It is built for platform engineering teams to visualize infrastructure flows like:
 - CDN → Firewall → Load Balancer → Web Server (any tiered frontend)
 - Any tiered application architecture
 
@@ -149,7 +149,7 @@ npm run build
 
 # In grafana.ini, add:
 # [plugins]
-# allow_loading_unsigned_plugins = sid2-grafana-topology
+# allow_loading_unsigned_plugins = mindiatulashvili-sre-topology-panel
 ```
 
 ## Grafana instance

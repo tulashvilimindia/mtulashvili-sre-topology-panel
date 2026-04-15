@@ -19,7 +19,7 @@
     "panels": [
       {
         "id": 1,
-        "type": "sid2-grafana-topology",
+        "type": "mindiatulashvili-sre-topology-panel",
         "title": "Angular Portal — Request Flow",
         "gridPos": {
           "x": 0,

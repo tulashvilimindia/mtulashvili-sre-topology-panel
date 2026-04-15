@@ -20,7 +20,7 @@
     "panels": [
       {
         "id": 1,
-        "type": "sid2-grafana-topology",
+        "type": "mindiatulashvili-sre-topology-panel",
         "title": "PMS — Service Topology (15 services, NR-only)",
         "gridPos": {
           "x": 0,

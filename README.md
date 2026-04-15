@@ -98,7 +98,7 @@ The plugin supports three relationship patterns that cover all common topologies
 ### Build from Source
 
 ```bash
-git clone https://github.com/tulashvilimindia/sid2-grafana-topology.git
+git clone https://github.com/tulashvilimindia/mindiatulashvili-sre-topology-panel.git
 cd grafana-topology-plugin
 npm install
 npm run build
@@ -110,26 +110,26 @@ npm run build
 
 ```bash
 # Linux
-sudo cp -r dist/ /var/lib/grafana/plugins/sid2-grafana-topology/
+sudo cp -r dist/ /var/lib/grafana/plugins/mindiatulashvili-sre-topology-panel/
 
 # macOS (Homebrew)
-cp -r dist/ /opt/homebrew/var/lib/grafana/plugins/sid2-grafana-topology/
+cp -r dist/ /opt/homebrew/var/lib/grafana/plugins/mindiatulashvili-sre-topology-panel/
 
 # Windows
-xcopy dist\ "C:\Program Files\GrafanaLabs\grafana\data\plugins\sid2-grafana-topology\" /E /I
+xcopy dist\ "C:\Program Files\GrafanaLabs\grafana\data\plugins\mindiatulashvili-sre-topology-panel\" /E /I
 ```
 
 2. Allow the unsigned plugin in `grafana.ini`:
 
 ```ini
 [plugins]
-allow_loading_unsigned_plugins = sid2-grafana-topology
+allow_loading_unsigned_plugins = mindiatulashvili-sre-topology-panel
 ```
 
 Or via environment variable:
 
 ```bash
-GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=sid2-grafana-topology
+GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=mindiatulashvili-sre-topology-panel
 ```
 
 3. Restart Grafana:
@@ -145,8 +145,8 @@ sudo systemctl restart grafana-server
 ```bash
 docker run -d \
   -p 3000:3000 \
-  -v $(pwd)/dist:/var/lib/grafana/plugins/sid2-grafana-topology \
-  -e GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=sid2-grafana-topology \
+  -v $(pwd)/dist:/var/lib/grafana/plugins/mindiatulashvili-sre-topology-panel \
+  -e GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=mindiatulashvili-sre-topology-panel \
   grafana/grafana-enterprise:12.0.0
 ```
 
@@ -159,10 +159,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./dist:/var/lib/grafana/plugins/sid2-grafana-topology
+      - ./dist:/var/lib/grafana/plugins/mindiatulashvili-sre-topology-panel
       - grafana-storage:/var/lib/grafana
     environment:
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: sid2-grafana-topology
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: mindiatulashvili-sre-topology-panel
 volumes:
   grafana-storage:
 ```

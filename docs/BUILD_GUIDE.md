@@ -5,7 +5,7 @@ Pipeline Demo** dashboard from scratch in Grafana, using only the web UI
 (zero REST API calls).
 
 The finished dashboard showcases every major feature of the
-`sid2-grafana-topology` panel on a single screen:
+`mindiatulashvili-sre-topology-panel` panel on a single screen:
 
 - **22 nodes** across **10 tiers**
 - **9 HA pairs** (one per tier 1–9) + **1 four-shard DB cluster** (tier 10)
@@ -58,9 +58,9 @@ readable.
 
 ## Prerequisites
 
-1. **Grafana ≥ 12.0** with the `sid2-grafana-topology-panel` plugin installed
+1. **Grafana ≥ 12.0** with the `mindiatulashvili-sre-topology-panel` plugin installed
    (either signed and allowlisted, or provisioned unsigned via
-   `GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=sid2-grafana-topology-panel`)
+   `GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=mindiatulashvili-sre-topology-panel`)
 2. **TestData datasource** enabled and visible in **Connections → Data sources**
    (it ships with Grafana core — no plugin install required)
 
@@ -437,7 +437,7 @@ metric thresholds), edit that file and re-upload via Step 5.
 - **URL**: `http://localhost:13100/d/26251229-4008-4c1f-a8a3-e7b67534856a/10-layer-ha-synthetic-pipeline-demo`
 - **UID**: `26251229-4008-4c1f-a8a3-e7b67534856a`
 - **Title**: 10-Layer HA Synthetic Pipeline Demo
-- **Panel type**: `sid2-grafana-topology`
+- **Panel type**: `mindiatulashvili-sre-topology-panel`
 - **Panel targets**: 22 TestData queries, refIds `A` through `V`, scenario `Random Walk`
 - **Options**: 22 nodes, 33 edges, 10 groups
 

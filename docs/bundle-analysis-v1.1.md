@@ -1,4 +1,4 @@
-# Bundle analysis — sid2-grafana-topology v1.1
+# Bundle analysis — mindiatulashvili-sre-topology-panel v1.1
 
 **Date:** 2026-04-15
 **Build output:** `dist/module.js` = **166 KiB minified** (169,697 bytes)

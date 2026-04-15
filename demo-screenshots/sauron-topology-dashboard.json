@@ -20,7 +20,7 @@
     "panels": [
       {
         "id": 1,
-        "type": "sid2-grafana-topology",
+        "type": "mindiatulashvili-sre-topology-panel",
         "title": "Sauron's Eye — Angular Portal Full Traffic Trace",
         "gridPos": {
           "x": 0,

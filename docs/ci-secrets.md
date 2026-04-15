@@ -16,7 +16,7 @@ signing private plugins regardless of deployment target.
 1. Log in to https://grafana.com (free account works — doesn't need a paid org).
 2. Navigate to **My Account → Security → Access Policies**.
 3. Click **Create access policy**.
-4. Name: `plugin-signing-sid2-grafana-topology` (or similar).
+4. Name: `plugin-signing-mindiatulashvili-sre-topology-panel` (or similar).
 5. Realm: your Grafana Cloud organization.
 6. Scopes: **`plugins:write`** only — least privilege.
 7. Click **Add token**, set a 1-year expiration, copy the `glc_...` token value.

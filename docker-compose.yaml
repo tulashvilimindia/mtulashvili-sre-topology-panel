@@ -1,7 +1,7 @@
 services:
   grafana:
     user: root
-    container_name: sid2-grafana-topology-dev
+    container_name: mindiatulashvili-sre-topology-panel-dev
     build:
       context: ./.config
       args:
@@ -10,14 +10,14 @@ services:
     ports:
       - 13100:3000/tcp
     volumes:
-      - ./dist:/var/lib/grafana/plugins/sid2-grafana-topology-panel
+      - ./dist:/var/lib/grafana/plugins/mindiatulashvili-sre-topology-panel
       - ./provisioning:/etc/grafana/provisioning
     environment:
       NODE_ENV: development
-      GF_LOG_FILTERS: plugin.sid2-grafana-topology-panel:debug
+      GF_LOG_FILTERS: plugin.mindiatulashvili-sre-topology-panel:debug
       GF_LOG_LEVEL: debug
       GF_DATAPROXY_LOGGING: 1
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: sid2-grafana-topology
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: mindiatulashvili-sre-topology-panel
       GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
