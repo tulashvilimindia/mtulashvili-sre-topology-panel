@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { PanelProps } from '@grafana/data';
-import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeRuntimeState, MetricValue, NodeMetricConfig, FiringAlert, NODE_TYPE_CONFIG, STATUS_COLORS, MUTED_TEXT_COLOR, DEFAULT_EDGE } from '../types';
+import { TopologyPanelOptions, TopologyNode, TopologyEdge, NodeRuntimeState, NodeStatus, NodeType, EdgeType, FlowSpeed, AnchorPoint, EdgeRuntimeState, MetricValue, NodeMetricConfig, FiringAlert, NODE_TYPE_CONFIG, STATUS_COLORS, MUTED_TEXT_COLOR, DEFAULT_EDGE } from '../types';
 import { TopologyCanvas } from './TopologyCanvas';
 import { autoLayout } from '../utils/layout';
 import { calculateEdgeStatus, getEdgeColor, calculateThickness, calculateFlowSpeed, isWorseStatus, propagateStatus } from '../utils/edges';
@@ -8,7 +8,24 @@ import { QueryError } from '../utils/datasourceQuery';
 import { useSelfQueries } from '../hooks/useSelfQueries';
 import { useAlertRules } from '../hooks/useAlertRules';
 import { useDynamicTargets } from '../hooks/useDynamicTargets';
-import { emitNodeClicked, emitNodeEditRequest, emitEdgeEditRequest, emitOrphanEdgeCleanup, onOrphanEdgeCleanup, onTopologyImport } from '../utils/panelEvents';
+import {
+  emitNodeClicked,
+  emitNodeEditRequest,
+  emitEdgeEditRequest,
+  emitOrphanEdgeCleanup,
+  onOrphanEdgeCleanup,
+  onTopologyImport,
+  NodeEditSection,
+  EdgeEditSection,
+} from '../utils/panelEvents';
+import { setNodeType, toggleNodeCompact } from '../utils/nodeMutations';
+import {
+  setEdgeType,
+  toggleEdgeBidirectional,
+  toggleEdgeFlowAnimation,
+  setEdgeFlowSpeed,
+  setEdgeAnchor,
+} from '../utils/edgeMutations';
 import { getExampleTopology } from '../editors/exampleTopology';
 import { NodePopup } from './NodePopup';
 import { EdgePopup } from './EdgePopup';
@@ -614,6 +631,76 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     }
   }, [onOptionsChange]);
 
+  // ─── Click-ops handlers for the hybrid context menu ───────────────────
+  //
+  // In-menu mutation handlers call pure helpers from nodeMutations /
+  // edgeMutations and fire onOptionsChange. Each closes the context menu
+  // after the mutation. Section-redirect handlers emit section-targeted
+  // edit requests so the sidebar card opens scrolled to the relevant
+  // sub-section; they close the menu first so the sidebar focus change
+  // is visually clean.
+
+  const handleChangeNodeType = useCallback((nodeId: string, newType: NodeType) => {
+    const next = setNodeType(optionsRef.current, nodeId, newType);
+    onOptionsChange(next);
+    setContextMenu(null);
+  }, [onOptionsChange]);
+
+  const handleToggleNodeCompact = useCallback((nodeId: string) => {
+    const next = toggleNodeCompact(optionsRef.current, nodeId);
+    onOptionsChange(next);
+    setContextMenu(null);
+  }, [onOptionsChange]);
+
+  const handleChangeEdgeType = useCallback((edgeId: string, newType: EdgeType) => {
+    const next = setEdgeType(optionsRef.current, edgeId, newType);
+    onOptionsChange(next);
+    setContextMenu(null);
+  }, [onOptionsChange]);
+
+  const handleToggleEdgeBidirectional = useCallback((edgeId: string) => {
+    const next = toggleEdgeBidirectional(optionsRef.current, edgeId);
+    onOptionsChange(next);
+    setContextMenu(null);
+  }, [onOptionsChange]);
+
+  const handleToggleEdgeFlowAnimation = useCallback((edgeId: string) => {
+    const next = toggleEdgeFlowAnimation(optionsRef.current, edgeId);
+    onOptionsChange(next);
+    setContextMenu(null);
+  }, [onOptionsChange]);
+
+  const handleSetEdgeFlowSpeed = useCallback((edgeId: string, speed: FlowSpeed | undefined) => {
+    const next = setEdgeFlowSpeed(optionsRef.current, edgeId, speed);
+    onOptionsChange(next);
+    setContextMenu(null);
+  }, [onOptionsChange]);
+
+  const handleSetEdgeAnchor = useCallback(
+    (edgeId: string, side: 'source' | 'target', anchor: AnchorPoint) => {
+      const next = setEdgeAnchor(optionsRef.current, edgeId, side, anchor);
+      onOptionsChange(next);
+      setContextMenu(null);
+    },
+    [onOptionsChange]
+  );
+
+  const handleEditNodeSection = useCallback(
+    (nodeId: string, section: NodeEditSection) => {
+      setContextMenu(null);
+      emitNodeEditRequest(nodeId, section);
+    },
+    []
+  );
+
+  const handleEditEdgeSection = useCallback(
+    (edgeId: string, section: EdgeEditSection) => {
+      setContextMenu(null);
+      emitEdgeEditRequest(edgeId, section);
+    },
+    []
+  );
+
   // Subscribe to orphan-edge-cleanup events fired by NodesEditor after a node
   // delete. setTimeout(0) yields one tick so NodesEditor's own slice update
   // (the node removal) has already propagated through Grafana's onOptionsChange
@@ -860,6 +947,17 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
         onDuplicate={handleContextDuplicate}
         onDelete={handleContextDelete}
         onClose={() => setContextMenu(null)}
+        nodes={nodes}
+        edges={expandedEdges}
+        onChangeNodeType={handleChangeNodeType}
+        onToggleNodeCompact={handleToggleNodeCompact}
+        onChangeEdgeType={handleChangeEdgeType}
+        onToggleEdgeBidirectional={handleToggleEdgeBidirectional}
+        onToggleEdgeFlowAnimation={handleToggleEdgeFlowAnimation}
+        onSetEdgeFlowSpeed={handleSetEdgeFlowSpeed}
+        onSetEdgeAnchor={handleSetEdgeAnchor}
+        onEditNodeSection={handleEditNodeSection}
+        onEditEdgeSection={handleEditEdgeSection}
       />
       {popupNodeId && (() => {
         const popupNode = nodes.find((n) => n.id === popupNodeId);
