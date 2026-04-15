@@ -36,6 +36,12 @@ coverage/
 stats.json
 /bundle-report.html
 
+# Local environment / secrets (NEVER committed)
+# Includes GRAFANA_ACCESS_POLICY_TOKEN for plugin signing.
+.env
+.env.local
+.env.*.local
+
 # Playwright MCP
 .playwright-mcp/
 
