@@ -384,6 +384,122 @@
   }
 }
 
+/* ─── Light theme ─────────────────────────────────────────────────────── */
+/*
+ * When the user's OS or Grafana theme is set to light, override the dark
+ * Nord palette with Nord's Snow Storm / Polar Night light variants.
+ * Status colors (green/yellow/red) remain the same because they're
+ * legible on both backgrounds.
+ *
+ * KNOWN GAP: inline styles in NodePopup / EdgePopup / ContextMenu are
+ * NOT covered by this block — they render dark even in light mode.
+ * Migrating those to CSS classes is a separate follow-up (see v1.2
+ * backlog in the plan file) because it touches ~400 LOC across three
+ * components and would sprawl this task.
+ *
+ * Also NOT covered: the SVG edge markers in TopologyCanvas <defs> at
+ * lines 530-546 — those use their own hardcoded Nord hex because SVG
+ * marker fill/stroke cannot inherit from CSS custom properties in a
+ * way that works across browsers. Light-theme SVG markers are a
+ * stretch goal.
+ */
+@media (prefers-color-scheme: light) {
+  .topology-panel {
+    background: #eceff4;
+    color: #2e3440;
+  }
+  .topology-canvas {
+    background: #eceff4;
+  }
+  .topology-toolbar {
+    border-bottom-color: #d8dee9;
+  }
+  .topology-title {
+    color: #5e81ac;
+  }
+  .topology-btn {
+    background: #e5e9f0;
+    border-color: #d8dee9;
+    color: #4c566a;
+  }
+  .topology-btn:hover {
+    background: #d8dee9;
+    color: #2e3440;
+  }
+  .topology-health-bar {
+    background: #e5e9f0;
+  }
+  .topology-node {
+    background: #e5e9f0;
+    border-color: #d8dee9;
+  }
+  .topology-node:hover {
+    border-color: #81a1c1;
+    box-shadow: 0 0 0 1px rgba(129, 161, 193, 0.3);
+  }
+  .topology-node.dragging {
+    border-color: #5e81ac;
+    box-shadow: 0 4px 20px rgba(46, 52, 64, 0.15);
+  }
+  .topo-node-name {
+    color: #2e3440;
+  }
+  .topo-node-role {
+    color: #4c566a;
+  }
+  .topo-metric {
+    background: #eceff4;
+  }
+  .topo-metric-label {
+    color: #4c566a;
+  }
+  .topo-metric-value.unknown {
+    color: #4c566a;
+  }
+  .topo-node-hint {
+    color: #81a1c1;
+  }
+  .topology-node:hover .topo-node-hint {
+    color: #5e81ac;
+  }
+  .topo-exp-section {
+    color: #4c566a;
+    border-bottom-color: #d8dee9;
+  }
+  .topo-node-expanded-inner {
+    border-top-color: #d8dee9;
+  }
+  .topology-popup {
+    background: #eceff4;
+    border-color: #d8dee9;
+    box-shadow: 0 8px 30px rgba(46, 52, 64, 0.15);
+  }
+  .topology-popup-header {
+    border-bottom-color: #d8dee9;
+  }
+  .topology-popup-title {
+    color: #2e3440;
+  }
+  .topology-popup-close {
+    color: #4c566a;
+  }
+  .topology-popup-metric-header {
+    color: #5e81ac;
+  }
+  .topology-popup-metric-value {
+    color: #2e3440;
+  }
+  .topology-group-label {
+    color: #4c566a;
+    background: #eceff4;
+  }
+  .topology-time-banner {
+    background: #fff3c4;
+    color: #8a6d00;
+    border-bottom-color: #d0a535;
+  }
+}
+
 /* ============ A11Y: VISUALLY HIDDEN TEXT FOR SCREEN READERS ============ */
 /*
  * Standard "visually-hidden" pattern — element is in the accessibility

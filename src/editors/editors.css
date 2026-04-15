@@ -119,3 +119,43 @@
   color: #4c566a;
   font-size: 11px;
 }
+
+/* ─── Light theme ─────────────────────────────────────────────────────── */
+/*
+ * Editor sidebar overrides for Grafana light theme. Status colors and
+ * the Grafana UI components (Button, Input, Select) inherit their
+ * theming from Grafana itself — only the plugin's own classes need
+ * explicit overrides.
+ *
+ * See TopologyPanel.css light-theme block for the same known gap:
+ * inline styles in NodeCard / EdgeCard / MetricEditor are NOT covered.
+ */
+@media (prefers-color-scheme: light) {
+  .topo-editor-header-title {
+    color: #2e3440;
+  }
+  .topo-editor-count {
+    color: #4c566a;
+  }
+  .topo-editor-card-badge {
+    background: #d8dee9;
+    color: #5e81ac;
+  }
+  .topo-editor-field label {
+    color: #5e81ac;
+  }
+  .topo-editor-section-title {
+    color: #4c566a;
+    border-bottom-color: #d8dee9;
+  }
+  .topo-editor-empty {
+    color: #81a1c1;
+  }
+  .topo-threshold-color {
+    border-color: #d8dee9;
+  }
+  .topo-metric-badge {
+    background: #5e81ac;
+    color: #eceff4;
+  }
+}
