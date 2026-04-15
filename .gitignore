@@ -32,6 +32,10 @@ coverage/
 # Cache
 .eslintcache
 
+# Bundle analysis outputs (committed report is in docs/, not root)
+stats.json
+/bundle-report.html
+
 # Playwright MCP
 .playwright-mcp/
 
