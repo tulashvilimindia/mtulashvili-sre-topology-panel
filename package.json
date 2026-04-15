@@ -1,5 +1,5 @@
 {
-  "name": "mindiatulashvili-sre-topology-panel",
+  "name": "mtulashvili-sre-topology-panel",
   "version": "1.0.0",
   "description": "E2E Topology Diagram Panel with live metrics, drag-and-drop, animated flow connections, and expandable metric panels",
   "scripts": {

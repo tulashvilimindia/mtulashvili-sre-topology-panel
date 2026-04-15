@@ -1,6 +1,6 @@
 # Master prompt — E2E Topology Grafana Plugin development
 
-You are working on `mindiatulashvili-sre-topology-panel`, a custom Grafana panel plugin . Read CLAUDE.md first for full project context, architecture decisions, and antipatterns.
+You are working on `mtulashvili-sre-topology-panel`, a custom Grafana panel plugin . Read CLAUDE.md first for full project context, architecture decisions, and antipatterns.
 
 ## Current state (v1 scaffold)
 The plugin scaffold is complete with:
@@ -18,7 +18,7 @@ The plugin scaffold is complete with:
 ### Immediate (get it running)
 1. Set up webpack config — the project needs `.config/webpack/webpack.config.ts` from `@grafana/create-plugin`. Run `npx @grafana/create-plugin@latest` in a temp directory, copy the `.config/` folder into this project, and verify `npm run dev` compiles without errors.
 2. Fix any TypeScript errors from the scaffold — the types are complete but some component imports may need adjustment.
-3. Build and install on (your Grafana URL) — copy dist/ to the Grafana plugins directory, add `allow_loading_unsigned_plugins = mindiatulashvili-sre-topology-panel` to grafana.ini, restart Grafana.
+3. Build and install on (your Grafana URL) — copy dist/ to the Grafana plugins directory, add `allow_loading_unsigned_plugins = mtulashvili-sre-topology-panel` to grafana.ini, restart Grafana.
 4. Create a test dashboard with the example topology and verify: nodes render, drag works, edges animate, expand/collapse works.
 
 ### Phase 2 — Grafana data integration

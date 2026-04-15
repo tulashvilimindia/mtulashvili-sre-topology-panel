@@ -1,12 +1,12 @@
 {
   "type": "panel",
   "name": "E2E Topology",
-  "id": "mindiatulashvili-sre-topology-panel",
+  "id": "mtulashvili-sre-topology-panel",
   "info": {
     "description": "Interactive E2E topology diagram with live metrics, drag-and-drop positioning, animated flow connections, and expandable metric panels per node",
     "author": {
       "name": "Mindia Tulashvili",
-      "url": "https://github.com/tulashvilimindia/mindiatulashvili-sre-topology-panel"
+      "url": "https://github.com/tulashvilimindia/mtulashvili-sre-topology-panel"
     },
     "keywords": ["topology", "diagram", "e2e", "architecture", "flow", "network"],
     "logos": {
@@ -14,9 +14,9 @@
       "large": "img/logo.svg"
     },
     "links": [
-      { "name": "Website", "url": "https://github.com/tulashvilimindia/mindiatulashvili-sre-topology-panel" },
-      { "name": "Issues", "url": "https://github.com/tulashvilimindia/mindiatulashvili-sre-topology-panel/issues" },
-      { "name": "Documentation", "url": "https://github.com/tulashvilimindia/mindiatulashvili-sre-topology-panel#readme" }
+      { "name": "Website", "url": "https://github.com/tulashvilimindia/mtulashvili-sre-topology-panel" },
+      { "name": "Issues", "url": "https://github.com/tulashvilimindia/mtulashvili-sre-topology-panel/issues" },
+      { "name": "Documentation", "url": "https://github.com/tulashvilimindia/mtulashvili-sre-topology-panel#readme" }
     ],
     "screenshots": [
       { "name": "Overview with live metrics", "path": "img/screenshots/01-overview.png" },
