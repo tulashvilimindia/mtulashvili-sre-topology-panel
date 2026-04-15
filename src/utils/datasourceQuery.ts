@@ -54,6 +54,43 @@ export function detectDatasourceType(dsUid: string): string {
 /** Hard ceiling for any single query when no external signal is provided. */
 const QUERY_TIMEOUT_MS = 10_000;
 
+/**
+ * Deep-interpolate all string fields of a DatasourceQueryConfig through
+ * Grafana's replaceVariables function. Returns a NEW object — never
+ * mutates the input. When `replaceVars` is undefined or `config` is
+ * undefined, returns the input by reference as a fast path.
+ *
+ * Fields interpolated:
+ *   - namespace, metricName, stat (CloudWatch)
+ *   - url, body, rootSelector, method (Infinity)
+ *   - dimensions: both keys AND values
+ * Fields NOT interpolated: period (always a number at this layer).
+ */
+function interpolateQueryConfig(
+  config: DatasourceQueryConfig | undefined,
+  replaceVars: ((value: string) => string) | undefined
+): DatasourceQueryConfig | undefined {
+  if (!config || !replaceVars) {
+    return config;
+  }
+  const next: DatasourceQueryConfig = { ...config };
+  if (config.namespace !== undefined) { next.namespace = replaceVars(config.namespace); }
+  if (config.metricName !== undefined) { next.metricName = replaceVars(config.metricName); }
+  if (config.stat !== undefined) { next.stat = replaceVars(config.stat); }
+  if (config.url !== undefined) { next.url = replaceVars(config.url); }
+  if (config.body !== undefined) { next.body = replaceVars(config.body); }
+  if (config.rootSelector !== undefined) { next.rootSelector = replaceVars(config.rootSelector); }
+  if (config.method !== undefined) { next.method = replaceVars(config.method); }
+  if (config.dimensions) {
+    const nextDims: Record<string, string> = {};
+    for (const [k, v] of Object.entries(config.dimensions)) {
+      nextDims[replaceVars(k)] = replaceVars(v);
+    }
+    next.dimensions = nextDims;
+  }
+  return next;
+}
+
 export async function queryDatasource(
   dsUid: string,
   query: string,
