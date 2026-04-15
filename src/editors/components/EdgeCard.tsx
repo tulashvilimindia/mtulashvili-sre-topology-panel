@@ -349,7 +349,10 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
 
   return (
     <div className="topo-editor-card">
-      <CollapsableSection label={header} isOpen={isOpen} onToggle={onToggle}>
+      {/* Grafana's CollapsableSection reads isOpen only as initial state (useState(isOpen)) — prop
+          changes do not re-sync. Key-based remount forces a fresh instance whenever isOpen flips
+          externally (e.g. from the canvas context-menu sidebar-redirect emitEdgeEditRequest flow). */}
+      <CollapsableSection key={`open-${isOpen}`} label={header} isOpen={isOpen} onToggle={onToggle}>
         <div className="topo-editor-field">
           <label>Source</label>
           <Select
@@ -570,7 +573,7 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
         </div>
 
         {/* Metric — with datasource picker */}
-        <CollapsableSection label="Metric" isOpen={showMetric} onToggle={() => setShowMetric(!showMetric)}>
+        <CollapsableSection key={`metric-${showMetric}`} label="Metric" isOpen={showMetric} onToggle={() => setShowMetric(!showMetric)}>
           <div className="topo-editor-field">
             <label>Datasource</label>
             <DataSourcePicker
@@ -734,6 +737,7 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
 
         {/* Thresholds */}
         <CollapsableSection
+          key={`thresholds-${showThresholds}`}
           label={`Thresholds (${(edge.thresholds || []).length})`}
           isOpen={showThresholds}
           onToggle={() => setShowThresholds(!showThresholds)}
@@ -743,6 +747,7 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
 
         {/* State map — categorical coloring (e.g. HA sync 0/1 → red/green) */}
         <CollapsableSection
+          key={`statemap-${showStateMap}`}
           label={`State map (${stateMapEntries.length})`}
           isOpen={showStateMap}
           onToggle={() => setShowStateMap(!showStateMap)}
@@ -792,7 +797,7 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
         </CollapsableSection>
 
         {/* Visual config */}
-        <CollapsableSection label="Visual" isOpen={showVisual} onToggle={() => setShowVisual(!showVisual)}>
+        <CollapsableSection key={`visual-${showVisual}`} label="Visual" isOpen={showVisual} onToggle={() => setShowVisual(!showVisual)}>
           <div className="topo-editor-field">
             <label>Thickness mode</label>
             <RadioButtonGroup options={THICKNESS_MODES} value={edge.thicknessMode} onChange={(v) => handleField('thicknessMode', v)} size="sm" />

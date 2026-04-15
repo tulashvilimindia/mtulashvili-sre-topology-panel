@@ -4,6 +4,7 @@ datasources:
   - name: TestData DB
     type: testdata
     uid: testdata
+    isDefault: true
     access: proxy
 
   # Infinity datasource — connects to production Grafana REST API
@@ -23,7 +24,7 @@ datasources:
   - name: Production Prometheus
     type: prometheus
     uid: prod-prometheus
-    isDefault: true
+    isDefault: false
     access: proxy
     url: ${GRAFANA_URL}/api/datasources/proxy/uid/prometheus
     jsonData:
