@@ -1,8 +1,7 @@
 # Bundle analysis — sid2-grafana-topology v1.1
 
 **Date:** 2026-04-15
-**Commit:** `c558bcd` (post-Phase 4.5, pre-Phase 4.6 script commit)
-**Build output:** `dist/module.js` = **174 KiB minified** (177,868 bytes)
+**Build output:** `dist/module.js` = **166 KiB minified** (169,697 bytes)
 **Command used:** `npm run analyze`
 **Interactive treemap:** [bundle-report-v1.1.html](./bundle-report-v1.1.html)
 **Plan target:** ≤ 200 KiB post-Phase 4. **Met.**
@@ -58,7 +57,7 @@ or a full `date-fns` when only `formatDistance` is used.
 today, but if future demo topologies grow, consider JSON-loading it at
 runtime instead of inlining in the bundle.
 
-**After minification, `module.js` is 174 KiB** — a 5× compression ratio
+**After minification, `module.js` is 166 KiB** — a 5× compression ratio
 from the 858 KB raw aggregate, driven by SWC's es2020 target + Terser
 mangling. This is within the <200 KiB plan budget and is reasonable for
 a ~11,000 LOC production React+SDK plugin with this feature surface.
