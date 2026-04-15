@@ -102,6 +102,11 @@ export async function queryDatasource(
 ): Promise<QueryResult> {
   const type = dsType || detectDatasourceType(dsUid);
   const interpolatedQuery = replaceVars ? replaceVars(query) : query;
+  // Interpolate all user-controllable string fields of the queryConfig so
+  // CloudWatch (namespace/metricName/dimensions/stat) and Infinity (url/
+  // body/rootSelector/method) respect Grafana template variables —
+  // matching the behavior of interpolatedQuery above for Prometheus.
+  const interpolatedConfig = interpolateQueryConfig(queryConfig, replaceVars);
 
   // When no external signal is provided, give every query a 10s hard
   // ceiling so a hung datasource cannot stall Promise.all in useSelfQueries
@@ -121,10 +126,10 @@ export async function queryDatasource(
         inner = queryPrometheus(dsUid, interpolatedQuery, historicalTime, effectiveSignal);
         break;
       case 'cloudwatch':
-        inner = queryCloudWatch(dsUid, queryConfig, effectiveSignal);
+        inner = queryCloudWatch(dsUid, interpolatedConfig, effectiveSignal);
         break;
       case 'yesoreyeram-infinity-datasource':
-        inner = queryInfinity(dsUid, queryConfig, effectiveSignal);
+        inner = queryInfinity(dsUid, interpolatedConfig, effectiveSignal);
         break;
       default:
         inner = queryPrometheus(dsUid, interpolatedQuery, historicalTime, effectiveSignal);
