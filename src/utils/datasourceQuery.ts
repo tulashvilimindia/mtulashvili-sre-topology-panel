@@ -377,29 +377,32 @@ export async function queryDatasourceRange(
   dsUid: string,
   query: string,
   queryConfig?: DatasourceQueryConfig,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  replaceVars?: (value: string) => string
 ): Promise<TimeseriesPoint[]> {
   const type = detectDatasourceType(dsUid);
   switch (type) {
     case 'prometheus':
-      return queryPrometheusRange(dsUid, query, signal);
+      return queryPrometheusRange(dsUid, query, signal, replaceVars);
     case 'cloudwatch':
-      return queryCloudWatchRange(dsUid, queryConfig, signal);
+      return queryCloudWatchRange(dsUid, queryConfig, signal, replaceVars);
     case 'yesoreyeram-infinity-datasource':
       // Infinity returns point-in-time snapshots, not time series. No natural
       // range query mapping — return empty and let the popup show "no trends".
       return [];
     default:
-      return queryPrometheusRange(dsUid, query, signal);
+      return queryPrometheusRange(dsUid, query, signal, replaceVars);
   }
 }
 
 async function queryPrometheusRange(
   dsUid: string,
   query: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  replaceVars?: (value: string) => string
 ): Promise<TimeseriesPoint[]> {
-  if (!dsUid || !query) {
+  const interpolatedQuery = replaceVars ? replaceVars(query) : query;
+  if (!dsUid || !interpolatedQuery) {
     return [];
   }
   try {
@@ -407,7 +410,7 @@ async function queryPrometheusRange(
     const start = end - 3600;
     const resp = await fetch(
       `/api/datasources/proxy/uid/${dsUid}/api/v1/query_range?` +
-      new URLSearchParams({ query, start: String(start), end: String(end), step: '60' }),
+      new URLSearchParams({ query: interpolatedQuery, start: String(start), end: String(end), step: '60' }),
       signal ? { signal } : undefined
     );
     if (!resp.ok) {
@@ -431,7 +434,7 @@ async function queryPrometheusRange(
     if ((err as Error).name === 'AbortError') {
       return [];
     }
-    console.warn('[topology] prom range error', { dsUid, query, err });
+    console.warn('[topology] prom range error', { dsUid, query: interpolatedQuery, err });
     return [];
   }
 }
@@ -439,15 +442,17 @@ async function queryPrometheusRange(
 async function queryCloudWatchRange(
   dsUid: string,
   config?: DatasourceQueryConfig,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  replaceVars?: (value: string) => string
 ): Promise<TimeseriesPoint[]> {
-  if (!config?.namespace || !config?.metricName) {
+  const interpolated = interpolateQueryConfig(config, replaceVars);
+  if (!interpolated?.namespace || !interpolated?.metricName) {
     return [];
   }
   try {
     const dimensions: Record<string, string[]> = {};
-    if (config.dimensions) {
-      for (const [k, v] of Object.entries(config.dimensions)) {
+    if (interpolated.dimensions) {
+      for (const [k, v] of Object.entries(interpolated.dimensions)) {
         dimensions[k] = [v];
       }
     }
@@ -459,11 +464,11 @@ async function queryCloudWatchRange(
           refId: 'A',
           datasource: { uid: dsUid, type: 'cloudwatch' },
           type: 'timeSeriesQuery',
-          namespace: config.namespace,
-          metricName: config.metricName,
+          namespace: interpolated.namespace,
+          metricName: interpolated.metricName,
           dimensions,
-          statistic: config.stat || 'Average',
-          period: String(config.period || 60),
+          statistic: interpolated.stat || 'Average',
+          period: String(interpolated.period || 60),
           region: 'default',
         }],
         from: 'now-1h',
@@ -500,7 +505,7 @@ async function queryCloudWatchRange(
     if ((err as Error).name === 'AbortError') {
       return [];
     }
-    console.warn('[topology] cloudwatch range error', { dsUid, metric: config.metricName, err });
+    console.warn('[topology] cloudwatch range error', { dsUid, metric: interpolated.metricName, err });
     return [];
   }
 }
