@@ -134,7 +134,7 @@ export function calculateEdgeStatus(
  * Get edge color from status
  */
 export function getEdgeColor(status: EdgeStatus): string {
-  return STATUS_COLORS[status] || '#4c566a';
+  return STATUS_COLORS[status] || STATUS_COLORS.nodata;
 }
 
 /**

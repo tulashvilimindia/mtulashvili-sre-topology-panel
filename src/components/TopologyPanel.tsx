@@ -297,7 +297,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
     return Array.from(byType).map(([type, data]) => ({
       type,
       icon: NODE_TYPE_CONFIG[type]?.icon || '?',
-      color: STATUS_COLORS[data.status] || '#4c566a',
+      color: STATUS_COLORS[data.status] || STATUS_COLORS.nodata,
       status: data.status,
       count: data.count,
     }));
