@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 (Unreleased)
+## 1.0.0 - 2026-04-15
 
 - Initial release of E2E Topology panel plugin
 - Interactive SVG topology canvas with bezier edges
