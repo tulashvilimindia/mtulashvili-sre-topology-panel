@@ -815,7 +815,10 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
             <div className="topo-node-header">
               <div
                 className="topo-node-icon"
-                style={{ background: typeConfig.color + '22', color: typeConfig.color }}
+                style={{
+                  background: (node.colorOverride || typeConfig.color) + '22',
+                  color: node.colorOverride || typeConfig.color,
+                }}
               >
                 {node.iconOverride || typeConfig.icon}
               </div>

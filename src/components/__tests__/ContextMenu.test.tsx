@@ -166,7 +166,7 @@ describe('ContextMenu', () => {
 // ─── Hybrid click-ops: submenus + sidebar redirects (TASK 7) ────────────
 
 describe('ContextMenu submenu + click-ops', () => {
-  test('Change type submenu opens on click and shows 17 node types', async () => {
+  test('Change type submenu opens on click and shows all 37 node types', async () => {
     renderMenu({
       nodes: [buildNode({ type: 'server' })],
       onChangeNodeType: jest.fn(),
@@ -175,7 +175,7 @@ describe('ContextMenu submenu + click-ops', () => {
     fireEvent.click(screen.getByText('Change type'));
     const submenu = await screen.findByTestId('topology-context-submenu');
     const items = within(submenu).getAllByRole('menuitem');
-    expect(items).toHaveLength(17);
+    expect(items).toHaveLength(37);
   });
 
   test('Change type submenu click fires onChangeNodeType with new type', async () => {

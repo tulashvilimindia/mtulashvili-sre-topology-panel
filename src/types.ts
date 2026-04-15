@@ -2,7 +2,25 @@
 // NODE TYPES
 // ============================================================
 
-export type NodeType = 'cloudflare' | 'firewall' | 'loadbalancer' | 'virtualserver' | 'pool' | 'server' | 'database' | 'cache' | 'queue' | 'alb' | 'nlb' | 'nat' | 'kubernetes' | 'accelerator' | 'logs' | 'probe' | 'custom';
+export type NodeType =
+  // Generic infrastructure (v1.0)
+  | 'cloudflare' | 'firewall' | 'loadbalancer' | 'virtualserver' | 'pool'
+  | 'server' | 'database' | 'cache' | 'queue' | 'alb' | 'nlb' | 'nat'
+  | 'kubernetes' | 'accelerator' | 'logs' | 'probe' | 'custom'
+  // Cloud-native k8s brands
+  | 'aks' | 'eks' | 'gke'
+  // Serverless compute
+  | 'lambda' | 'function' | 'cloudrun'
+  // Edge / API / security
+  | 'afd' | 'appgw' | 'apigw' | 'waf'
+  // Messaging (distinct from generic queue)
+  | 'kafka' | 'pubsub'
+  // Storage & analytics
+  | 'storage' | 'elasticsearch' | 'warehouse'
+  // Identity & secrets
+  | 'idp' | 'secrets'
+  // Network
+  | 'dns' | 'vpn' | 'bastion';
 export type NodeStatus = 'ok' | 'warning' | 'critical' | 'unknown' | 'nodata';
 
 export interface NodeMetricConfig {
@@ -85,6 +103,8 @@ export interface TopologyNode {
   description?: string;
   /** Custom icon text override (e.g. "SB", "GA") — replaces type default icon */
   iconOverride?: string;
+  /** Custom color override (any CSS color) — replaces type default color for icon badge */
+  colorOverride?: string;
   /**
    * Opt-in label matchers for Grafana alert rules. When set, any firing/pending
    * alert whose labels contain ALL these key/value pairs will override the node's
@@ -402,6 +422,33 @@ export const NODE_TYPE_CONFIG: Record<NodeType, { icon: string; color: string; d
   logs: { icon: 'LOG', color: '#5e81ac', defaultRole: 'Log Aggregator' },
   probe: { icon: 'PRB', color: '#88c0d0', defaultRole: 'Synthetic Probe' },
   custom: { icon: '?', color: '#4c566a', defaultRole: '' },
+  // ─── Cloud-native k8s brands ──────────────────────
+  aks: { icon: 'AKS', color: '#0078d4', defaultRole: 'Azure Kubernetes' },
+  eks: { icon: 'EKS', color: '#ff9900', defaultRole: 'AWS Kubernetes' },
+  gke: { icon: 'GKE', color: '#4285f4', defaultRole: 'GCP Kubernetes' },
+  // ─── Serverless compute ───────────────────────────
+  lambda: { icon: 'LAM', color: '#ff9900', defaultRole: 'AWS Lambda' },
+  function: { icon: 'FN', color: '#88c0d0', defaultRole: 'Serverless Function' },
+  cloudrun: { icon: 'CR', color: '#4285f4', defaultRole: 'Cloud Run' },
+  // ─── Edge / API / WAF ─────────────────────────────
+  afd: { icon: 'AFD', color: '#0078d4', defaultRole: 'Azure Front Door' },
+  appgw: { icon: 'AGW', color: '#0078d4', defaultRole: 'App Gateway' },
+  apigw: { icon: 'APIG', color: '#ff9900', defaultRole: 'API Gateway' },
+  waf: { icon: 'WAF', color: '#bf616a', defaultRole: 'Web App Firewall' },
+  // ─── Messaging (distinct from generic queue) ──────
+  kafka: { icon: 'KAF', color: '#bf616a', defaultRole: 'Kafka' },
+  pubsub: { icon: 'PS', color: '#4285f4', defaultRole: 'Pub/Sub' },
+  // ─── Storage & analytics ──────────────────────────
+  storage: { icon: 'STG', color: '#5e81ac', defaultRole: 'Object Storage' },
+  elasticsearch: { icon: 'ES', color: '#a3be8c', defaultRole: 'Search Cluster' },
+  warehouse: { icon: 'DW', color: '#5e81ac', defaultRole: 'Data Warehouse' },
+  // ─── Identity & secrets ───────────────────────────
+  idp: { icon: 'IDP', color: '#b48ead', defaultRole: 'Identity Provider' },
+  secrets: { icon: 'SEC', color: '#ebcb8b', defaultRole: 'Secrets Vault' },
+  // ─── Network ──────────────────────────────────────
+  dns: { icon: 'DNS', color: '#b48ead', defaultRole: 'DNS' },
+  vpn: { icon: 'VPN', color: '#b48ead', defaultRole: 'VPN Gateway' },
+  bastion: { icon: 'BAS', color: '#4c566a', defaultRole: 'Bastion Host' },
 };
 
 /** Accent color for non-status visuals (sparklines, edge labels, info text) */

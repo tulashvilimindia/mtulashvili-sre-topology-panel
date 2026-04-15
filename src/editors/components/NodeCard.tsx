@@ -294,8 +294,14 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
   // ─── Header ───
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-      <span className="topo-editor-card-badge" style={{ background: typeConfig.color + '22', color: typeConfig.color }}>
-        {typeConfig.icon}
+      <span
+        className="topo-editor-card-badge"
+        style={{
+          background: (node.colorOverride || typeConfig.color) + '22',
+          color: node.colorOverride || typeConfig.color,
+        }}
+      >
+        {node.iconOverride || typeConfig.icon}
       </span>
       <span>{node.name || 'Untitled'}</span>
       {node.metrics.length > 0 && (
@@ -442,13 +448,39 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
               <Checkbox label="Compact" value={node.compact} onChange={(e) => handleField('compact', e.currentTarget.checked)} />
             </div>
             <div className="topo-editor-field">
-              <label>Icon override <span style={{ fontSize: 9, color: '#4c566a' }}>2-3 chars, replaces type icon</span></label>
+              <label>Icon override <span style={{ fontSize: 9, color: '#4c566a' }}>2-4 chars, replaces type icon</span></label>
               <Input
                 value={node.iconOverride || ''}
                 onChange={(e) => handleField('iconOverride', e.currentTarget.value || undefined)}
                 placeholder="SB, GA, API..."
                 width={10}
               />
+            </div>
+            <div className="topo-editor-field">
+              <label>Color override <span style={{ fontSize: 9, color: '#4c566a' }}>hex, replaces type color</span></label>
+              <div className="topo-editor-row" style={{ gap: 4 }}>
+                <Input
+                  value={node.colorOverride || ''}
+                  onChange={(e) => handleField('colorOverride', e.currentTarget.value || undefined)}
+                  placeholder="#a3be8c"
+                  width={12}
+                />
+                <input
+                  type="color"
+                  value={node.colorOverride || typeConfig.color}
+                  onChange={(e) => handleField('colorOverride', e.currentTarget.value)}
+                  aria-label="Color picker"
+                  style={{ width: 28, height: 28, padding: 0, border: '1px solid #2d3748', background: 'transparent', cursor: 'pointer' }}
+                />
+                {node.colorOverride && (
+                  <IconButton
+                    name="times"
+                    size="sm"
+                    tooltip="Clear color override"
+                    onClick={() => handleField('colorOverride', undefined)}
+                  />
+                )}
+              </div>
             </div>
             <div className="topo-editor-field">
               <label>Width (px)</label>
