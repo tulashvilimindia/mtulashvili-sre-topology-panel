@@ -24,10 +24,13 @@ interface EdgePopupProps {
   onClose: () => void;
   /** When set, renders an Edit button that calls this handler. */
   onEdit?: () => void;
+  /** Grafana template-variable interpolator. Propagated to queryDatasourceRange so
+   *  the edge sparkline respects $env / $region / etc. */
+  replaceVars?: (value: string) => string;
 }
 
 export const EdgePopup: React.FC<EdgePopupProps> = ({
-  edge, runtimeState, sourceName, targetName, onClose, onEdit,
+  edge, runtimeState, sourceName, targetName, onClose, onEdit, replaceVars,
 }) => {
   const [points, setPoints] = useState<TimeseriesPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +46,7 @@ export const EdgePopup: React.FC<EdgePopupProps> = ({
     setLoading(true);
 
     const { datasourceUid, query, queryConfig } = edge.metric;
-    queryDatasourceRange(datasourceUid, query, queryConfig, controller.signal)
+    queryDatasourceRange(datasourceUid, query, queryConfig, controller.signal, replaceVars)
       .then((result) => {
         if (cancelled) { return; }
         setPoints(result);
@@ -56,7 +59,8 @@ export const EdgePopup: React.FC<EdgePopupProps> = ({
       });
 
     return () => { cancelled = true; controller.abort(); };
-  }, [edge.id, edge.metric]);
+    // replaceVars comes from PanelProps and is stable within a panel lifetime.
+  }, [edge.id, edge.metric, replaceVars]);
 
   const currentValue = runtimeState?.formattedLabel
     ?? (points.length > 0 ? points[points.length - 1].value.toFixed(1) : 'N/A');

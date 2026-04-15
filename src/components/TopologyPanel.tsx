@@ -889,6 +889,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
               onEdit={handleEdit}
               metricValues={nodeStates.get(popupNodeId)?.metricValues}
               freshnessSLOSec={animation.metricFreshnessSLOSec}
+              replaceVars={replaceVariables}
             />
           </div>
         );
@@ -921,6 +922,7 @@ export const TopologyPanel: React.FC<Props> = ({ id, options, onOptionsChange, d
               targetName={targetNode?.name || popupEdge.targetId || 'unknown'}
               onClose={() => { setPopupEdgeId(null); setPopupEdgePosition(null); }}
               onEdit={handleEdit}
+              replaceVars={replaceVariables}
             />
           </div>
         );

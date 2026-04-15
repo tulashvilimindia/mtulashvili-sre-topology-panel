@@ -42,6 +42,10 @@ interface PopupProps {
   metricValues?: Record<string, MetricValue>;
   /** SLO for freshness display in seconds. Default 60. */
   freshnessSLOSec?: number;
+  /** Grafana template-variable interpolator. Propagated to queryDatasourceRange so
+   *  sparklines respect $env / $region / etc. matching the instant-query behavior
+   *  in useSelfQueries. When undefined, queries are fetched with literal tokens. */
+  replaceVars?: (value: string) => string;
 }
 
 interface MetricTimeseries {
@@ -58,6 +62,7 @@ export const NodePopup: React.FC<PopupProps> = ({
   onEdit,
   metricValues,
   freshnessSLOSec = 60,
+  replaceVars,
 }) => {
   const [seriesData, setSeriesData] = useState<MetricTimeseries[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +97,8 @@ export const NodePopup: React.FC<PopupProps> = ({
           metric.datasourceUid,
           metric.query,
           metric.queryConfig,
-          controller.signal
+          controller.signal,
+          replaceVars
         );
         if (cancelled) {
           return;
@@ -113,8 +119,9 @@ export const NodePopup: React.FC<PopupProps> = ({
 
     fetchAll();
     return () => { cancelled = true; controller.abort(); };
-    // metricIds is a stable hash of node.metrics[].id; node.metrics listed to satisfy exhaustive-deps
-  }, [node.id, node.metrics, metricIds]);
+    // metricIds is a stable hash of node.metrics[].id; node.metrics listed to satisfy exhaustive-deps.
+    // replaceVars comes from PanelProps and is stable within a panel lifetime (same pattern as useSelfQueries).
+  }, [node.id, node.metrics, metricIds, replaceVars]);
 
   return (
     <div

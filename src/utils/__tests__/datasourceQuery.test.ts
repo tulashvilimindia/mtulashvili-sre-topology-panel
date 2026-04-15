@@ -414,3 +414,155 @@ describe('queryDatasourceRange', () => {
     expect(points).toHaveLength(1);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// Template variable interpolation (Sprint 1 / T2.4)
+//
+// These tests prove Grafana's replaceVariables function is applied to
+// every user-controllable string field of the DatasourceQueryConfig for
+// all three supported datasource types (Prometheus, CloudWatch, Infinity).
+// Before T2.1-T2.3, only the Prometheus PromQL string was interpolated;
+// CloudWatch and Infinity silently passed raw $var tokens through to the
+// datasource, which then returned empty data.
+// ─────────────────────────────────────────────────────────────────────
+
+describe('queryDatasource — template variable interpolation', () => {
+  let warnSpy: jest.SpyInstance;
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => { warnSpy.mockRestore(); jest.restoreAllMocks(); });
+
+  test('Prometheus interpolates query via replaceVars', async () => {
+    mockDsType('prometheus');
+    mockFetchOk({
+      data: { result: [{ metric: {}, value: [0, '5'] }] },
+    });
+    const replaceVars = jest.fn((v: string) => v.replace('$env', 'prod'));
+    const result = await queryDatasource(
+      'uid-1',
+      'up{env="$env"}',
+      undefined,
+      undefined,
+      replaceVars
+    );
+    expect(result).toMatchObject({ value: 5 });
+    expect(replaceVars).toHaveBeenCalledWith('up{env="$env"}');
+    const calledUrl = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(decodeURIComponent(calledUrl)).toContain('up{env="prod"}');
+  });
+
+  test('CloudWatch interpolates namespace', async () => {
+    mockDsType('cloudwatch');
+    mockFetchOk({
+      results: { A: { frames: [{ data: { values: [[1], [3]] } }] } },
+    });
+    const replaceVars = jest.fn((v: string) => v.replace('$region', 'us-east-1'));
+    await queryDatasource(
+      'uid-1',
+      '',
+      undefined,
+      { namespace: 'AWS/$region', metricName: 'RequestCount' },
+      replaceVars
+    );
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body.queries[0].namespace).toBe('AWS/us-east-1');
+  });
+
+  test('CloudWatch interpolates dimension values', async () => {
+    mockDsType('cloudwatch');
+    mockFetchOk({
+      results: { A: { frames: [{ data: { values: [[1], [3]] } }] } },
+    });
+    const replaceVars = jest.fn((v: string) => v.replace('$env', 'prod'));
+    await queryDatasource(
+      'uid-1',
+      '',
+      undefined,
+      {
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'RequestCount',
+        dimensions: { LoadBalancer: 'app/$env-alb/abc' },
+      },
+      replaceVars
+    );
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body.queries[0].dimensions.LoadBalancer).toEqual(['app/prod-alb/abc']);
+  });
+
+  test('CloudWatch interpolates dimension keys', async () => {
+    mockDsType('cloudwatch');
+    mockFetchOk({
+      results: { A: { frames: [{ data: { values: [[1], [3]] } }] } },
+    });
+    const replaceVars = jest.fn((v: string) => (v === '$dimKey' ? 'Stage' : v));
+    await queryDatasource(
+      'uid-1',
+      '',
+      undefined,
+      {
+        namespace: 'AWS/x',
+        metricName: 'y',
+        dimensions: { $dimKey: 'static-value' },
+      },
+      replaceVars
+    );
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body.queries[0].dimensions).toHaveProperty('Stage');
+    expect(body.queries[0].dimensions).not.toHaveProperty('$dimKey');
+  });
+
+  test('Infinity interpolates url', async () => {
+    mockDsType('yesoreyeram-infinity-datasource');
+    mockFetchOk({
+      results: { A: { frames: [{ data: { values: [[42]] } }] } },
+    });
+    const replaceVars = jest.fn((v: string) => v.replace('$env', 'prod'));
+    await queryDatasource(
+      'uid-1',
+      '',
+      undefined,
+      { url: 'https://api/$env/metrics' },
+      replaceVars
+    );
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body.queries[0].url).toBe('https://api/prod/metrics');
+  });
+
+  test('Infinity interpolates POST body', async () => {
+    mockDsType('yesoreyeram-infinity-datasource');
+    mockFetchOk({
+      results: { A: { frames: [{ data: { values: [[42]] } }] } },
+    });
+    const replaceVars = jest.fn((v: string) => v.replace('$env', 'prod'));
+    await queryDatasource(
+      'uid-1',
+      '',
+      undefined,
+      {
+        url: 'https://api/x',
+        method: 'POST',
+        body: '{"env":"$env"}',
+      },
+      replaceVars
+    );
+    const sent = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(sent.queries[0].url_options.data).toBe('{"env":"prod"}');
+  });
+
+  test('no replaceVars → template tokens pass through unchanged', async () => {
+    mockDsType('cloudwatch');
+    mockFetchOk({
+      results: { A: { frames: [{ data: { values: [[1], [3]] } }] } },
+    });
+    await queryDatasource(
+      'uid-1',
+      '',
+      undefined,
+      { namespace: 'AWS/$env', metricName: 'y' }
+      // replaceVars intentionally omitted
+    );
+    const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body.queries[0].namespace).toBe('AWS/$env');
+  });
+});

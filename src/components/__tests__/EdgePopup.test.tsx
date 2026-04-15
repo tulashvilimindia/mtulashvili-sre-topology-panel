@@ -108,7 +108,8 @@ describe('EdgePopup', () => {
       'prom',
       'rate(x[5m])',
       undefined,
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      undefined
     );
   });
 
