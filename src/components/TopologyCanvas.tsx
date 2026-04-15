@@ -824,7 +824,15 @@ export const TopologyCanvas: React.FC<CanvasProps> = ({
                 {node.role && <div className="topo-node-role">{node.role}</div>}
               </div>
               {displayOptions.showNodeStatus && (
-                <div className={`topo-node-dot ${status}${status === 'critical' && !animationOptions.pulseOnCritical ? ' no-pulse' : ''}`} />
+                <>
+                  <div className={`topo-node-dot ${status}${status === 'critical' && !animationOptions.pulseOnCritical ? ' no-pulse' : ''}`} />
+                  {/* Defense-in-depth for screen readers: the node's
+                      aria-label already announces status, but a
+                      visually-hidden sibling next to the color-only dot
+                      means a colorblind user hovering a single card
+                      with a magnifier still gets a text label. */}
+                  <span className="sr-only">{status}</span>
+                </>
               )}
             </div>
 

@@ -384,6 +384,25 @@
   }
 }
 
+/* ============ A11Y: VISUALLY HIDDEN TEXT FOR SCREEN READERS ============ */
+/*
+ * Standard "visually-hidden" pattern — element is in the accessibility
+ * tree and read by screen readers but invisible on screen. Used as a
+ * defense-in-depth text label next to color-only status indicators so
+ * colorblind users and SR users both get the status.
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ─── Mobile responsive layout (max-width: 768px) ─────────────────────── */
 /*
  * Media queries key off the viewport, not the panel container. On a phone
