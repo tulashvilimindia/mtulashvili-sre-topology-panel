@@ -13,6 +13,17 @@
       "small": "img/logo.svg",
       "large": "img/logo.svg"
     },
+    "links": [
+      { "name": "Website", "url": "https://github.com/tulashvilimindia/sid2-grafana-topology" },
+      { "name": "Issues", "url": "https://github.com/tulashvilimindia/sid2-grafana-topology/issues" },
+      { "name": "Documentation", "url": "https://github.com/tulashvilimindia/sid2-grafana-topology#readme" }
+    ],
+    "screenshots": [
+      { "name": "Overview with live metrics", "path": "img/screenshots/01-overview.png" },
+      { "name": "Edge detail popup with sparkline", "path": "img/screenshots/02-edge-popup.png" },
+      { "name": "Drag-to-connect in edit mode", "path": "img/screenshots/03-drag-to-connect.png" },
+      { "name": "Slot Floor SAS Network example", "path": "img/screenshots/04-slotfloor-example.png" }
+    ],
     "version": "1.0.0",
     "updated": "2026-04-11"
   },
