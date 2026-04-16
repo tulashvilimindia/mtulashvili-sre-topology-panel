@@ -16,6 +16,41 @@
 
 import { getDataSourceSrv } from '@grafana/runtime';
 
+/** Hardcoded list of standard AWS regions used to populate the region
+ *  picker when the datasource has no default region configured (or when
+ *  /resources/regions can't be reached). Order roughly follows user volume
+ *  (us/eu first, then Asia Pacific, then others). */
+export const AWS_REGIONS: Array<{ label: string; value: string }> = [
+  { label: 'US East (N. Virginia) — us-east-1', value: 'us-east-1' },
+  { label: 'US East (Ohio) — us-east-2', value: 'us-east-2' },
+  { label: 'US West (N. California) — us-west-1', value: 'us-west-1' },
+  { label: 'US West (Oregon) — us-west-2', value: 'us-west-2' },
+  { label: 'Europe (Ireland) — eu-west-1', value: 'eu-west-1' },
+  { label: 'Europe (London) — eu-west-2', value: 'eu-west-2' },
+  { label: 'Europe (Paris) — eu-west-3', value: 'eu-west-3' },
+  { label: 'Europe (Frankfurt) — eu-central-1', value: 'eu-central-1' },
+  { label: 'Europe (Zurich) — eu-central-2', value: 'eu-central-2' },
+  { label: 'Europe (Stockholm) — eu-north-1', value: 'eu-north-1' },
+  { label: 'Europe (Milan) — eu-south-1', value: 'eu-south-1' },
+  { label: 'Europe (Spain) — eu-south-2', value: 'eu-south-2' },
+  { label: 'Asia Pacific (Tokyo) — ap-northeast-1', value: 'ap-northeast-1' },
+  { label: 'Asia Pacific (Seoul) — ap-northeast-2', value: 'ap-northeast-2' },
+  { label: 'Asia Pacific (Osaka) — ap-northeast-3', value: 'ap-northeast-3' },
+  { label: 'Asia Pacific (Singapore) — ap-southeast-1', value: 'ap-southeast-1' },
+  { label: 'Asia Pacific (Sydney) — ap-southeast-2', value: 'ap-southeast-2' },
+  { label: 'Asia Pacific (Jakarta) — ap-southeast-3', value: 'ap-southeast-3' },
+  { label: 'Asia Pacific (Melbourne) — ap-southeast-4', value: 'ap-southeast-4' },
+  { label: 'Asia Pacific (Mumbai) — ap-south-1', value: 'ap-south-1' },
+  { label: 'Asia Pacific (Hyderabad) — ap-south-2', value: 'ap-south-2' },
+  { label: 'Asia Pacific (Hong Kong) — ap-east-1', value: 'ap-east-1' },
+  { label: 'Canada (Central) — ca-central-1', value: 'ca-central-1' },
+  { label: 'South America (São Paulo) — sa-east-1', value: 'sa-east-1' },
+  { label: 'Middle East (Bahrain) — me-south-1', value: 'me-south-1' },
+  { label: 'Middle East (UAE) — me-central-1', value: 'me-central-1' },
+  { label: 'Africa (Cape Town) — af-south-1', value: 'af-south-1' },
+  { label: 'Israel (Tel Aviv) — il-central-1', value: 'il-central-1' },
+];
+
 /**
  * Resolve the datasource's default region from its instanceSettings.jsonData.
  * Falls back to 'us-east-1' if unset.
@@ -30,36 +65,62 @@ export function getCloudWatchDefaultRegion(dsUid: string): string {
   }
 }
 
-interface ResourceEntry {
-  label?: string;
-  value?: string;
-  text?: string;
-}
+// Grafana's CloudWatch resource endpoints return slightly different shapes
+// per endpoint. All are arrays of objects, but the interesting string lives
+// in different fields:
+//   namespaces:     [{ value: "AWS/EC2" }]
+//   metrics:        [{ value: { name: "CPUUtilization", namespace: "AWS/EC2" } }]
+//   dimension-keys: [{ text: "InstanceId", value: "InstanceId", label: "InstanceId" }]
+// Each fetch function applies its own selector.
+type Selector = (entry: unknown) => string | undefined;
 
-async function fetchResource(dsUid: string, path: string): Promise<string[]> {
+async function fetchResourceWith(dsUid: string, path: string, select: Selector): Promise<string[]> {
   const res = await fetch(`/api/datasources/uid/${dsUid}/resources/${path}`);
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText}`);
   }
-  const data = (await res.json()) as ResourceEntry[] | unknown;
+  const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) {
     return [];
   }
-  // Normalize: prefer `value`, fall back to `text` (older handlers use text).
   return data
-    .map((entry) => entry?.value ?? entry?.text ?? '')
+    .map(select)
     .filter((v): v is string => typeof v === 'string' && v.length > 0);
 }
 
+const selectStringValue: Selector = (entry) => {
+  if (entry && typeof entry === 'object') {
+    const rec = entry as Record<string, unknown>;
+    if (typeof rec.value === 'string') { return rec.value; }
+    if (typeof rec.text === 'string') { return rec.text; }
+  }
+  return undefined;
+};
+
+const selectMetricName: Selector = (entry) => {
+  if (entry && typeof entry === 'object') {
+    const rec = entry as Record<string, unknown>;
+    // Modern shape: { value: { name, namespace } }
+    if (rec.value && typeof rec.value === 'object') {
+      const nested = rec.value as Record<string, unknown>;
+      if (typeof nested.name === 'string') { return nested.name; }
+    }
+    // Fallback: flat string value
+    if (typeof rec.value === 'string') { return rec.value; }
+    if (typeof rec.text === 'string') { return rec.text; }
+  }
+  return undefined;
+};
+
 /** List AWS namespaces available to the datasource in the given region. */
 export function fetchCwNamespaces(dsUid: string, region: string): Promise<string[]> {
-  return fetchResource(dsUid, `namespaces?region=${encodeURIComponent(region)}`);
+  return fetchResourceWith(dsUid, `namespaces?region=${encodeURIComponent(region)}`, selectStringValue);
 }
 
 /** List metric names in a namespace (e.g. CPUUtilization for AWS/EC2). */
 export function fetchCwMetrics(dsUid: string, region: string, namespace: string): Promise<string[]> {
   const qs = `region=${encodeURIComponent(region)}&namespace=${encodeURIComponent(namespace)}`;
-  return fetchResource(dsUid, `metrics?${qs}`);
+  return fetchResourceWith(dsUid, `metrics?${qs}`, selectMetricName);
 }
 
 /** List dimension keys for a specific metric in a namespace. */
@@ -74,5 +135,5 @@ export function fetchCwDimensionKeys(
     `&namespace=${encodeURIComponent(namespace)}` +
     `&metricName=${encodeURIComponent(metricName)}` +
     `&dimensionFilters=${encodeURIComponent('{}')}`;
-  return fetchResource(dsUid, `dimension-keys?${qs}`);
+  return fetchResourceWith(dsUid, `dimension-keys?${qs}`, selectStringValue);
 }

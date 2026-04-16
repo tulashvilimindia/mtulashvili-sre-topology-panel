@@ -55,6 +55,8 @@ export interface NodeMetricConfig {
 
 /** Configuration for non-Prometheus datasource queries */
 export interface DatasourceQueryConfig {
+  /** CloudWatch: AWS region override (e.g. "us-east-1"). Falls back to the datasource's defaultRegion when unset. */
+  region?: string;
   /** CloudWatch: namespace (e.g. "AWS/ApplicationELB") */
   namespace?: string;
   /** CloudWatch: metric name (e.g. "RequestCount") */

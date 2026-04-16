@@ -6,6 +6,7 @@ import { ThresholdList } from './ThresholdList';
 import { getNodeSelectOptions } from '../utils/editorUtils';
 import { EdgeEditSection } from '../../utils/panelEvents';
 import {
+  AWS_REGIONS,
   getCloudWatchDefaultRegion,
   fetchCwNamespaces,
   fetchCwMetrics,
@@ -242,23 +243,12 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
     let cancelled = false;
     getDataSourceSrv()
       .get(uid)
-      .then(async (ds) => {
+      .then((ds) => {
         if (cancelled) {return;}
         setDsType(ds.type);
         if (ds.type === 'cloudwatch') {
           setCwError(null);
-          const region = getCloudWatchDefaultRegion(uid);
-          setCwRegion(region);
-          try {
-            const namespaces = await fetchCwNamespaces(uid, region);
-            if (cancelled) {return;}
-            setCwNamespaces(namespaces.map((n) => ({ label: n, value: n })));
-          } catch (err) {
-            if (!cancelled) {
-              setCwError(`Namespaces: ${(err as Error).message}`);
-              setCwNamespaces([]);
-            }
-          }
+          setCwRegion(getCloudWatchDefaultRegion(uid));
         } else {
           setCwNamespaces([]);
           setCwMetricNames([]);
@@ -270,16 +260,41 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
     return () => { cancelled = true; };
   }, [edge.metric?.datasourceUid]);
 
+  // Effective CW region: user override (queryConfig.region) or DS default (cwRegion)
+  const effectiveCwRegion = edge.metric?.queryConfig?.region || cwRegion;
+
+  // Fetch namespaces once effective region is known
+  useEffect(() => {
+    const uid = edge.metric?.datasourceUid;
+    if (dsType !== 'cloudwatch' || !uid || !effectiveCwRegion) {
+      return;
+    }
+    let cancelled = false;
+    setCwError(null);
+    fetchCwNamespaces(uid, effectiveCwRegion)
+      .then((namespaces) => {
+        if (cancelled) {return;}
+        setCwNamespaces(namespaces.map((n) => ({ label: n, value: n })));
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setCwError(`Namespaces: ${(err as Error).message}`);
+          setCwNamespaces([]);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [dsType, edge.metric?.datasourceUid, effectiveCwRegion]);
+
   // Fetch metric names whenever namespace changes
   useEffect(() => {
     const uid = edge.metric?.datasourceUid;
     const namespace = edge.metric?.queryConfig?.namespace;
-    if (dsType !== 'cloudwatch' || !uid || !cwRegion || !namespace) {
+    if (dsType !== 'cloudwatch' || !uid || !effectiveCwRegion || !namespace) {
       setCwMetricNames([]);
       return;
     }
     let cancelled = false;
-    fetchCwMetrics(uid, cwRegion, namespace)
+    fetchCwMetrics(uid, effectiveCwRegion, namespace)
       .then((names) => {
         if (cancelled) {return;}
         setCwMetricNames(names.map((n) => ({ label: n, value: n })));
@@ -291,19 +306,19 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
         }
       });
     return () => { cancelled = true; };
-  }, [dsType, edge.metric?.datasourceUid, cwRegion, edge.metric?.queryConfig?.namespace]);
+  }, [dsType, edge.metric?.datasourceUid, effectiveCwRegion, edge.metric?.queryConfig?.namespace]);
 
   // Fetch dimension keys whenever metric name changes
   useEffect(() => {
     const uid = edge.metric?.datasourceUid;
     const namespace = edge.metric?.queryConfig?.namespace;
     const metricName = edge.metric?.queryConfig?.metricName;
-    if (dsType !== 'cloudwatch' || !uid || !cwRegion || !namespace || !metricName) {
+    if (dsType !== 'cloudwatch' || !uid || !effectiveCwRegion || !namespace || !metricName) {
       setCwDimKeys([]);
       return;
     }
     let cancelled = false;
-    fetchCwDimensionKeys(uid, cwRegion, namespace, metricName)
+    fetchCwDimensionKeys(uid, effectiveCwRegion, namespace, metricName)
       .then((keys) => {
         if (cancelled) {return;}
         setCwDimKeys(keys.map((k) => ({ label: k, value: k })));
@@ -312,7 +327,7 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
         // Dimension keys are optional — fail silently
       });
     return () => { cancelled = true; };
-  }, [dsType, edge.metric?.datasourceUid, cwRegion, edge.metric?.queryConfig?.namespace, edge.metric?.queryConfig?.metricName]);
+  }, [dsType, edge.metric?.datasourceUid, effectiveCwRegion, edge.metric?.queryConfig?.namespace, edge.metric?.queryConfig?.metricName]);
 
   // ─── Patch a single queryConfig field on edge.metric.queryConfig ───
   const updateMetricQueryConfig = useCallback(
@@ -698,15 +713,30 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
           {/* CloudWatch */}
           {edge.metric?.datasourceUid && dsType === 'cloudwatch' && (
             <>
-              <div className="topo-editor-section-title">
-                CloudWatch query
-                {cwRegion && <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 6 }}>region {cwRegion}</span>}
-              </div>
+              <div className="topo-editor-section-title">CloudWatch query</div>
               {cwError && (
                 <div style={{ fontSize: 10, color: '#bf616a', padding: '4px 0' }}>
                   {cwError} — check AWS credentials in the datasource config, or type values manually.
                 </div>
               )}
+              <div className="topo-editor-field">
+                <label>
+                  Region
+                  {cwRegion && !edge.metric?.queryConfig?.region && (
+                    <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>
+                      (datasource default: {cwRegion})
+                    </span>
+                  )}
+                </label>
+                <Select
+                  options={AWS_REGIONS}
+                  value={edge.metric?.queryConfig?.region || cwRegion || null}
+                  onChange={(v) => updateMetricQueryConfig('region', v.value || undefined)}
+                  allowCustomValue
+                  isClearable
+                  placeholder="Select AWS region..."
+                />
+              </div>
               <div className="topo-editor-field">
                 <label>
                   Namespace
