@@ -201,6 +201,20 @@ export const NodePopup: React.FC<PopupProps> = ({
           ))}
         </div>
       )}
+      {node.description && (
+        <div
+          className="topology-popup-description"
+          style={{
+            padding: '6px 8px',
+            borderBottom: '1px solid #2d3748',
+            fontSize: 10,
+            color: '#88c0d0',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {node.description}
+        </div>
+      )}
       {firingAlerts && firingAlerts.length > 0 && (
         <div style={{ padding: '6px 8px', borderBottom: '1px solid #2d3748' }}>
           <div style={{ fontSize: 10, color: '#616e88', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>

@@ -124,6 +124,20 @@ export const EdgePopup: React.FC<EdgePopupProps> = ({
         {edge.bidirectional && <span>bidirectional</span>}
       </div>
 
+      {edge.description && (
+        <div
+          className="topology-popup-description"
+          style={{
+            padding: '4px 8px 6px',
+            fontSize: 10,
+            color: '#88c0d0',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {edge.description}
+        </div>
+      )}
+
       {!edge.metric && (
         <div className="topology-popup-loading">No metric configured</div>
       )}

@@ -191,6 +191,31 @@ describe('EdgePopup', () => {
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
+  // ─── description field (Notes) ───────────────────────────────────────
+  test('renders edge.description when set', () => {
+    render(
+      <EdgePopup
+        edge={makeEdge({ description: 'rate-limited at 5rps; see rfc-042' })}
+        sourceName="Web"
+        targetName="DB"
+        onClose={jest.fn()}
+      />
+    );
+    expect(screen.getByText(/rate-limited at 5rps/)).toBeInTheDocument();
+  });
+
+  test('does not render a description block when edge.description is unset', () => {
+    const { container } = render(
+      <EdgePopup
+        edge={makeEdge()}
+        sourceName="Web"
+        targetName="DB"
+        onClose={jest.fn()}
+      />
+    );
+    expect(container.querySelector('.topology-popup-description')).toBeNull();
+  });
+
   test('virtual edge (id contains ::) still fetches parent metric config', async () => {
     queryDatasourceRange.mockResolvedValueOnce([]);
     const edge = makeEdge({
