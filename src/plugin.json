@@ -24,8 +24,8 @@
       { "name": "Drag-to-connect in edit mode", "path": "img/screenshots/03-drag-to-connect.png" },
       { "name": "Slot Floor SAS Network example", "path": "img/screenshots/04-slotfloor-example.png" }
     ],
-    "version": "1.0.0",
-    "updated": "2026-04-11"
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
   },
   "dependencies": {
     "grafanaDependency": ">=12.0.0",
