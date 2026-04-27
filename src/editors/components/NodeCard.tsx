@@ -318,7 +318,10 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
 
   return (
     <div className="topo-editor-card">
-      <CollapsableSection label={header} isOpen={isOpen} onToggle={onToggle}>
+      {/* Grafana's CollapsableSection reads isOpen only as initial state (useState(isOpen)) — prop
+          changes do not re-sync. Key-based remount forces a fresh instance whenever isOpen flips
+          externally (e.g. from the canvas context-menu sidebar-redirect emitNodeEditRequest flow). */}
+      <CollapsableSection key={`open-${isOpen}`} label={header} isOpen={isOpen} onToggle={onToggle}>
 
         {/* ═══════════ STEP 1: Datasource ═══════════ */}
         <div className="topo-editor-section-title">1. Datasource</div>
@@ -440,7 +443,7 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
 
         {/* ═══════════ Advanced (existing nodes) ═══════════ */}
         {!isNew && (
-          <CollapsableSection label="Advanced" isOpen={showAdvanced} onToggle={() => setShowAdvanced(!showAdvanced)}>
+          <CollapsableSection key={`advanced-${showAdvanced}`} label="Advanced" isOpen={showAdvanced} onToggle={() => setShowAdvanced(!showAdvanced)}>
             <div className="topo-editor-row">
               <Checkbox label="Compact" value={node.compact} onChange={(e) => handleField('compact', e.currentTarget.checked)} />
             </div>
@@ -610,6 +613,7 @@ export const NodeCard: React.FC<Props> = ({ node, groups, isOpen, onToggle, onCh
         {/* ═══════════ Configured metrics (existing nodes) ═══════════ */}
         {node.metrics.length > 0 && (
           <CollapsableSection
+            key={`metrics-${showMetrics}`}
             label={`Configured metrics (${node.metrics.length}) — ${summaryCount} summary`}
             isOpen={showMetrics}
             onToggle={() => setShowMetrics(!showMetrics)}
