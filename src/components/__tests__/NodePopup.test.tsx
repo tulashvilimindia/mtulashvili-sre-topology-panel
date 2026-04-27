@@ -216,6 +216,22 @@ describe('NodePopup', () => {
     expect(screen.queryByText('Stale')).not.toBeInTheDocument();
   });
 
+  // ─── description field (Notes / Annotation) ─────────────────────────
+  //
+  // Regression for a silent gap: NodeCard has a Notes TextArea persisting
+  // node.description, but NodePopup used to never render it — making the
+  // editor input effectively write-only. These tests lock in visibility.
+  test('renders node.description when set', () => {
+    const node = makeNode({ description: 'owned by platform team — runbook: https://wiki/x' });
+    render(<NodePopup node={node} onClose={jest.fn()} />);
+    expect(screen.getByText(/owned by platform team/)).toBeInTheDocument();
+  });
+
+  test('does not render a description block when node.description is unset', () => {
+    const { container } = render(<NodePopup node={makeNode()} onClose={jest.fn()} />);
+    expect(container.querySelector('.topology-popup-description')).toBeNull();
+  });
+
   test('stale metric (over SLO) shows Stale pill', async () => {
     const node = makeNode({
       metrics: [{
