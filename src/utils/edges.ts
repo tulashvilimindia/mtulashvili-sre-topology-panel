@@ -234,11 +234,19 @@ export const EDGE_TYPE_STYLES: Record<EdgeType, { dashArray: string; opacity: nu
 
 /**
  * Propagate critical/degraded status upstream through edges.
- * When a node is critical, all edges pointing TO it get 'degraded' status,
- * and source nodes of those edges get a 'propagated' flag.
+ * When a node is critical or degraded, all edges pointing TO it are
+ * flagged so the renderer paints them in degraded colour.
+ *
+ * Narrow by design — warning/saturated nodes do NOT propagate. In dense
+ * topologies, propagating from every warning would leave the canvas
+ * flooded with yellow edges, which buries the actual critical path a
+ * user is scanning for. Callers that want a broader signal should
+ * render the target node's own status directly.
  *
  * Returns a Set of edge IDs that should show propagated (degraded) color.
  */
+const PROPAGATING_STATUSES = new Set<NodeStatus | EdgeStatus>(['critical', 'degraded', 'down']);
+
 export function propagateStatus(
   nodeStatuses: Map<string, NodeStatus>,
   edges: Array<{ id: string; sourceId: string; targetId?: string }>
@@ -250,7 +258,7 @@ export function propagateStatus(
       return;
     }
     const targetStatus = nodeStatuses.get(edge.targetId);
-    if (targetStatus && isWorseStatus(targetStatus, 'ok') && targetStatus !== 'nodata' && targetStatus !== 'unknown') {
+    if (targetStatus && PROPAGATING_STATUSES.has(targetStatus)) {
       propagatedEdges.add(edge.id);
     }
   });

@@ -269,14 +269,36 @@ describe('propagateStatus', () => {
     expect(result.has('e2')).toBe(true);
   });
 
-  test('warning node also propagates (any non-nodata non-unknown)', () => {
+  test('warning node does NOT propagate (narrow-by-design cutoff)', () => {
+    // The SRE convention we've settled on: only critical/degraded/down
+    // propagates upstream. Propagating from warning floods dense
+    // topologies with yellow edges and buries the critical path.
     const statuses = new Map([['n2', 'warning']] as Array<[string, never]>);
-    const result = propagateStatus(statuses, edges);
-    expect(result.has('e1')).toBe(true);
+    expect(propagateStatus(statuses, edges).size).toBe(0);
+  });
+
+  test('saturated node does NOT propagate (equivalent to warning)', () => {
+    const statuses = new Map([['n2', 'saturated']] as Array<[string, never]>);
+    expect(propagateStatus(statuses, edges).size).toBe(0);
+  });
+
+  test('degraded node propagates', () => {
+    const statuses = new Map([['n2', 'degraded']] as Array<[string, never]>);
+    expect(propagateStatus(statuses, edges).has('e1')).toBe(true);
+  });
+
+  test('down node propagates', () => {
+    const statuses = new Map([['n2', 'down']] as Array<[string, never]>);
+    expect(propagateStatus(statuses, edges).has('e1')).toBe(true);
   });
 
   test('nodata status does NOT propagate', () => {
     const statuses = new Map([['n2', 'nodata']] as Array<[string, never]>);
+    expect(propagateStatus(statuses, edges).size).toBe(0);
+  });
+
+  test('unknown status does NOT propagate', () => {
+    const statuses = new Map([['n2', 'unknown']] as Array<[string, never]>);
     expect(propagateStatus(statuses, edges).size).toBe(0);
   });
 
