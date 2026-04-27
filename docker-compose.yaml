@@ -1,10 +1,10 @@
 services:
   prometheus:
     image: prom/prometheus:v2.54.1
-    container_name: mtulashvili-topology-prometheus
+    container_name: grafana-topology-plugin-prometheus
     restart: unless-stopped
     ports:
-      - 19091:9090/tcp
+      - 19092:9090/tcp
     volumes:
       - ./.config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
