@@ -46,16 +46,20 @@ datasources:
       allowedHosts:
         - https://api.newrelic.com
     secureJsonData:
-      apiKeyValue: ${NR_API_KEY}
+      apiKeyValue: $NR_API_KEY
 
   # CloudWatch — direct with AWS credentials
+  # Grafana's provisioning variable substitution only supports plain
+  # $VAR / ${VAR} (no bash ${VAR:-default}). docker-compose guarantees
+  # AWS_REGION is set in the container env with us-east-1 as its own
+  # default, so here we can reference it directly.
   - name: AWS CloudWatch
     type: cloudwatch
     uid: local-cloudwatch
     access: proxy
     jsonData:
       authType: keys
-      defaultRegion: ${AWS_REGION:-us-east-1}
+      defaultRegion: $AWS_REGION
     secureJsonData:
-      accessKey: ${AWS_ACCESS_KEY}
-      secretKey: ${AWS_SECRET_KEY}
+      accessKey: $AWS_ACCESS_KEY
+      secretKey: $AWS_SECRET_KEY

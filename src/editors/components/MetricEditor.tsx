@@ -4,6 +4,7 @@ import { DataSourcePicker, getDataSourceSrv } from '@grafana/runtime';
 import { NodeMetricConfig, DatasourceQueryConfig } from '../../types';
 import { ThresholdList } from './ThresholdList';
 import {
+  AWS_REGIONS,
   getCloudWatchDefaultRegion,
   fetchCwNamespaces,
   fetchCwMetrics,
@@ -135,18 +136,9 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
         } else if (ds.type === 'cloudwatch') {
           setAvailableMetrics([]);
           setCwError(null);
-          const region = getCloudWatchDefaultRegion(metric.datasourceUid);
-          setCwRegion(region);
-          try {
-            const namespaces = await fetchCwNamespaces(metric.datasourceUid, region);
-            if (cancelled) {return;}
-            setCwNamespaces(namespaces.map((n) => ({ label: n, value: n })));
-          } catch (err) {
-            if (!cancelled) {
-              setCwError(`Namespaces: ${(err as Error).message}`);
-              setCwNamespaces([]);
-            }
-          }
+          // Capture DS default — actual fetches use the effective region
+          // (queryConfig.region || cwRegion) via the downstream effects.
+          setCwRegion(getCloudWatchDefaultRegion(metric.datasourceUid));
         } else {
           // Reset stale state when switching to a non-specialized DS type
           setAvailableMetrics([]);
@@ -168,16 +160,41 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
     return () => { cancelled = true; };
   }, [metric.datasourceUid]);
 
+  // Effective region: user selection (queryConfig.region) overrides the
+  // datasource default (cwRegion). All CW resource API calls use this.
+  const effectiveRegion = metric.queryConfig?.region || cwRegion;
+
+  // When effective region is known for a CloudWatch DS, fetch namespaces.
+  useEffect(() => {
+    if (dsType !== 'cloudwatch' || !metric.datasourceUid || !effectiveRegion) {
+      return;
+    }
+    let cancelled = false;
+    setCwError(null);
+    fetchCwNamespaces(metric.datasourceUid, effectiveRegion)
+      .then((namespaces) => {
+        if (cancelled) {return;}
+        setCwNamespaces(namespaces.map((n) => ({ label: n, value: n })));
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setCwError(`Namespaces: ${(err as Error).message}`);
+          setCwNamespaces([]);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [dsType, metric.datasourceUid, effectiveRegion]);
+
   // When the CloudWatch namespace changes, fetch the list of metric names
   // available in that namespace.
   useEffect(() => {
     const namespace = metric.queryConfig?.namespace;
-    if (dsType !== 'cloudwatch' || !metric.datasourceUid || !cwRegion || !namespace) {
+    if (dsType !== 'cloudwatch' || !metric.datasourceUid || !effectiveRegion || !namespace) {
       setCwMetricNames([]);
       return;
     }
     let cancelled = false;
-    fetchCwMetrics(metric.datasourceUid, cwRegion, namespace)
+    fetchCwMetrics(metric.datasourceUid, effectiveRegion, namespace)
       .then((names) => {
         if (cancelled) {return;}
         setCwMetricNames(names.map((n) => ({ label: n, value: n })));
@@ -189,19 +206,19 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
         }
       });
     return () => { cancelled = true; };
-  }, [dsType, metric.datasourceUid, cwRegion, metric.queryConfig?.namespace]);
+  }, [dsType, metric.datasourceUid, effectiveRegion, metric.queryConfig?.namespace]);
 
   // When the CloudWatch metric name changes, fetch the list of dimension keys
   // valid for that metric. Used to populate the dimension-key dropdown.
   useEffect(() => {
     const namespace = metric.queryConfig?.namespace;
     const metricName = metric.queryConfig?.metricName;
-    if (dsType !== 'cloudwatch' || !metric.datasourceUid || !cwRegion || !namespace || !metricName) {
+    if (dsType !== 'cloudwatch' || !metric.datasourceUid || !effectiveRegion || !namespace || !metricName) {
       setCwDimKeys([]);
       return;
     }
     let cancelled = false;
-    fetchCwDimensionKeys(metric.datasourceUid, cwRegion, namespace, metricName)
+    fetchCwDimensionKeys(metric.datasourceUid, effectiveRegion, namespace, metricName)
       .then((keys) => {
         if (cancelled) {return;}
         setCwDimKeys(keys.map((k) => ({ label: k, value: k })));
@@ -210,7 +227,7 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
         // Dimension keys are optional — fail silently
       });
     return () => { cancelled = true; };
-  }, [dsType, metric.datasourceUid, cwRegion, metric.queryConfig?.namespace, metric.queryConfig?.metricName]);
+  }, [dsType, metric.datasourceUid, effectiveRegion, metric.queryConfig?.namespace, metric.queryConfig?.metricName]);
 
   // Existing sections used by sibling metrics (for Section dropdown)
   const sectionOptions = useMemo(() => {
@@ -299,15 +316,30 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
       {/* ═══════════ CloudWatch query editor ═══════════ */}
       {metric.datasourceUid && dsType === 'cloudwatch' && (
         <>
-          <div className="topo-editor-section-title">
-            CloudWatch query
-            {cwRegion && <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 6 }}>region {cwRegion}</span>}
-          </div>
+          <div className="topo-editor-section-title">CloudWatch query</div>
           {cwError && (
             <div style={{ fontSize: 10, color: '#bf616a', padding: '4px 0' }}>
               {cwError} — check AWS credentials in the datasource config, or type values manually.
             </div>
           )}
+          <div className="topo-editor-field">
+            <label>
+              Region
+              {cwRegion && !metric.queryConfig?.region && (
+                <span style={{ fontSize: 9, color: '#4c566a', marginLeft: 4 }}>
+                  (datasource default: {cwRegion})
+                </span>
+              )}
+            </label>
+            <Select
+              options={AWS_REGIONS}
+              value={metric.queryConfig?.region || cwRegion || null}
+              onChange={(v) => updateQueryConfig('region', v.value || undefined)}
+              allowCustomValue
+              isClearable
+              placeholder="Select AWS region..."
+            />
+          </div>
           <div className="topo-editor-field">
             <label>
               Namespace
