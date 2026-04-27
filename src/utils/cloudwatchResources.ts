@@ -75,8 +75,13 @@ export function getCloudWatchDefaultRegion(dsUid: string): string {
 // Each fetch function applies its own selector.
 type Selector = (entry: unknown) => string | undefined;
 
-async function fetchResourceWith(dsUid: string, path: string, select: Selector): Promise<string[]> {
-  const res = await fetch(`/api/datasources/uid/${dsUid}/resources/${path}`);
+async function fetchResourceWith(
+  dsUid: string,
+  path: string,
+  select: Selector,
+  signal?: AbortSignal
+): Promise<string[]> {
+  const res = await fetch(`/api/datasources/uid/${dsUid}/resources/${path}`, { signal });
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText}`);
   }
@@ -114,14 +119,19 @@ const selectMetricName: Selector = (entry) => {
 };
 
 /** List AWS namespaces available to the datasource in the given region. */
-export function fetchCwNamespaces(dsUid: string, region: string): Promise<string[]> {
-  return fetchResourceWith(dsUid, `namespaces?region=${encodeURIComponent(region)}`, selectStringValue);
+export function fetchCwNamespaces(dsUid: string, region: string, signal?: AbortSignal): Promise<string[]> {
+  return fetchResourceWith(dsUid, `namespaces?region=${encodeURIComponent(region)}`, selectStringValue, signal);
 }
 
 /** List metric names in a namespace (e.g. CPUUtilization for AWS/EC2). */
-export function fetchCwMetrics(dsUid: string, region: string, namespace: string): Promise<string[]> {
+export function fetchCwMetrics(
+  dsUid: string,
+  region: string,
+  namespace: string,
+  signal?: AbortSignal
+): Promise<string[]> {
   const qs = `region=${encodeURIComponent(region)}&namespace=${encodeURIComponent(namespace)}`;
-  return fetchResourceWith(dsUid, `metrics?${qs}`, selectMetricName);
+  return fetchResourceWith(dsUid, `metrics?${qs}`, selectMetricName, signal);
 }
 
 /** List dimension keys for a specific metric in a namespace. */
@@ -129,12 +139,13 @@ export function fetchCwDimensionKeys(
   dsUid: string,
   region: string,
   namespace: string,
-  metricName: string
+  metricName: string,
+  signal?: AbortSignal
 ): Promise<string[]> {
   const qs =
     `region=${encodeURIComponent(region)}` +
     `&namespace=${encodeURIComponent(namespace)}` +
     `&metricName=${encodeURIComponent(metricName)}` +
     `&dimensionFilters=${encodeURIComponent('{}')}`;
-  return fetchResourceWith(dsUid, `dimension-keys?${qs}`, selectStringValue);
+  return fetchResourceWith(dsUid, `dimension-keys?${qs}`, selectStringValue, signal);
 }

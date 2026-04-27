@@ -390,6 +390,12 @@ curl -s http://your-grafana/api/datasources | jq '.[].uid'
 
 ### Node Types and Icons
 
+37 built-in types across 7 categories. Use `iconOverride` (2-4 chars) and
+`colorOverride` (any CSS color) on a single node to stamp custom branding
+without registering a new type.
+
+**Generic infrastructure** (the v1.0 set, vendor-agnostic):
+
 | Type | Icon | Default Color | Typical Use |
 |------|------|---------------|-------------|
 | `cloudflare` | CF | Gold | CDN / WAF edge |
@@ -409,6 +415,61 @@ curl -s http://your-grafana/api/datasources | jq '.[].uid'
 | `logs` | LOG | Blue | Log aggregator (Loki, CloudWatch Logs, etc.) |
 | `probe` | PRB | Cyan | Synthetic probe / uptime monitor |
 | `custom` | ? | Gray | Custom node type |
+
+**Cloud-native k8s brands**:
+
+| Type | Icon | Default Color | Typical Use |
+|------|------|---------------|-------------|
+| `aks` | AKS | Azure blue | Azure Kubernetes Service |
+| `eks` | EKS | AWS orange | AWS Elastic Kubernetes Service |
+| `gke` | GKE | GCP blue | GCP Kubernetes Engine |
+
+**Serverless compute**:
+
+| Type | Icon | Default Color | Typical Use |
+|------|------|---------------|-------------|
+| `lambda` | LAM | AWS orange | AWS Lambda |
+| `function` | FN | Cyan | Generic serverless function (Azure Functions, etc.) |
+| `cloudrun` | CR | GCP blue | Google Cloud Run |
+
+**Edge / API / WAF**:
+
+| Type | Icon | Default Color | Typical Use |
+|------|------|---------------|-------------|
+| `afd` | AFD | Azure blue | Azure Front Door |
+| `appgw` | AGW | Azure blue | Azure Application Gateway |
+| `apigw` | APIG | AWS orange | AWS API Gateway / generic API gateway |
+| `waf` | WAF | Red | Web Application Firewall |
+
+**Messaging** (distinct from generic `queue`):
+
+| Type | Icon | Default Color | Typical Use |
+|------|------|---------------|-------------|
+| `kafka` | KAF | Red | Apache Kafka |
+| `pubsub` | PS | GCP blue | Google Pub/Sub |
+
+**Storage & analytics**:
+
+| Type | Icon | Default Color | Typical Use |
+|------|------|---------------|-------------|
+| `storage` | STG | Blue | Object storage (S3, Azure Blob, GCS) |
+| `elasticsearch` | ES | Green | Elasticsearch / OpenSearch |
+| `warehouse` | DW | Blue | Data warehouse (Snowflake, BigQuery, Redshift) |
+
+**Identity & secrets**:
+
+| Type | Icon | Default Color | Typical Use |
+|------|------|---------------|-------------|
+| `idp` | IDP | Purple | Identity Provider (Okta, Auth0, Entra ID) |
+| `secrets` | SEC | Gold | Secrets vault (HashiCorp Vault, AWS Secrets Manager) |
+
+**Network**:
+
+| Type | Icon | Default Color | Typical Use |
+|------|------|---------------|-------------|
+| `dns` | DNS | Purple | DNS resolver / authoritative |
+| `vpn` | VPN | Purple | VPN gateway |
+| `bastion` | BAS | Gray | Bastion / jump host |
 
 ### Edge Visual Behavior
 
@@ -693,6 +754,27 @@ auto-dismisses after 12 seconds.
 - [x] **Right-click context menu on nodes and edges** — `ContextMenu` component with Duplicate / Copy id / Delete; edit-mode-only "Edit in sidebar" item routes through the `emitNodeEditRequest` / `emitEdgeEditRequest` pub/sub bus
 - [x] **Drag-to-connect directly on canvas** — Shift+drag from one node to another in edit mode creates a new edge via `onOptionsChange` and auto-opens its card in the sidebar editor
 - [x] **`emitEdgeEditRequest` cross-subtree channel** — 5th `panelEvents` pub/sub channel so `EdgesEditor` can subscribe and scroll+expand the matching edge card on request, mirror of the existing node-edit channel
+
+**Shipped in 1.0.1** (port of 22 feature/fix commits + 1 follow-up; 267 → 480 Jest tests, 14 → 30 suites):
+
+- [x] **+20 cloud-native node types** — `aks`, `eks`, `gke`, `lambda`, `function`, `cloudrun`, `afd`, `appgw`, `apigw`, `waf`, `kafka`, `pubsub`, `storage`, `elasticsearch`, `warehouse`, `idp`, `secrets`, `dns`, `vpn`, `bastion` (37 total)
+- [x] **Per-node `colorOverride`** — hex input + native color picker + clear button in NodeCard Advanced; complements the pre-existing `iconOverride`
+- [x] **Hybrid click-ops context menu with submenus** — Change type, Compact mode, Bidirectional, Flow animation, Flow speed, Anchor source/target as in-menu toggles with checkmarks; depth-2 submenus with full keyboard nav (ArrowRight/Left, Escape)
+- [x] **Sidebar redirects from context menu** — Edit metrics, Edit alert matchers, Edit observability links (nodes); Edit metric binding, Edit thresholds, Edit state map, Edit visual (edges) — open the matching sidebar card scrolled to the targeted sub-section
+- [x] **CloudWatch namespace / metric / dimension-key autocomplete** — Selects populated from Grafana's CW resource API with `allowCustomValue` fallback when AWS unreachable; cascading clear-stale-downstream so changing namespace also drops `metricName` + `dimensions`
+- [x] **CloudWatch region picker** — 28-region list with `queryConfig.region` persistence, forwarded to `/api/ds/query` payload in both instant and range CW paths
+- [x] **AbortController + 10s timeout** on all CW autocomplete fetches — hung resource APIs no longer stall the editor; cleanup on every dep change cancels in-flight requests
+- [x] **Pure mutation helpers** — `src/utils/nodeMutations.ts` + `edgeMutations.ts` with single-field, immutable, fully tested helpers consumed by the click-ops menu
+- [x] **Section-targeted edit requests** — `panelEvents.NodeEditSection` / `EdgeEditSection` literal types + `CollapsableSection` key-based remount so external `isOpen` prop changes propagate (Grafana UI's `useState(initialValue)` pattern ignored prop changes after mount)
+- [x] **`node.description` / `edge.description` rendering** in `NodePopup` / `EdgePopup` — the editor's Notes TextArea was previously write-only
+- [x] **`%VERSION%` / `%TODAY%` placeholder substitution** restored in `src/plugin.json` so each build injects the current `package.json` version + today's date automatically
+- [x] **`propagateStatus` narrowed** to `critical` / `degraded` / `down` only — warning/saturated no longer flood dense topologies with yellow edges
+- [x] **Generic query fallback** for non-specialised datasources (testdata, loki, elasticsearch, graphite, tempo, mssql, mysql) — plain query textarea instead of a dead UI
+- [x] **Local Prometheus dev sidecar** — `prom/prometheus:v2.54.1` scrapes Grafana's `/metrics` for ~668 real metric names; powers autocomplete dev without cloud credentials
+- [x] **Playwright + `@grafana/plugin-e2e` smoke suite** — 3 specs in `e2e/` exercise plugin discoverability against the Docker dev stack
+- [x] **Pan-gesture closure-race fix** — handler snapshots `panStartRef.current` into primitives before `setViewport` to survive React 18 batching
+- [x] **Viewport survives edit↔view remount** — removed the cleanup effect that was wiping the per-panel viewport store on every unmount
+- [x] **Diamond fan-in regression test** — locks the BFS `queued`-set guard against future O(N²) regressions
 
 **Partially shipped — needs follow-up:**
 

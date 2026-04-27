@@ -147,8 +147,14 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
           setCwDimKeys([]);
           setCwError(null);
         }
-      } catch {
-        // Silently fail — user can still type manually
+      } catch (err) {
+        // Surface the error in the CW banner when the user picked a CW
+        // datasource — a uid-based heuristic so we don't depend on dsType
+        // (which may not have been set yet if get() failed). Non-CW
+        // datasources don't have a banner UI surface.
+        if (!cancelled && String(metric.datasourceUid).toLowerCase().includes('cloudwatch')) {
+          setCwError(`Datasource: ${(err as Error).message}`);
+        }
       } finally {
         if (!cancelled) {
           setLoadingMetrics(false);
@@ -161,55 +167,67 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
   }, [metric.datasourceUid]);
 
   // Effective region: user selection (queryConfig.region) overrides the
-  // datasource default (cwRegion). All CW resource API calls use this.
-  const effectiveRegion = metric.queryConfig?.region || cwRegion;
+  // datasource default (cwRegion). `??` (not `||`) so an explicit empty-
+  // string region — were one ever to land in queryConfig from JSON edit —
+  // wouldn't silently fall back to the DS default.
+  const effectiveRegion = metric.queryConfig?.region ?? cwRegion;
 
-  // When effective region is known for a CloudWatch DS, fetch namespaces.
+  // Namespace fetch — AbortController + 10s timeout so a hung CloudWatch
+  // resource API can't stall the editor; cancellation on every dep change
+  // (region/datasource switch, unmount) prevents stale-result setState.
   useEffect(() => {
     if (dsType !== 'cloudwatch' || !metric.datasourceUid || !effectiveRegion) {
       return;
     }
-    let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
     setCwError(null);
-    fetchCwNamespaces(metric.datasourceUid, effectiveRegion)
+    fetchCwNamespaces(metric.datasourceUid, effectiveRegion, controller.signal)
       .then((namespaces) => {
-        if (cancelled) {return;}
+        if (controller.signal.aborted) {return;}
         setCwNamespaces(namespaces.map((n) => ({ label: n, value: n })));
       })
       .catch((err) => {
-        if (!cancelled) {
-          setCwError(`Namespaces: ${(err as Error).message}`);
-          setCwNamespaces([]);
-        }
-      });
-    return () => { cancelled = true; };
+        if (controller.signal.aborted) {return;}
+        setCwError(`Namespaces: ${(err as Error).message}`);
+        setCwNamespaces([]);
+      })
+      .finally(() => clearTimeout(timeoutId));
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [dsType, metric.datasourceUid, effectiveRegion]);
 
-  // When the CloudWatch namespace changes, fetch the list of metric names
-  // available in that namespace.
+  // Metric-name fetch (depends on namespace).
   useEffect(() => {
     const namespace = metric.queryConfig?.namespace;
     if (dsType !== 'cloudwatch' || !metric.datasourceUid || !effectiveRegion || !namespace) {
       setCwMetricNames([]);
       return;
     }
-    let cancelled = false;
-    fetchCwMetrics(metric.datasourceUid, effectiveRegion, namespace)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    fetchCwMetrics(metric.datasourceUid, effectiveRegion, namespace, controller.signal)
       .then((names) => {
-        if (cancelled) {return;}
+        if (controller.signal.aborted) {return;}
         setCwMetricNames(names.map((n) => ({ label: n, value: n })));
       })
       .catch((err) => {
-        if (!cancelled) {
-          setCwError(`Metrics: ${(err as Error).message}`);
-          setCwMetricNames([]);
-        }
-      });
-    return () => { cancelled = true; };
+        if (controller.signal.aborted) {return;}
+        setCwError(`Metrics: ${(err as Error).message}`);
+        setCwMetricNames([]);
+      })
+      .finally(() => clearTimeout(timeoutId));
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [dsType, metric.datasourceUid, effectiveRegion, metric.queryConfig?.namespace]);
 
-  // When the CloudWatch metric name changes, fetch the list of dimension keys
-  // valid for that metric. Used to populate the dimension-key dropdown.
+  // Dimension-keys fetch (depends on metric name). Errors stay silent —
+  // dim keys are optional and the Select.allowCustomValue path covers
+  // manual entry.
   useEffect(() => {
     const namespace = metric.queryConfig?.namespace;
     const metricName = metric.queryConfig?.metricName;
@@ -217,17 +235,49 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
       setCwDimKeys([]);
       return;
     }
-    let cancelled = false;
-    fetchCwDimensionKeys(metric.datasourceUid, effectiveRegion, namespace, metricName)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    fetchCwDimensionKeys(metric.datasourceUid, effectiveRegion, namespace, metricName, controller.signal)
       .then((keys) => {
-        if (cancelled) {return;}
+        if (controller.signal.aborted) {return;}
         setCwDimKeys(keys.map((k) => ({ label: k, value: k })));
       })
       .catch(() => {
-        // Dimension keys are optional — fail silently
-      });
-    return () => { cancelled = true; };
+        // optional — silent fail
+      })
+      .finally(() => clearTimeout(timeoutId));
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [dsType, metric.datasourceUid, effectiveRegion, metric.queryConfig?.namespace, metric.queryConfig?.metricName]);
+
+  // Atomic onChange handlers that clear stale downstream selections when
+  // an upstream cascade level changes — switching namespace must drop the
+  // metricName + dimensions captured under the previous namespace, since
+  // those values are namespace-scoped on the AWS side.
+  const handleNamespaceChange = useCallback((newNamespace: string | undefined) => {
+    const next: DatasourceQueryConfig = { ...(metric.queryConfig || {}) };
+    if (newNamespace === undefined || newNamespace === '') {
+      delete next.namespace;
+    } else {
+      next.namespace = newNamespace;
+    }
+    delete next.metricName;
+    delete next.dimensions;
+    handleField('queryConfig', Object.keys(next).length > 0 ? next : undefined);
+  }, [metric.queryConfig, handleField]);
+
+  const handleMetricNameChange = useCallback((newMetricName: string | undefined) => {
+    const next: DatasourceQueryConfig = { ...(metric.queryConfig || {}) };
+    if (newMetricName === undefined || newMetricName === '') {
+      delete next.metricName;
+    } else {
+      next.metricName = newMetricName;
+    }
+    delete next.dimensions;
+    handleField('queryConfig', Object.keys(next).length > 0 ? next : undefined);
+  }, [metric.queryConfig, handleField]);
 
   // Existing sections used by sibling metrics (for Section dropdown)
   const sectionOptions = useMemo(() => {
@@ -348,7 +398,7 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
             <Select
               options={cwNamespaces}
               value={metric.queryConfig?.namespace || null}
-              onChange={(v) => updateQueryConfig('namespace', v.value || undefined)}
+              onChange={(v) => handleNamespaceChange(v.value || undefined)}
               allowCustomValue
               isClearable
               placeholder={cwNamespaces.length > 0 ? 'Select namespace...' : 'AWS/ApplicationELB'}
@@ -362,7 +412,7 @@ export const MetricEditor: React.FC<Props> = ({ metric, isOpen, onToggle, onChan
             <Select
               options={cwMetricNames}
               value={metric.queryConfig?.metricName || null}
-              onChange={(v) => updateQueryConfig('metricName', v.value || undefined)}
+              onChange={(v) => handleMetricNameChange(v.value || undefined)}
               allowCustomValue
               isClearable
               placeholder={cwMetricNames.length > 0 ? 'Select metric...' : 'RequestCount'}

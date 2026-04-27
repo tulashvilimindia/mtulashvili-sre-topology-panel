@@ -487,6 +487,13 @@ interface MenuPanelProps {
   onEscape: () => void;
   isSubmenu: boolean;
   allowSubmenus: boolean;
+  /**
+   * When false, the document-level keydown handler short-circuits without
+   * processing arrow keys / Escape. Used to silence the root MenuPanel
+   * while a submenu is open so a single ArrowDown doesn't move focus in
+   * both panels simultaneously (visible jitter).
+   */
+  isActive: boolean;
 }
 
 /**
@@ -516,6 +523,7 @@ const MenuPanel: React.FC<MenuPanelProps> = ({
   onEscape,
   isSubmenu,
   allowSubmenus,
+  isActive,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -529,9 +537,12 @@ const MenuPanel: React.FC<MenuPanelProps> = ({
     });
   }, []);
 
-  // Keyboard navigation scoped to this level.
+  // Keyboard navigation scoped to this level. Inactive panels (the root
+  // while a submenu is open) short-circuit so a single keystroke doesn't
+  // get processed by both panels and produce visible focus jitter.
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      if (!isActive) { return; }
       if (e.key === 'Escape') {
         e.preventDefault();
         onEscape();
@@ -547,8 +558,17 @@ const MenuPanel: React.FC<MenuPanelProps> = ({
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        const delta = e.key === 'ArrowDown' ? 1 : -1;
-        const nextIdx = (activeIdx + delta + itemEls.length) % itemEls.length;
+        // When focus is outside the menu (activeIdx === -1), ArrowDown
+        // jumps to the first item and ArrowUp to the last — explicit
+        // branch avoids the prior off-by-one (`((-1) + (-1) + N) % N` skipped
+        // the last item on first ArrowUp).
+        let nextIdx: number;
+        if (activeIdx < 0) {
+          nextIdx = e.key === 'ArrowDown' ? 0 : itemEls.length - 1;
+        } else {
+          const delta = e.key === 'ArrowDown' ? 1 : -1;
+          nextIdx = (activeIdx + delta + itemEls.length) % itemEls.length;
+        }
         itemEls[nextIdx].focus();
         return;
       }
@@ -568,7 +588,7 @@ const MenuPanel: React.FC<MenuPanelProps> = ({
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [items, onEscape, onSubmenuOpen, isSubmenu, allowSubmenus]);
+  }, [items, onEscape, onSubmenuOpen, isSubmenu, allowSubmenus, isActive]);
 
   return (
     <div
@@ -683,6 +703,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = (props) => {
       return buildNodeMenu(target, props, closeAll);
     }
     return buildEdgeMenu(target, props, closeAll);
+    // The full prop callback set (onChangeNodeType, onToggleNodeCompact,
+    // onChangeEdgeType, onSetEdgeAnchor, ...) is passed in as stable
+    // useCallback refs from TopologyPanel. Listing them here would cause
+    // rebuilds on every parent re-render with no semantic change. We
+    // intentionally rebuild only when the target, edit mode, or the node/
+    // edge slice arrays change — those are the inputs the menu items read.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, props.isEditMode, props.nodes, props.edges]);
 
@@ -757,6 +783,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = (props) => {
         onEscape={rootEscape}
         isSubmenu={false}
         allowSubmenus={true}
+        isActive={openSubmenu === null}
       />
       {openSubmenu && submenuPosition && (
         <MenuPanel
@@ -769,6 +796,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = (props) => {
           onEscape={handleSubmenuEscape}
           isSubmenu={true}
           allowSubmenus={false}
+          isActive={true}
         />
       )}
     </>

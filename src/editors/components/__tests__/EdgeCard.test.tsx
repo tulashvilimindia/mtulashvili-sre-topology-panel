@@ -261,14 +261,14 @@ describe('EdgeCard — main metric CloudWatch autocomplete', () => {
       { sectionHint: 'metric' }
     );
     await waitFor(() => {
-      expect(fetchCwNamespacesMock).toHaveBeenCalledWith('ds-cw', 'us-east-1');
+      expect(fetchCwNamespacesMock).toHaveBeenCalledWith('ds-cw', 'us-east-1', expect.any(AbortSignal));
     });
     await waitFor(() => {
-      expect(fetchCwMetricsMock).toHaveBeenCalledWith('ds-cw', 'us-east-1', 'AWS/EC2');
+      expect(fetchCwMetricsMock).toHaveBeenCalledWith('ds-cw', 'us-east-1', 'AWS/EC2', expect.any(AbortSignal));
     });
     await waitFor(() => {
       expect(fetchCwDimensionKeysMock).toHaveBeenCalledWith(
-        'ds-cw', 'us-east-1', 'AWS/EC2', 'CPUUtilization'
+        'ds-cw', 'us-east-1', 'AWS/EC2', 'CPUUtilization', expect.any(AbortSignal)
       );
     });
   });

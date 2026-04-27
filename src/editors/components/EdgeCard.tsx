@@ -256,36 +256,55 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
           setCwError(null);
         }
       })
-      .catch(() => { if (!cancelled) { setDsType(''); } });
+      .catch((err) => {
+        if (cancelled) {return;}
+        setDsType('');
+        // If the user picked a CloudWatch DS but the resolver failed, surface
+        // it via the same banner the namespace fetch uses; otherwise stay
+        // silent (non-CW failures don't have a dedicated UI surface).
+        const uidLooksCw = String(uid).toLowerCase().includes('cloudwatch');
+        if (uidLooksCw) {
+          setCwError(`Datasource: ${(err as Error).message}`);
+        }
+      });
     return () => { cancelled = true; };
   }, [edge.metric?.datasourceUid]);
 
-  // Effective CW region: user override (queryConfig.region) or DS default (cwRegion)
-  const effectiveCwRegion = edge.metric?.queryConfig?.region || cwRegion;
+  // Effective CW region: user override (queryConfig.region) or DS default
+  // (cwRegion). `??` (not `||`) so an explicit empty-string region — were
+  // one ever to land in queryConfig from JSON edit — wouldn't silently
+  // fall back to the DS default.
+  const effectiveCwRegion = edge.metric?.queryConfig?.region ?? cwRegion;
 
-  // Fetch namespaces once effective region is known
+  // Namespace fetch — AbortController + 10s timeout so a hung resource
+  // API can't stall the editor; cancellation on every dep change prevents
+  // stale-result setState.
   useEffect(() => {
     const uid = edge.metric?.datasourceUid;
     if (dsType !== 'cloudwatch' || !uid || !effectiveCwRegion) {
       return;
     }
-    let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
     setCwError(null);
-    fetchCwNamespaces(uid, effectiveCwRegion)
+    fetchCwNamespaces(uid, effectiveCwRegion, controller.signal)
       .then((namespaces) => {
-        if (cancelled) {return;}
+        if (controller.signal.aborted) {return;}
         setCwNamespaces(namespaces.map((n) => ({ label: n, value: n })));
       })
       .catch((err) => {
-        if (!cancelled) {
-          setCwError(`Namespaces: ${(err as Error).message}`);
-          setCwNamespaces([]);
-        }
-      });
-    return () => { cancelled = true; };
+        if (controller.signal.aborted) {return;}
+        setCwError(`Namespaces: ${(err as Error).message}`);
+        setCwNamespaces([]);
+      })
+      .finally(() => clearTimeout(timeoutId));
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [dsType, edge.metric?.datasourceUid, effectiveCwRegion]);
 
-  // Fetch metric names whenever namespace changes
+  // Metric-name fetch (depends on namespace).
   useEffect(() => {
     const uid = edge.metric?.datasourceUid;
     const namespace = edge.metric?.queryConfig?.namespace;
@@ -293,22 +312,28 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
       setCwMetricNames([]);
       return;
     }
-    let cancelled = false;
-    fetchCwMetrics(uid, effectiveCwRegion, namespace)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    fetchCwMetrics(uid, effectiveCwRegion, namespace, controller.signal)
       .then((names) => {
-        if (cancelled) {return;}
+        if (controller.signal.aborted) {return;}
         setCwMetricNames(names.map((n) => ({ label: n, value: n })));
       })
       .catch((err) => {
-        if (!cancelled) {
-          setCwError(`Metrics: ${(err as Error).message}`);
-          setCwMetricNames([]);
-        }
-      });
-    return () => { cancelled = true; };
+        if (controller.signal.aborted) {return;}
+        setCwError(`Metrics: ${(err as Error).message}`);
+        setCwMetricNames([]);
+      })
+      .finally(() => clearTimeout(timeoutId));
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [dsType, edge.metric?.datasourceUid, effectiveCwRegion, edge.metric?.queryConfig?.namespace]);
 
-  // Fetch dimension keys whenever metric name changes
+  // Dimension-keys fetch (depends on metric name). Errors stay silent —
+  // dim keys are optional and the Select.allowCustomValue path covers
+  // manual entry.
   useEffect(() => {
     const uid = edge.metric?.datasourceUid;
     const namespace = edge.metric?.queryConfig?.namespace;
@@ -317,16 +342,21 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
       setCwDimKeys([]);
       return;
     }
-    let cancelled = false;
-    fetchCwDimensionKeys(uid, effectiveCwRegion, namespace, metricName)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    fetchCwDimensionKeys(uid, effectiveCwRegion, namespace, metricName, controller.signal)
       .then((keys) => {
-        if (cancelled) {return;}
+        if (controller.signal.aborted) {return;}
         setCwDimKeys(keys.map((k) => ({ label: k, value: k })));
       })
       .catch(() => {
-        // Dimension keys are optional — fail silently
-      });
-    return () => { cancelled = true; };
+        // optional — silent fail
+      })
+      .finally(() => clearTimeout(timeoutId));
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [dsType, edge.metric?.datasourceUid, effectiveCwRegion, edge.metric?.queryConfig?.namespace, edge.metric?.queryConfig?.metricName]);
 
   // ─── Patch a single queryConfig field on edge.metric.queryConfig ───
@@ -349,6 +379,48 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
     },
     [edge, onChange]
   );
+
+  // Atomic onChange handlers that clear stale downstream selections when
+  // an upstream cascade level changes — switching namespace must drop the
+  // metricName + dimensions captured under the previous namespace, since
+  // those values are namespace-scoped on the AWS side and would 400 the
+  // resource API on the next fetch.
+  const handleNamespaceChange = useCallback((newNamespace: string | undefined) => {
+    const currentMetric: EdgeMetricConfig = edge.metric || { datasourceUid: '', query: '', alias: '' };
+    const nextConfig: DatasourceQueryConfig = { ...(currentMetric.queryConfig || {}) };
+    if (newNamespace === undefined || newNamespace === '') {
+      delete nextConfig.namespace;
+    } else {
+      nextConfig.namespace = newNamespace;
+    }
+    delete nextConfig.metricName;
+    delete nextConfig.dimensions;
+    onChange({
+      ...edge,
+      metric: {
+        ...currentMetric,
+        queryConfig: Object.keys(nextConfig).length > 0 ? nextConfig : undefined,
+      },
+    });
+  }, [edge, onChange]);
+
+  const handleMetricNameChange = useCallback((newMetricName: string | undefined) => {
+    const currentMetric: EdgeMetricConfig = edge.metric || { datasourceUid: '', query: '', alias: '' };
+    const nextConfig: DatasourceQueryConfig = { ...(currentMetric.queryConfig || {}) };
+    if (newMetricName === undefined || newMetricName === '') {
+      delete nextConfig.metricName;
+    } else {
+      nextConfig.metricName = newMetricName;
+    }
+    delete nextConfig.dimensions;
+    onChange({
+      ...edge,
+      metric: {
+        ...currentMetric,
+        queryConfig: Object.keys(nextConfig).length > 0 ? nextConfig : undefined,
+      },
+    });
+  }, [edge, onChange]);
 
   // ─── CloudWatch dimensions: local state for key/value list editor focus stability ───
   const [dimEntries, setDimEntries] = useState<Array<{ key: string; value: string }>>(
@@ -745,7 +817,7 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
                 <Select
                   options={cwNamespaces}
                   value={edge.metric?.queryConfig?.namespace || null}
-                  onChange={(v) => updateMetricQueryConfig('namespace', v.value || undefined)}
+                  onChange={(v) => handleNamespaceChange(v.value || undefined)}
                   allowCustomValue
                   isClearable
                   placeholder={cwNamespaces.length > 0 ? 'Select namespace...' : 'AWS/ApplicationELB'}
@@ -759,7 +831,7 @@ export const EdgeCard: React.FC<Props> = ({ edge, nodes, isOpen, onToggle, onCha
                 <Select
                   options={cwMetricNames}
                   value={edge.metric?.queryConfig?.metricName || null}
-                  onChange={(v) => updateMetricQueryConfig('metricName', v.value || undefined)}
+                  onChange={(v) => handleMetricNameChange(v.value || undefined)}
                   allowCustomValue
                   isClearable
                   placeholder={cwMetricNames.length > 0 ? 'Select metric...' : 'RequestCount'}

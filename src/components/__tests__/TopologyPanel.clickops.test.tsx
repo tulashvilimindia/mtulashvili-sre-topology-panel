@@ -197,4 +197,60 @@ describe('TopologyPanel click-ops end-to-end', () => {
       restore();
     }
   });
+
+  test('right-click node → Edit observability links is a sidebar redirect (no onOptionsChange)', async () => {
+    const { onOptionsChange, restore } = renderInEditMode();
+    try {
+      const nodeA = screen.getByLabelText(/A \(server\)/);
+      fireEvent.contextMenu(nodeA, { clientX: 60, clientY: 60 });
+      const menu = await screen.findByTestId('topology-context-menu');
+      fireEvent.click(within(menu).getByText('Edit observability links'));
+      // Same redirect-only semantic as Edit alert matchers — no slice mutation.
+      expect(onOptionsChange).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
+  });
+
+  test('right-click edge → Edit metric binding is a sidebar redirect (no onOptionsChange)', async () => {
+    const { onOptionsChange, restore } = renderInEditMode();
+    try {
+      const edgeEl = screen.getByTestId('edge-hit-e-ab');
+      fireEvent.contextMenu(edgeEl, { clientX: 200, clientY: 50 });
+      const menu = await screen.findByTestId('topology-context-menu');
+      fireEvent.click(within(menu).getByText('Edit metric binding'));
+      // Routes to EdgesEditor → EdgeCard via emitEdgeEditRequest('edge-id', 'metric').
+      // Pub/sub only — no options mutation.
+      expect(onOptionsChange).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
+  });
+
+  test('keyboard: ArrowRight on focused submenu item opens the submenu and ArrowLeft closes it', async () => {
+    const { restore } = renderInEditMode();
+    try {
+      const nodeA = screen.getByLabelText(/A \(server\)/);
+      fireEvent.contextMenu(nodeA, { clientX: 60, clientY: 60 });
+      const menu = await screen.findByTestId('topology-context-menu');
+      // Walk down to the "Change type" submenu trigger via keyboard (skip
+      // "Edit in sidebar" — first menuitem on initial focus).
+      const items = within(menu).getAllByRole('menuitem');
+      const changeTypeIdx = items.findIndex((el) => el.textContent?.includes('Change type'));
+      expect(changeTypeIdx).toBeGreaterThanOrEqual(0);
+      // Focus that item directly (testing the navigation primitive on a known item),
+      // then ArrowRight should open the submenu.
+      items[changeTypeIdx].focus();
+      fireEvent.keyDown(document, { key: 'ArrowRight' });
+      const submenu = await screen.findByTestId('topology-context-submenu');
+      expect(submenu).toBeInTheDocument();
+      // ArrowLeft on the submenu should close it (and not also close the root).
+      fireEvent.keyDown(document, { key: 'ArrowLeft' });
+      // Submenu unmounts; root menu stays.
+      expect(screen.queryByTestId('topology-context-submenu')).toBeNull();
+      expect(screen.getByTestId('topology-context-menu')).toBeInTheDocument();
+    } finally {
+      restore();
+    }
+  });
 });

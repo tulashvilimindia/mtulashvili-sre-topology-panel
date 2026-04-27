@@ -183,7 +183,7 @@ describe('MetricEditor — CloudWatch datasource', () => {
     });
     // Effective region triggers namespace fetch with eu-west-2.
     await waitFor(() => {
-      expect(fetchCwNamespacesMock).toHaveBeenCalledWith('ds-cw', 'eu-west-2');
+      expect(fetchCwNamespacesMock).toHaveBeenCalledWith('ds-cw', 'eu-west-2', expect.any(AbortSignal));
     });
   });
 
@@ -196,7 +196,7 @@ describe('MetricEditor — CloudWatch datasource', () => {
       onChange
     );
     await waitFor(() => {
-      expect(fetchCwMetricsMock).toHaveBeenCalledWith('ds-cw', 'us-east-1', 'AWS/EC2');
+      expect(fetchCwMetricsMock).toHaveBeenCalledWith('ds-cw', 'us-east-1', 'AWS/EC2', expect.any(AbortSignal));
     });
   });
 
@@ -210,7 +210,7 @@ describe('MetricEditor — CloudWatch datasource', () => {
     }));
     await waitFor(() => {
       expect(fetchCwDimensionKeysMock).toHaveBeenCalledWith(
-        'ds-cw', 'us-east-1', 'AWS/EC2', 'CPUUtilization'
+        'ds-cw', 'us-east-1', 'AWS/EC2', 'CPUUtilization', expect.any(AbortSignal)
       );
     });
   });
@@ -231,7 +231,7 @@ describe('MetricEditor — CloudWatch datasource', () => {
       queryConfig: { region: 'ap-southeast-2' },
     }));
     await waitFor(() => {
-      expect(fetchCwNamespacesMock).toHaveBeenCalledWith('ds-cw', 'ap-southeast-2');
+      expect(fetchCwNamespacesMock).toHaveBeenCalledWith('ds-cw', 'ap-southeast-2', expect.any(AbortSignal));
     });
   });
 
