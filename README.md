@@ -7,8 +7,8 @@ Built by Mindia Tulashvili.
 ![Grafana 12+](https://img.shields.io/badge/Grafana-12.0%2B-orange)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 ![Plugin Type](https://img.shields.io/badge/Type-Panel-green)
-![Tests](https://img.shields.io/badge/tests-242%20passing-green)
-![Bundle](https://img.shields.io/badge/bundle-162KB-blue)
+![Tests](https://img.shields.io/badge/tests-480%20passing-green)
+![Bundle](https://img.shields.io/badge/bundle-185KB-blue)
 
 ---
 
