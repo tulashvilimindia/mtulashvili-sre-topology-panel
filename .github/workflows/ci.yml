@@ -1,10 +1,15 @@
 name: CI
 
 on:
+  # Run on every push to any branch except the frozen pre-port archive.
+  # Catches lint/test/build regressions at push time on feature branches,
+  # not just at PR open. The archive branch is excluded to avoid burning
+  # CI minutes validating a historical reference that never gets edited.
   push:
-    branches: [main, dev]
+    branches-ignore: ['main-pre-port-archive']
+  # Run on every pull request regardless of target branch — keeps PR
+  # feedback consistent if a future workflow uses non-main targets.
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
