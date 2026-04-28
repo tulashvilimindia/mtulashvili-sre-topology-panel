@@ -53,6 +53,12 @@ demo-screenshots/*.jpeg
 /3-1a-view-mode.png
 /editor-snapshot-1.yml
 
+# Browser-smoke artifacts (Playwright MCP captures + Markdown snapshots)
+/smoke-*.png
+/snap-*.md
+/snapshot-*.md
+/snapshot-*.yml
+
 # OS
 .DS_Store
 Thumbs.db
